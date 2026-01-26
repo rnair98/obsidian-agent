@@ -331,6 +331,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "arize-phoenix" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "langchain" },
     { name = "langchain-openai" },
     { name = "langgraph" },
@@ -360,6 +361,7 @@ observability = [
 requires-dist = [
     { name = "arize-phoenix", specifier = ">=12.28.1" },
     { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "langchain", specifier = ">=1.2.7" },
     { name = "langchain-openai", specifier = ">=1.1.7" },
     { name = "langgraph", specifier = ">=1.0.5" },

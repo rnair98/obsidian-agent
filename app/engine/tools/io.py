@@ -4,6 +4,7 @@ from pathlib import Path
 
 import polars as pl
 from langchain_core.tools import tool
+from pydantic import BaseModel, Field
 
 from app.settings import settings
 
@@ -117,128 +118,28 @@ def write_report(content: str) -> str:
     return f"Report saved to {output_path}"
 
 
-def _legacy_write_report(
-    output_path: Path,
-    topic: str,
-    notes: list[str],
-    experiments: list[str],
-    sources: list[dict[str, str]],
-    insights: list[str],
-    reasoning: list[str],
-    code_context: list[str] | None = None,
-) -> str:
-    ensure_dir(output_path.parent)
-    lines = [
-        f"# Research Report: {topic}",
-        "",
-        "## Executive Summary",
-        "",
-        "This report summarizes the research findings and experiments conducted.",
-        "",
-        "## Research Notes",
-        "",
-        *[f"- {note}" for note in notes],
-        "",
-        "## Experiments",
-        "",
-        *[f"- {experiment}" for experiment in experiments],
-        "",
-        "## Key Insights",
-        "",
-        *[f"- {insight}" for insight in insights],
-        "",
-        "",
-        "## Reasoning Log",
-        "",
-        *[f"- {entry}" for entry in reasoning],
-        "",
-        "## Sources",
-        "",
-        *[
-            f"- {entry.get('title', 'Unknown')} ({entry.get('url', '')})"
-            f" [{entry.get('provider', 'unknown')}]"
-            for entry in sources
-        ],
-        "",
-    ]
-    report = "\n".join(lines)
-    output_path.write_text(report, encoding="utf-8")
-    return report
+class ZettelNote(BaseModel):
+    id: str = Field(..., description="Unique identifier for the note (slug format)")
+    title: str = Field(..., description="Title of the note")
+    content: str = Field(..., description="Markdown content of the note")
+    links: list[str] = Field(
+        default_factory=list, description="List of linked note IDs"
+    )
 
 
 @tool
-def write_zettelkasten_notes(notes: list[dict[str, str]]) -> str:
+def write_zettelkasten_notes(notes: list[ZettelNote]) -> str:
     """
     Save extracted Zettelkasten notes to the vault.
-    Takes a list of dictionaries with 'id', 'title', 'content', 'links'.
     """
     vault_dir = settings.VAULT_DIR
     ensure_dir(vault_dir)
     # Simplified for the tool version, assuming inputs are pre-formatted
     # or we format them here.
-    # For now, let's just save what we get to illustrate the pattern.
     count = 0
     for note in notes:
-        p = vault_dir / f"{note.get('id', 'note')}.md"
-        p.write_text(note.get("content", ""), encoding="utf-8")
+        # note is now a ZettelNote object
+        p = vault_dir / f"{note.id}.md"
+        p.write_text(note.content, encoding="utf-8")
         count += 1
     return f"Saved {count} notes to {vault_dir}"
-
-
-def _legacy_write_zettelkasten_notes(
-    vault_dir: Path,
-    topic: str,
-    notes: list[str],
-    insights: list[str],
-    report: str,
-) -> list[dict[str, str]]:
-    ensure_dir(vault_dir)
-    created_at = timestamp()
-    zettel: list[dict[str, str]] = []
-    report_link = topic.lower().replace(" ", "-") + "-summary"
-    for index, note in enumerate(insights or notes, start=1):
-        zettel_id = f"{topic.lower().replace(' ', '-')}-{index}"
-        filename = vault_dir / f"{zettel_id}.md"
-        content = "\n".join(
-            [
-                "---",
-                f'zettel_id: "{zettel_id}"',
-                f'topic: "{topic}"',
-                f"created_at: {created_at}",
-                "links: []",
-                "---",
-                "",
-                f"# {note[:80]}",
-                "",
-                note,
-                "",
-                f"Linked notes: [[{report_link}]]",
-                "",
-            ]
-        )
-        filename.write_text(content, encoding="utf-8")
-        zettel.append({"id": zettel_id, "path": str(filename)})
-    summary_path = vault_dir / f"{topic.lower().replace(' ', '-')}-summary.md"
-    report_excerpt = "\n".join(report.splitlines()[:20])
-    summary_content = "\n".join(
-        [
-            "---",
-            f'topic: "{topic}"',
-            f"created_at: {created_at}",
-            "type: summary",
-            "---",
-            "",
-            f"# {topic} Summary",
-            "",
-            "## Linked Notes",
-            "",
-            *[f"- [[{entry['id']}]]" for entry in zettel],
-            "",
-            "## Report Excerpt",
-            "",
-            report_excerpt,
-            "",
-        ]
-    )
-    summary_path.write_text(summary_content, encoding="utf-8")
-    return zettel

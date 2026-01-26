@@ -1,20 +1,25 @@
-from urllib.error import URLError
-from urllib.request import Request, urlopen
-
+import httpx
 from langchain_core.tools import tool
+
+from app.settings import settings
 
 
 @tool
-def fetch_url(url: str) -> tuple[str | None, str | None]:
+def fetch_url(url: str) -> str:
     """
-    Fetch the content of a specific URL (GET request).
-    Returns the text content and an optional error message.
+    Fetch the content of a specific URL using Jina Reader API
+    and convert it to Markdown. Returns the markdown content or an error message.
     """
-    timeout = 10.0
-    request = Request(url, headers={"User-Agent": "langgraph-researcher/1.0"})
+    jina_url = f"https://r.jina.ai/{url}"
+    headers = {"User-Agent": "langgraph-researcher/1.0"}
+
+    if settings.JINA_API_KEY:
+        headers["Authorization"] = f"Bearer {settings.JINA_API_KEY}"
+
     try:
-        with urlopen(request, timeout=timeout) as response:
-            content = response.read(2000).decode("utf-8", errors="replace")
-        return content, None
-    except (URLError, ValueError) as exc:
-        return None, str(exc)
+        with httpx.Client(timeout=15.0) as client:
+            response = client.get(jina_url, headers=headers)
+            response.raise_for_status()
+            return response.text
+    except httpx.HTTPError as exc:
+        return f"Error fetching URL {url} via Jina: {str(exc)}"

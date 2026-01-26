@@ -7,11 +7,7 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
-
-class LLMConfig(TypedDict):
-    model: str | None = None
-    temperature: float | None = None
-    base_url: str | None = None
+from app.settings import LLMConfig
 
 
 class SearchQuery(TypedDict):

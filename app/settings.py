@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_settings import (
@@ -13,7 +14,7 @@ class LLMConfig(BaseModel):
     """LLM configuration. Only model is required; all other params pass through."""
 
     model: str
-    api_key: str
+    api_key: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
     # API Keys
     BRAVE_SEARCH_API_KEY: str = ""
     EXA_API_KEY: str = ""
+    JINA_API_KEY: str = ""
 
     # Search Config
     BRAVE_SEARCH_URL: str = "https://api.search.brave.com/res/v1/web/search"

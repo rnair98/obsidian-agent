@@ -5,7 +5,11 @@ This module provides a single entry point for running registered workflows,
 handling state initialization, context setup, and graph invocation.
 """
 
+import uuid
+
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import InMemorySaver
 
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
@@ -20,7 +24,10 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
     """
     logger.info(f"Running workflow: {workflow_name} for topic: {request.topic}")
 
-    graph = get_workflow(workflow_name)
+    checkpointer = InMemorySaver()
+    config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
+    graph = get_workflow(workflow_name, checkpointer)
 
     memories = load_memories(settings.MEMORIES_DIR)
 
@@ -51,6 +58,10 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
         key_insights=[],
     )
 
-    result = graph.invoke(input=state, context=context)
+    result = graph.invoke(
+        input=state,
+        config=config,
+        context=context,
+    )
 
     return result

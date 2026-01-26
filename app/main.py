@@ -12,16 +12,12 @@ from app.logger import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    tracer_provider = register(
+    register(
         project_name="code-reviewer",
         auto_instrument=True,
     )
     logger.info("Phoenix OTEL tracer registered")
     yield
-    # Shutdown
-    if tracer_provider:
-        tracer_provider.shutdown()
-        logger.info("Phoenix OTEL tracer shutdown")
 
 
 app = FastAPI(lifespan=lifespan)

@@ -38,9 +38,11 @@ def create_researcher_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
     ) -> dict[str, Any]:
-        llm_config = runtime.context.llm_config or settings.llm.to_dict()
+        llm_config = settings.llm.model_dump()
+        if runtime.context.llm_config:
+            llm_config.update(runtime.context.llm_config.model_dump(exclude_unset=True))
         logger.debug(f"[RESEARCHER] Using responses API: {USE_RESPONSES_API}")
-        logger.debug(f"[RESEARCHER] LLM Config: {llm_config}")
+        logger.debug(f"[RESEARCHER] Using model: {llm_config['model']}")
 
         model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
 
@@ -50,6 +52,7 @@ def create_researcher_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
             system_prompt=settings.agents.researcher.system_prompt,
             response_format=ResearcherOutput,
         )
+        logger.debug("[RESEARCHER] Agent invoked.")
         result = agent_executor.invoke(
             input=state, context=runtime.context, config=config
         )

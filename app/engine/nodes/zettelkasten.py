@@ -21,9 +21,7 @@ if TYPE_CHECKING:
     from app.engine.schema import ResearchContext, ResearchState
 
 
-def create_zettelkasten_agent(
-    runtime: Runtime[ResearchContext],
-) -> "CompiledStateGraph[AgentState[ResponseT]]":
+def create_zettelkasten_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
     USE_RESPONSES_API = True
     TOOLS = [write_zettelkasten_notes]
 
@@ -32,7 +30,9 @@ def create_zettelkasten_agent(
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
     ) -> dict[str, Any]:
-        llm_config = runtime.context.llm_config or settings.llm.to_dict()
+        llm_config = settings.llm.model_dump()
+        if runtime.context.llm_config:
+            llm_config.update(runtime.context.llm_config.model_dump(exclude_unset=True))
         logger.debug(f"[ZETTELKASTEN] Using responses API: {USE_RESPONSES_API}")
         logger.debug(f"[ZETTELKASTEN] LLM Config: {llm_config}")
 
@@ -44,6 +44,7 @@ def create_zettelkasten_agent(
             system_prompt=settings.agents.zettelkasten.system_prompt,
             response_format=ZettelkastenOutput,
         )
+        logger.debug("[ZETTELKASTEN] Agent invoked.")
         result = agent_executor.invoke(
             input=state, context=runtime.context, config=config
         )

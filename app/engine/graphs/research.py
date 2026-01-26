@@ -3,18 +3,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from langgraph.constants import END, START
+from langgraph.graph.state import StateGraph
 
 from app.engine.nodes.persist import persist_artifacts
 from app.engine.nodes.researcher import create_researcher_agent
 from app.engine.nodes.summarizer import create_summarizer_agent
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
+from app.engine.schema import ResearchState
 
 if TYPE_CHECKING:
     from langgraph.checkpoint.memory import BaseCheckpointSaver
-    from langgraph.graph.state import CompiledStateGraph, StateGraph
-
-    from app.engine.schema import ResearchState
+    from langgraph.graph.state import CompiledStateGraph
 
 
 def build_research_graph() -> StateGraph[ResearchState]:

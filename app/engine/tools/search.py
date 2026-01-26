@@ -1,8 +1,6 @@
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.parse import quote_plus
-from urllib.request import Request, urlopen
 
+import httpx
 import orjson
 from langchain_core.tools import tool
 
@@ -88,20 +86,23 @@ def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
     api_key = settings.BRAVE_SEARCH_API_KEY
     if not api_key:
         return [], "BRAVE_SEARCH_API_KEY is not set."
-    url = f"{settings.BRAVE_SEARCH_URL}?q={quote_plus(query)}&count={limit}"
-    request = Request(
-        url,
-        headers={
-            "Accept": "application/json",
-            "X-Subscription-Token": api_key,
-            "User-Agent": "langgraph-researcher/1.0",
-        },
-    )
+
+    url = settings.BRAVE_SEARCH_URL
+    params = {"q": query, "count": limit}
+    headers = {
+        "Accept": "application/json",
+        "X-Subscription-Token": api_key,
+        "User-Agent": "langgraph-researcher/1.0",
+    }
+
     try:
-        with urlopen(request, timeout=20) as response:
-            payload = orjson.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, orjson.JSONDecodeError) as exc:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
         return [], f"Brave search failed: {exc}"
+
     results = []
     for entry in payload.get("web", {}).get("results", []):
         results.append(
@@ -128,6 +129,7 @@ def call_exa_search(
     api_key = settings.EXA_API_KEY
     if not api_key:
         return [], "EXA_API_KEY is not set."
+
     payload: dict[str, Any] = {
         "query": query,
         "numResults": limit,
@@ -135,24 +137,27 @@ def call_exa_search(
     }
     if search_type and search_type != "auto":
         payload["type"] = search_type
-    body = orjson.dumps(payload).encode("utf-8")
-    request = Request(
-        settings.EXA_SEARCH_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {api_key}",
-            "x-api-key": api_key,
-            "User-Agent": "langgraph-researcher/1.0",
-        },
-        method="POST",
-    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "x-api-key": api_key,
+        "User-Agent": "langgraph-researcher/1.0",
+    }
+
     try:
-        with urlopen(request, timeout=20) as response:
-            data = orjson.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, orjson.JSONDecodeError) as exc:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post(
+                settings.EXA_SEARCH_URL,
+                content=orjson.dumps(payload),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
         return [], f"Exa search failed: {exc}"
+
     results = []
     for entry in data.get("results", []):
         results.append(
@@ -182,22 +187,23 @@ def call_exa_context(query: str) -> tuple[str | None, str | None]:
         "query": query,
         "tokensNum": tokens_num,
     }
-    body = orjson.dumps(payload).encode("utf-8")
-    request = Request(
-        settings.EXA_CONTEXT_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "User-Agent": "langgraph-researcher/1.0",
-        },
-        method="POST",
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "User-Agent": "langgraph-researcher/1.0",
+    }
+
     try:
-        with urlopen(request, timeout=20) as response:
-            data = orjson.loads(response.read().decode("utf-8"))
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post(
+                settings.EXA_CONTEXT_URL,
+                content=orjson.dumps(payload),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
             return data.get("response"), None
-    except (HTTPError, URLError, orjson.JSONDecodeError) as exc:
+    except (httpx.HTTPError, ValueError) as exc:
         return None, f"Exa context search failed: {exc}"
 
 

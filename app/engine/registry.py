@@ -1,5 +1,6 @@
 from typing import Callable
 
+from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 
 # Global registry: name -> factory function
@@ -32,11 +33,14 @@ def list_workflows() -> list[str]:
     return list(_WORKFLOW_REGISTRY.keys())
 
 
-def get_workflow(name: str) -> CompiledStateGraph:
+def get_workflow(
+    name: str,
+    checkpointer: BaseCheckpointSaver,
+) -> CompiledStateGraph:
     """
     Retrieve a compiled workflow graph by name.
     """
     name = name.lower()
     if name not in _WORKFLOW_REGISTRY:
         raise ValueError(f"Workflow '{name}' not found. Available: {list_workflows()}")
-    return _WORKFLOW_REGISTRY[name]()
+    return _WORKFLOW_REGISTRY[name](checkpointer)

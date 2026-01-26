@@ -1,8 +1,8 @@
 llm:
   model: "gpt-5.2-2025-12-11"
-  parallel_tool_calls: true
   temperature: 1.0
-
+  model_kwargs:
+    parallel_tool_calls: true
 
 agents:
   researcher:
