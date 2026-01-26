@@ -39,6 +39,7 @@ else
 fi
 
 # Create subdirectories and files
+mkdir -p "$AGENTS_DIR/rules"
 mkdir -p "$AGENTS_DIR/hooks"
 mkdir -p "$AGENTS_DIR/commands"
 mkdir -p "$AGENTS_DIR/skills"
@@ -68,6 +69,11 @@ echo -e "${YELLOW}[3/7] Copying plugin files...${NC}"
 PLUGIN_DIR="$TMP_DIR/plugins/10x-swe"
 
 if [ -d "$PLUGIN_DIR" ]; then
+    # Copy rules => .agents/rules
+    if [ -d "$PLUGIN_DIR/rules" ]; then
+        cp -r "$PLUGIN_DIR/rules/"* "$AGENTS_DIR/rules/" 2>/dev/null || true
+        echo -e "${GREEN}✓ Copied rules${NC}"
+    fi
     # Copy agents => .agents/commands
     if [ -d "$PLUGIN_DIR/agents" ]; then
         cp -r "$PLUGIN_DIR/agents/"* "$AGENTS_DIR/commands/" 2>/dev/null || true
@@ -100,9 +106,14 @@ echo -e "${YELLOW}[4/7] Cleaning up temporary files...${NC}"
 rm -rf "$TMP_DIR"
 echo -e "${GREEN}✓ Temporary files cleaned up${NC}"
 
-# Step 5: Ask user which agents they want to work with
+# Step 5: Setup .agent directory
+echo -e "${YELLOW}[5/7] Setting up .agent directory...${NC}"
+AGENT_DIR="$CWD/.agent"
+ln -sfn "$AGENTS_DIR/rules" "$AGENT_DIR/rules"
+
+# Step 6: Ask user which agents they want to work with
 echo ""
-echo -e "${YELLOW}[5/7] Select which agents you'd like to work with:${NC}"
+echo -e "${YELLOW}[6/8] Select which agents you'd like to work with:${NC}"
 echo ""
 echo "Available agents:"
 echo "  1) Claude (Anthropic)"
@@ -141,9 +152,9 @@ AGENT_NAMES[7]="Gemini"
 # Track if Claude was selected
 CLAUDE_SELECTED=false
 
-# Step 6: Create directories for selected agents
+# Step 7: Create directories for selected agents
 echo ""
-echo -e "${YELLOW}[6/7] Setting up selected agents...${NC}"
+echo -e "${YELLOW}[7/8] Setting up selected agents...${NC}"
 
 for NUM in "${SELECTED[@]}"; do
     NUM=$(echo "$NUM" | tr -d ' ') # Remove whitespace
@@ -257,9 +268,9 @@ EOF
     fi
 done
 
-# Step 7: Update .gitignore with agent directories (excluding .agents)
+# Step 8: Update .gitignore with agent directories (excluding .agents)
 echo ""
-echo -e "${YELLOW}[7/7] Updating .gitignore with agent directories...${NC}"
+echo -e "${YELLOW}[8/8] Updating .gitignore with agent directories...${NC}"
 
 GITIGNORE_FILE="$CWD/.gitignore"
 
