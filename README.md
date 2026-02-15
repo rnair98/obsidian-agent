@@ -1,4 +1,4 @@
-# code-reviewer
+# obsidian-agent
 
 FastAPI application scaffold.
 
