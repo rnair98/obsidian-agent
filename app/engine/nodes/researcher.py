@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.runtime import Runtime
 
+from app.engine.nodes.types import NodeName
 from app.engine.outputs import ResearcherOutput
 from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
 from app.engine.tools.io import save_note
@@ -41,18 +42,22 @@ def create_researcher_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
         llm_config = settings.llm.model_dump()
         if runtime.context.llm_config:
             llm_config.update(runtime.context.llm_config.model_dump(exclude_unset=True))
-        logger.debug(f"[RESEARCHER] Using responses API: {USE_RESPONSES_API}")
-        logger.debug(f"[RESEARCHER] Using model: {llm_config['model']}")
+        logger.debug(
+            f"[{NodeName.RESEARCHER.upper()}] Using responses API: {USE_RESPONSES_API}"
+        )
+        logger.debug(
+            f"[{NodeName.RESEARCHER.upper()}] Using model: {llm_config['model']}"
+        )
 
         model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
 
         agent_executor = create_agent(
             model=model,
             tools=TOOLS,
-            system_prompt=settings.agents.researcher.system_prompt,
+            system_prompt=getattr(settings.agents, NodeName.RESEARCHER).system_prompt,
             response_format=ResearcherOutput,
         )
-        logger.debug("[RESEARCHER] Agent invoked.")
+        logger.debug(f"[{NodeName.RESEARCHER.upper()}] Agent invoked.")
         result = agent_executor.invoke(
             input=state, context=runtime.context, config=config
         )

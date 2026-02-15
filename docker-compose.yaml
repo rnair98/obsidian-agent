@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "8000:8000"
+    command: [ "uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload" ]
+    environment:
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:4317
+      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
+      - BRAVE_SEARCH_API_KEY=${BRAVE_SEARCH_API_KEY:-}
+      - EXA_API_KEY=${EXA_API_KEY:-}
+      - JINA_API_KEY=${JINA_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      phoenix:
+        condition: service_started
+    networks:
+      - reviewer-network
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    networks:
+      - reviewer-network
+
+  db:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reviewer-network
+
+networks:
+  reviewer-network:
+    driver: bridge

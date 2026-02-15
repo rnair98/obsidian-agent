@@ -8,6 +8,7 @@ from langgraph.graph.state import StateGraph
 from app.engine.nodes.persist import persist_artifacts
 from app.engine.nodes.researcher import create_researcher_agent
 from app.engine.nodes.summarizer import create_summarizer_agent
+from app.engine.nodes.types import NodeName
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
 from app.engine.schema import ResearchState
@@ -25,19 +26,19 @@ def build_research_graph() -> StateGraph[ResearchState]:
     summarizer = create_summarizer_agent()
     zettelkasten = create_zettelkasten_agent()
 
-    graph.add_node("researcher", researcher)
-    graph.add_node("summarizer", summarizer)
-    graph.add_node("zettelkasten", zettelkasten)
-    graph.add_node("persist", persist_artifacts)
+    graph.add_node(NodeName.RESEARCHER, researcher)
+    graph.add_node(NodeName.SUMMARIZER, summarizer)
+    graph.add_node(NodeName.ZETTELKASTEN, zettelkasten)
+    graph.add_node(NodeName.PERSIST, persist_artifacts)
 
-    graph.add_edge(START, "researcher")
-    graph.add_edge("researcher", "summarizer")
-    graph.add_edge("summarizer", "zettelkasten")
-    graph.add_edge("zettelkasten", "persist")
-    graph.add_edge("persist", END)
+    graph.add_edge(START, NodeName.RESEARCHER)
+    graph.add_edge(NodeName.RESEARCHER, NodeName.SUMMARIZER)
+    graph.add_edge(NodeName.SUMMARIZER, NodeName.ZETTELKASTEN)
+    graph.add_edge(NodeName.ZETTELKASTEN, NodeName.PERSIST)
+    graph.add_edge(NodeName.PERSIST, END)
     return graph
 
 
-@workflow("research")
+@workflow(NodeName.RESEARCH)
 def create_research_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     return build_research_graph().compile(checkpointer=checkpointer)

@@ -11,35 +11,36 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.engine.nodes.researcher import create_researcher_agent
 from app.engine.nodes.summarizer import create_summarizer_agent
+from app.engine.nodes.types import NodeName
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
 from app.engine.schema import ResearchState
 
 
-@workflow("researcher")
+@workflow(NodeName.RESEARCHER)
 def create_researcher_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph(ResearchState)
-    graph.add_node("researcher", create_researcher_agent())
-    graph.add_edge(START, "researcher")
-    graph.add_edge("researcher", END)
+    graph.add_node(NodeName.RESEARCHER, create_researcher_agent())
+    graph.add_edge(START, NodeName.RESEARCHER)
+    graph.add_edge(NodeName.RESEARCHER, END)
     return graph.compile(checkpointer=checkpointer)
 
 
-@workflow("summarizer")
+@workflow(NodeName.SUMMARIZER)
 def create_summarizer_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph(ResearchState)
-    graph.add_node("summarizer", create_summarizer_agent())
-    graph.add_edge(START, "summarizer")
-    graph.add_edge("summarizer", END)
+    graph.add_node(NodeName.SUMMARIZER, create_summarizer_agent())
+    graph.add_edge(START, NodeName.SUMMARIZER)
+    graph.add_edge(NodeName.SUMMARIZER, END)
     return graph.compile(checkpointer=checkpointer)
 
 
-@workflow("zettelkasten")
+@workflow(NodeName.ZETTELKASTEN)
 def create_zettelkasten_workflow(
     checkpointer: BaseCheckpointSaver,
 ) -> CompiledStateGraph:
     graph = StateGraph(ResearchState)
-    graph.add_node("zettelkasten", create_zettelkasten_agent())
-    graph.add_edge(START, "zettelkasten")
-    graph.add_edge("zettelkasten", END)
+    graph.add_node(NodeName.ZETTELKASTEN, create_zettelkasten_agent())
+    graph.add_edge(START, NodeName.ZETTELKASTEN)
+    graph.add_edge(NodeName.ZETTELKASTEN, END)
     return graph.compile(checkpointer=checkpointer)

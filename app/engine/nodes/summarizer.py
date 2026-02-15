@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.runtime import Runtime
 
+from app.engine.nodes.types import NodeName
 from app.engine.outputs import SummarizerOutput
 from app.engine.tools.io import write_report
 from app.logger import logger
@@ -33,18 +34,20 @@ def create_summarizer_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
         llm_config = settings.llm.model_dump()
         if runtime.context.llm_config:
             llm_config.update(runtime.context.llm_config.model_dump(exclude_unset=True))
-        logger.debug(f"[SUMMARIZER] Using responses API: {USE_RESPONSES_API}")
-        logger.debug(f"[SUMMARIZER] LLM Config: {llm_config}")
+        logger.debug(
+            f"[{NodeName.SUMMARIZER.upper()}] Using responses API: {USE_RESPONSES_API}"
+        )
+        logger.debug(f"[{NodeName.SUMMARIZER.upper()}] LLM Config: {llm_config}")
 
         model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
 
         agent_executor = create_agent(
             model=model,
             tools=TOOLS,
-            system_prompt=settings.agents.summarizer.system_prompt,
+            system_prompt=getattr(settings.agents, NodeName.SUMMARIZER).system_prompt,
             response_format=SummarizerOutput,
         )
-        logger.debug("[SUMMARIZER] Agent invoked.")
+        logger.debug(f"[{NodeName.SUMMARIZER.upper()}] Agent invoked.")
         result = agent_executor.invoke(
             input=state, context=runtime.context, config=config
         )

@@ -1,0 +1,7 @@
+{
+	"name": "code-reviewer space",
+	"image": "mcr.microsoft.com/devcontainers/python:3.13-trixie",
+	"features": {
+		"ghcr.io/devcontainers/features/copilot-cli:1": {}
+	}
+}

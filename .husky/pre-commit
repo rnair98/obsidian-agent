@@ -1,0 +1,2 @@
+bun .husky/pre-commit.ts
+
