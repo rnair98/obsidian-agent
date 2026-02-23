@@ -3,12 +3,6 @@
 .vscode/
 .vscode
 
-# documentation & logs
-TASKS.md
-PLAN.md
-verify_*
-.logs/
-
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -23,17 +17,6 @@ wheels/
 
 # Node modules
 node_modules/
-
-# ai agent directories
-.agents/
-.agent/
-.claude/
-.codex/
-.opencode/
-.gemini/
-.factory/
-.cursor/
-.pi/
 
 # env files
 .env

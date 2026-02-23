@@ -19,6 +19,8 @@ dependencies = [
     "loguru>=0.7.3",
     "mcp>=1.6.0",
     "httpx>=0.28.1",
+    "pygithub>=2.8.1",
+    "langgraph-checkpoint-postgres>=3.0.4",
 ]
 
 [tool.uv]

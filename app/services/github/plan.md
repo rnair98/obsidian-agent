@@ -1,0 +1,4 @@
+- I need a github client built using pygithub
+- this client needs to manage connections to github using app installation authentication with the client id and client secret
+- we need the connection set by this client to persist across workflow executions in a session => this client will be used by langchain tools used to do code research on Github with github's codesearch api and eventually shallow clone repos to an external persistence storage layer for further indexing and analysis
+- basically new client's shouldn't be created on every tool call 

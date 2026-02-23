@@ -9,13 +9,15 @@ import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
+from app.core.logger import logger
+from app.core.settings import settings
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
+from app.engine.tools.github import get_github_repo
 from app.engine.tools.io import load_memories
-from app.logger import logger
-from app.settings import settings
+from app.services.github.auth import get_github_client
 
 
 def execute(workflow_name: str, request: ResearchRequest) -> dict:
@@ -24,13 +26,19 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
     """
     logger.info(f"Running workflow: {workflow_name} for topic: {request.topic}")
 
-    checkpointer = InMemorySaver()
+    checkpointer = AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL)
     config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     graph = get_workflow(workflow_name, checkpointer)
 
     memories = load_memories(settings.MEMORIES_DIR)
 
+    github_client = get_github_client()
+    github_repo = (
+        get_github_repo(request.github_repo_name)
+        if request.github_repo_name
+        else None
+    )
     context = ResearchContext(
         search_limit=request.search_limit,
         exa_search_type=request.exa_search_type,
@@ -38,6 +46,8 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
         seed_urls=request.seed_urls,
         experiment_snippets=request.experiment_snippets,
         llm_config=request.llm_config,
+        github_client=github_client,
+        github_repo=github_repo,
     )
 
     state = ResearchState(

@@ -2,9 +2,9 @@ from langchain.agents.middleware import ContextEditingMiddleware, ToolRetryMiddl
 from requests import RequestException, Timeout
 
 tool_retry = ToolRetryMiddleware(
-    max_retries=2,
+    max_retries=1,
     retry_on=(RequestException, Timeout),
-    backoff_factor=1.5,
+    backoff_factor=0.0,
 )
 
 context_editing = ContextEditingMiddleware()

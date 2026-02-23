@@ -11,15 +11,21 @@ from app.engine.nodes.summarizer import create_summarizer_agent
 from app.engine.nodes.types import NodeName
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
-from app.engine.schema import ResearchState
+from app.engine.schema import ResearchContext, ResearchState
 
 if TYPE_CHECKING:
     from langgraph.checkpoint.memory import BaseCheckpointSaver
     from langgraph.graph.state import CompiledStateGraph
 
 
-def build_research_graph() -> StateGraph[ResearchState]:
-    graph = StateGraph(ResearchState)
+@workflow(NodeName.RESEARCH)
+def create_research_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
+    graph = StateGraph[
+        ResearchState,
+        ResearchContext,
+        ResearchState,
+        ResearchState,
+    ](ResearchState)
 
     # Instantiate agents
     researcher = create_researcher_agent()
@@ -36,9 +42,4 @@ def build_research_graph() -> StateGraph[ResearchState]:
     graph.add_edge(NodeName.SUMMARIZER, NodeName.ZETTELKASTEN)
     graph.add_edge(NodeName.ZETTELKASTEN, NodeName.PERSIST)
     graph.add_edge(NodeName.PERSIST, END)
-    return graph
-
-
-@workflow(NodeName.RESEARCH)
-def create_research_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
-    return build_research_graph().compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=checkpointer)

@@ -1,13 +1,25 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SecretStr
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+
+class GithubConfig(BaseModel):
+    """GitHub auth: use app installation (app_id, private_key,
+    installation_id) or token."""
+
+    client_id: str = ""
+    client_secret: SecretStr = SecretStr("")
+    app_id: int = 0
+    private_key: SecretStr = SecretStr("")
+    installation_id: int = 0
+    token: SecretStr = SecretStr("")
 
 
 class LLMConfig(BaseModel):
@@ -29,6 +41,8 @@ class AgentsConfig(BaseModel):
 
 
 class Settings(BaseSettings):
+    github: GithubConfig | None = None
+
     # Paths
     MEMORIES_DIR: Path = Path(".memories")
     VAULT_DIR: Path = Path(".vault")
@@ -58,7 +72,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         extra="ignore",
-        yaml_file=Path(__file__).parent / "resources" / "agent_config.yaml",
+        yaml_file=Path(__file__).parent.parent / "resources" / "agent_config.yaml",
     )
 
     @classmethod
