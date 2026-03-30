@@ -39,21 +39,8 @@ function buildPrompt(preCommitOutput: string) {
 	].join("\n");
 }
 
-function getGithubToken() {
-	return process.env.COPILOT_TOKEN || process.env.GITHUB_TOKEN;
-}
-
-async function copilotFix(prompt: string, model: string, cliUrl: string) {
-	const githubToken = getGithubToken();
-	if (!githubToken) {
-		throw new Error(
-			"Missing auth token. Set COPILOT_TOKEN or GITHUB_TOKEN and start headless Copilot CLI with COPILOT_GITHUB_TOKEN.",
-		);
-	}
-
-	const client = new CopilotClient({
-		cliUrl,
-	});
+async function copilotFix(prompt: string, model: string) {
+	const client = new CopilotClient({});
 
 	let session: Awaited<ReturnType<typeof client.createSession>> | undefined;
 	try {
@@ -61,14 +48,19 @@ async function copilotFix(prompt: string, model: string, cliUrl: string) {
 			sessionId: `pre-commit-${Date.now()}`,
 			model,
 			onPermissionRequest: async (req: PermissionRequest) => {
-				return { kind: "approved" };
+				if (req.kind === "write" || req.kind === "read") {
+					return { kind: "approved" };
+				}
+				console.warn(`Denied permission request: ${req.kind}`);
+				return { kind: "denied-interactively-by-user" };
 			},
 		});
 		const response = await session.sendAndWait({ prompt });
 		const text = response?.data?.content;
-		if (text) {
-			process.stdout.write(`${text}\n\n`);
+		if (!text) {
+			throw new Error("Copilot returned no actionable response.");
 		}
+		process.stdout.write(`${text}\n\n`);
 	} finally {
 		await session?.disconnect();
 	}
@@ -78,7 +70,6 @@ async function main() {
 	const maxIter = Number(process.env.COPILOT_MAX_ITER ?? process.env.CODEX_MAX_ITER ?? "3");
 	const allFiles = process.env.ALL_FILES === "1";
 	const model = "gpt-5.4-mini";
-	const cliUrl = process.env.COPILOT_CLI_URL ?? "localhost:4321";
 
 	const repoRoot = process.cwd();
 	const precommitHome = resolve(repoRoot, ".cache", "pre-commit");
@@ -94,6 +85,8 @@ async function main() {
 		? ["pre-commit", "run", "--all-files"]
 		: ["pre-commit", "run"]; // staged-only by default
 
+	let prevFailCount: number | null = null;
+
 	for (let i = 1; i <= maxIter; i++) {
 		console.log(`\n=== pre-commit pass ${i}/${maxIter} ===`);
 		const res = await run(pcCmd, { env });
@@ -104,17 +97,37 @@ async function main() {
 			process.exit(0);
 		}
 
-		console.log("\n=== Copilot SDK run ===");
-		try {
-			await copilotFix(buildPrompt(res.out), model, cliUrl);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			const extra = message.includes("ECONNREFUSED")
-				? `\nHint: start Copilot CLI in headless mode, e.g. \`copilot --headless --port ${cliUrl.split(":").at(-1) ?? "4321"}\`.`
-				: "";
-			console.error(`Copilot SDK failed: ${message}${extra}`);
+		const failCount = (res.out.match(/^Failed$/gm) ?? []).length;
+		if (prevFailCount !== null && failCount >= prevFailCount) {
+			console.error("⚠️  Failures not decreasing after fix; aborting.");
 			process.exit(1);
 		}
+		prevFailCount = failCount;
+
+		// Check if pre-commit already auto-fixed files (e.g., ruff --fix)
+		const autoFixed = await run(["git", "diff", "--name-only"], { env });
+		if (autoFixed.out.trim()) {
+			console.log("Pre-commit auto-fixed files; re-staging and retrying...");
+			await run(["git", "add", "-u"], { env });
+			continue;
+		}
+
+		// No auto-fixes — ask Copilot to fix the remaining issues
+		console.log("\n=== Copilot SDK run ===");
+		try {
+			await copilotFix(buildPrompt(res.out), model);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`Copilot SDK failed: ${message}`);
+			process.exit(1);
+		}
+
+		const diff = await run(["git", "diff", "--name-only"], { env });
+		if (!diff.out.trim()) {
+			console.error("⚠️  Copilot made no file changes; aborting.");
+			process.exit(1);
+		}
+		await run(["git", "add", "-u"], { env });
 	}
 
 	console.error("❌ Max iterations reached; still failing.");
