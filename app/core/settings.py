@@ -11,11 +11,8 @@ from pydantic_settings import (
 
 
 class GithubConfig(BaseModel):
-    """GitHub auth: use app installation (app_id, private_key,
-    installation_id) or token."""
+    """GitHub auth config with app-installation primary and token fallback."""
 
-    client_id: str = ""
-    client_secret: SecretStr = SecretStr("")
     app_id: int = 0
     private_key: SecretStr = SecretStr("")
     installation_id: int = 0
@@ -40,8 +37,17 @@ class AgentsConfig(BaseModel):
     zettelkasten: AgentPromptConfig
 
 
+class WorkflowConfig(BaseModel):
+    """Workflow execution configuration resolved from settings sources."""
+
+    search_limit: int = 15
+    exa_search_type: str = "auto"
+    fetch_code_context: bool = False
+
+
 class Settings(BaseSettings):
     github: GithubConfig | None = None
+    workflow: WorkflowConfig = WorkflowConfig()
 
     # Paths
     MEMORIES_DIR: Path = Path(".memories")

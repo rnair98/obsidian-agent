@@ -1,4 +1,4 @@
-import { Codex } from "@openai/codex-sdk";
+import { CopilotClient, type PermissionRequest } from "@github/copilot-sdk";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -39,28 +39,46 @@ function buildPrompt(preCommitOutput: string) {
 	].join("\n");
 }
 
-async function codexFix(prompt: string) {
-	const codex = new Codex();
-	const thread = codex.startThread({
-		model: "gpt-5.1-codex-mini",
-	});
-	const { events } = await thread.runStreamed(prompt);
+function getGithubToken() {
+	return process.env.COPILOT_TOKEN || process.env.GITHUB_TOKEN;
+}
 
-	for await (const ev of events) {
-		// Stream agent text
-		if (ev.type === "item.completed" && ev.item.type === "agent_message") {
-			process.stdout.write(`${ev.item.text}\n`);
-		}
-		if (ev.type === "turn.failed") {
-			process.stderr.write(`Turn failed: ${ev.error.message}\n`);
-		}
+async function copilotFix(prompt: string, model: string, cliUrl: string) {
+	const githubToken = getGithubToken();
+	if (!githubToken) {
+		throw new Error(
+			"Missing auth token. Set COPILOT_TOKEN or GITHUB_TOKEN and start headless Copilot CLI with COPILOT_GITHUB_TOKEN.",
+		);
 	}
-	process.stdout.write("\n");
+
+	const client = new CopilotClient({
+		cliUrl,
+	});
+
+	let session: Awaited<ReturnType<typeof client.createSession>> | undefined;
+	try {
+		session = await client.createSession({
+			sessionId: `pre-commit-${Date.now()}`,
+			model,
+			onPermissionRequest: async (req: PermissionRequest) => {
+				return { kind: "approved" };
+			},
+		});
+		const response = await session.sendAndWait({ prompt });
+		const text = response?.data?.content;
+		if (text) {
+			process.stdout.write(`${text}\n\n`);
+		}
+	} finally {
+		await session?.disconnect();
+	}
 }
 
 async function main() {
-	const maxIter = Number(process.env.CODEX_MAX_ITER ?? "3");
+	const maxIter = Number(process.env.COPILOT_MAX_ITER ?? process.env.CODEX_MAX_ITER ?? "3");
 	const allFiles = process.env.ALL_FILES === "1";
+	const model = "gpt-5.4-mini";
+	const cliUrl = process.env.COPILOT_CLI_URL ?? "localhost:4321";
 
 	const repoRoot = process.cwd();
 	const precommitHome = resolve(repoRoot, ".cache", "pre-commit");
@@ -86,9 +104,17 @@ async function main() {
 			process.exit(0);
 		}
 
-		// Call Codex to fix based on raw output (you can add structured parsing later).
-		console.log("\n=== Codex SDK run ===");
-		await codexFix(buildPrompt(res.out));
+		console.log("\n=== Copilot SDK run ===");
+		try {
+			await copilotFix(buildPrompt(res.out), model, cliUrl);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			const extra = message.includes("ECONNREFUSED")
+				? `\nHint: start Copilot CLI in headless mode, e.g. \`copilot --headless --port ${cliUrl.split(":").at(-1) ?? "4321"}\`.`
+				: "";
+			console.error(`Copilot SDK failed: ${message}${extra}`);
+			process.exit(1);
+		}
 	}
 
 	console.error("❌ Max iterations reached; still failing.");

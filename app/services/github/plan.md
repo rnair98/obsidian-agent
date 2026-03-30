@@ -1,4 +1,6 @@
-- I need a github client built using pygithub
-- this client needs to manage connections to github using app installation authentication with the client id and client secret
-- we need the connection set by this client to persist across workflow executions in a session => this client will be used by langchain tools used to do code research on Github with github's codesearch api and eventually shallow clone repos to an external persistence storage layer for further indexing and analysis
-- basically new client's shouldn't be created on every tool call 
+- I need a GitHub client built using PyGithub.
+- This client should authenticate primarily via GitHub App installation (`app_id`, `private_key`, `installation_id`), with token fallback for local/dev usage.
+- The connection set by this client must persist across workflow executions in a session, because LangChain tools will reuse it for GitHub code search and later shallow clone operations.
+- New clients should not be created on every tool call.
+- We should keep this layer storage-agnostic so downstream clone/index workflows can use local paths, mounted tmpfs, or bucket-backed mounts without special client logic here.
+- Use PyGithub's [documentation](https://pygithub.readthedocs.io/en/latest/introduction.html) and examples as a guide for any needed restructuring and optimizations.

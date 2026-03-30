@@ -6,11 +6,11 @@ from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.runtime import Runtime
 
+from app.core.logger import logger
+from app.core.settings import settings
 from app.engine.nodes.types import NodeName
 from app.engine.outputs import ZettelkastenOutput
 from app.engine.tools.io import write_zettelkasten_notes
-from app.logger import logger
-from app.settings import settings
 
 if TYPE_CHECKING:
     from langchain.agents import AgentState
@@ -32,8 +32,6 @@ def create_zettelkasten_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
         config: RunnableConfig,
     ) -> dict[str, Any]:
         llm_config = settings.llm.model_dump()
-        if runtime.context.llm_config:
-            llm_config.update(runtime.context.llm_config.model_dump(exclude_unset=True))
         logger.debug(
             "[%s] Using responses API: %s",
             NodeName.ZETTELKASTEN.upper(),

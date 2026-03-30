@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
-from pydantic import BaseModel, Field, field_validator
-
-from app.core.settings import LLMConfig
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchQuery(TypedDict):
@@ -29,11 +27,6 @@ class ResearchContext:
     fetch_code_context: bool = False
     seed_urls: list[str] = field(default_factory=list)
     experiment_snippets: list[str] = field(default_factory=list)
-    llm_config: Optional[LLMConfig] = None
-    github_client: Optional[object] = None  # PyGithub Github instance;
-    # tools use ToolRuntime[ResearchContext]
-    github_repo: Optional[object] = None  # PyGithub Repository when request specifies
-    # github_repo_name
 
 
 class ResearchState(TypedDict):
@@ -52,29 +45,9 @@ class ResearchState(TypedDict):
 
 
 class ResearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     topic: str = Field(..., min_length=3)
     seed_urls: list[str] = Field(default_factory=list)
     experiment_snippets: list[str] = Field(default_factory=list)
     search: SearchQuery | None = None
-    search_limit: int = Field(15, ge=1, le=15)
-    exa_search_type: str = Field("auto")
-    fetch_code_context: bool = False
-    llm_config: LLMConfig | None = None
-    github_repo_names: list[str] = Field(
-        default_factory=list,
-        description="List of valid GitHub repos in the format <org>/<repo_name>",
-    )
-
-    @field_validator("github_repo_names")
-    @classmethod
-    def validate_github_repo_names(cls, v: list[str]) -> list[str]:
-        import re
-
-        pattern = re.compile(r"^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$")
-        invalid = [repo for repo in v if not pattern.match(repo)]
-        if invalid:
-            raise ValueError(
-                f"Invalid GitHub repo names: {invalid}. "
-                "Each must match <org>/<repo_name>."
-            )
-        return v

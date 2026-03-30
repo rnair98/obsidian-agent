@@ -15,9 +15,7 @@ from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
-from app.engine.tools.github import get_github_repo
 from app.engine.tools.io import load_memories
-from app.services.github.auth import get_github_client
 
 
 def execute(workflow_name: str, request: ResearchRequest) -> dict:
@@ -33,21 +31,12 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
 
     memories = load_memories(settings.MEMORIES_DIR)
 
-    github_client = get_github_client()
-    github_repo = (
-        get_github_repo(request.github_repo_name)
-        if request.github_repo_name
-        else None
-    )
     context = ResearchContext(
-        search_limit=request.search_limit,
-        exa_search_type=request.exa_search_type,
-        fetch_code_context=request.fetch_code_context,
+        search_limit=settings.workflow.search_limit,
+        exa_search_type=settings.workflow.exa_search_type,
+        fetch_code_context=settings.workflow.fetch_code_context,
         seed_urls=request.seed_urls,
         experiment_snippets=request.experiment_snippets,
-        llm_config=request.llm_config,
-        github_client=github_client,
-        github_repo=github_repo,
     )
 
     state = ResearchState(

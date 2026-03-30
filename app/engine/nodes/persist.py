@@ -1,8 +1,8 @@
 from pathlib import Path
 
+from app.core.settings import settings
 from app.engine.schema import ResearchState
 from app.engine.tools.io import persist_memories, write_sources
-from app.settings import settings
 
 
 def persist_artifacts(state: ResearchState) -> ResearchState:
