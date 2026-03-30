@@ -11,35 +11,31 @@ from app.core.logger import logger
 if TYPE_CHECKING:
     from github.Repository import Repository
 
-    from app.core.settings import GithubConfig
-
-_cached_github: Github | None = None
-_cached_config_key: tuple[str, int, int, bool] | None = None
+import functools
 
 
-def _config_cache_key(cfg: "GithubConfig") -> tuple[str, int, int, bool]:
-    """Stable, non-secret key used to invalidate stale client cache."""
-    token_present = bool(cfg.token.get_secret_value())
-    private_key_value = cfg.private_key.get_secret_value()
-    private_key_hash = hash(private_key_value) if private_key_value else 0
+@functools.lru_cache(maxsize=1)
+def _create_github_client(
+    app_id: str, installation_id: int, private_key_val: str
+) -> Github | None:
+    """Creates and caches the GitHub client based on auth params."""
+    if app_id and private_key_val and installation_id:
+        app_auth = Auth.AppAuth(int(app_id), private_key_val)
+        installation_auth = Auth.AppInstallationAuth(app_auth, installation_id)
+        logger.debug("Initialized GitHub client using app installation auth")
+        return Github(auth=installation_auth)
 
-    return (
-        str(cfg.app_id),
-        int(cfg.installation_id),
-        private_key_hash,
-        token_present,
-    )
+    logger.warning("GitHub client not initialized: incomplete App auth configuration")
+    return None
 
 
 def get_github_client() -> Github | None:
     """
     Return a PyGithub client authenticated as the app installation.
     Uses a single cached instance per process so the connection
-    persists across workflow runs.
-    Returns None if GitHub is not configured (no app credentials or token).
+    persists across workflow runs. Auto-invalidates if settings change.
+    Returns None if GitHub is not configured (no app credentials).
     """
-    global _cached_github, _cached_config_key
-
     from app.core.settings import settings
 
     cfg = settings.github
@@ -47,30 +43,9 @@ def get_github_client() -> Github | None:
         logger.debug("GitHub config missing; client unavailable")
         return None
 
-    config_key = _config_cache_key(cfg)
-    if _cached_github is not None and _cached_config_key == config_key:
-        return _cached_github
-
-    _cached_github = None
-    _cached_config_key = None
-
-    token = cfg.token.get_secret_value()
-    if token:
-        _cached_github = Github(auth=Auth.Token(token))
-        _cached_config_key = config_key
-        logger.debug("Initialized GitHub client using token auth")
-        return _cached_github
-
-    if cfg.app_id and cfg.private_key.get_secret_value() and cfg.installation_id:
-        app_auth = Auth.AppAuth(cfg.app_id, cfg.private_key.get_secret_value())
-        installation_auth = Auth.AppInstallationAuth(app_auth, cfg.installation_id)
-        _cached_github = Github(auth=installation_auth)
-        _cached_config_key = config_key
-        logger.debug("Initialized GitHub client using app installation auth")
-        return _cached_github
-
-    logger.warning("GitHub client not initialized: incomplete auth configuration")
-    return None
+    return _create_github_client(
+        str(cfg.app_id), cfg.installation_id, cfg.private_key.get_secret_value()
+    )
 
 
 def get_github_repo(repo_name: str) -> "Repository | None":
@@ -98,6 +73,4 @@ def get_github_repo(repo_name: str) -> "Repository | None":
 
 def clear_github_client() -> None:
     """Clear the cached client (e.g. for tests or config change)."""
-    global _cached_github, _cached_config_key
-    _cached_github = None
-    _cached_config_key = None
+    _create_github_client.cache_clear()

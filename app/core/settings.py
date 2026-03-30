@@ -11,12 +11,11 @@ from pydantic_settings import (
 
 
 class GithubConfig(BaseModel):
-    """GitHub auth config with app-installation primary and token fallback."""
+    """GitHub auth config using app-installation (primary/only method)."""
 
     app_id: int = 0
     private_key: SecretStr = SecretStr("")
     installation_id: int = 0
-    token: SecretStr = SecretStr("")
 
 
 class LLMConfig(BaseModel):
