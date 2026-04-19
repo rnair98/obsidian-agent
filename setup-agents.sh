@@ -270,8 +270,11 @@ main() {
         old_rev=$(cd "$source_repo" && git rev-parse HEAD 2>/dev/null || echo "none")
         (
             cd "$source_repo"
+            # Fetch resolves branches, tags, or SHAs into FETCH_HEAD. Reset
+            # via FETCH_HEAD rather than "origin/$PLUGIN_VERSION" so tags
+            # (e.g. PLUGIN_VERSION=v2.0) don't fail with an unknown-ref.
             git fetch --depth 1 origin "$PLUGIN_VERSION" &>/dev/null
-            git reset --hard "origin/$PLUGIN_VERSION" &>/dev/null
+            git reset --hard FETCH_HEAD &>/dev/null
         ) || die "Failed to update repository at '$source_repo'"
         
         local new_rev
