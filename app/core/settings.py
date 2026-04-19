@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Checkpointer (LangGraph AsyncPostgresSaver connection string)
+    DATABASE_URL: str = ""
+
     # API Keys
     BRAVE_SEARCH_API_KEY: str = ""
     EXA_API_KEY: str = ""

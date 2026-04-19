@@ -13,10 +13,12 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
 from app.core.settings import settings
+from app.engine.backends import get_filesystem_backend
 from app.engine.nodes.types import Workflow
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
 from app.engine.tools.io import load_memories
+from app.services.gh_client.auth import get_github_client
 
 
 async def execute(
@@ -27,12 +29,13 @@ async def execute(
     """
     logger.info(f"Running workflow: {workflow_name} for topic: {request.topic}")
 
-    checkpointer = AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL)
     config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
-    graph = get_workflow(workflow_name, checkpointer)
-
-    memories = load_memories(settings.MEMORIES_DIR)
+    backend = get_filesystem_backend(
+        backend_type=settings.filesystem.backend_type,
+        base_path=settings.filesystem.base_path,
+    )
+    memories = load_memories(settings.MEMORIES_DIR, backend=backend)
 
     context = ResearchContext(
         search_limit=settings.workflow.search_limit,
@@ -58,12 +61,18 @@ async def execute(
         zettelkasten_notes=[],
         reasoning=[],
         key_insights=[],
+        backend=backend,
+        gh_client=get_github_client(),
     )
 
-    result = await graph.ainvoke(
-        input=state,
-        config=config,
-        context=context,
-    )
+    async with AsyncPostgresSaver.from_conn_string(
+        settings.DATABASE_URL
+    ) as checkpointer:
+        graph = get_workflow(workflow_name, checkpointer)
+        result = await graph.ainvoke(
+            input=state,
+            config=config,
+            context=context,
+        )
 
     return result

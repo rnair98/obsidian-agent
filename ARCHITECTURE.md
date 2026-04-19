@@ -328,6 +328,8 @@ Settings resolve in this priority order
   `fetch_code_context`.
 - `filesystem: FilesystemConfig` — `backend_type`, `base_path`.
 - **Paths** — `MEMORIES_DIR`, `VAULT_DIR`, `OUTPUT_DIR`, `LOGS_DIR`.
+- **`DATABASE_URL`** — Postgres connection string for the LangGraph
+  `AsyncPostgresSaver` checkpointer. Empty string disables checkpointing.
 - **API keys** — `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `JINA_API_KEY`.
 
 Anything else in `.env` is silently ignored (`extra="ignore"`).
