@@ -40,7 +40,8 @@ function buildPrompt(preCommitOutput: string) {
 }
 
 async function copilotFix(prompt: string, model: string) {
-	const client = new CopilotClient({});
+	const cliUrl = process.env.COPILOT_CLI_URL;
+	const client = new CopilotClient(cliUrl ? { cliUrl } : {});
 
 	let session: Awaited<ReturnType<typeof client.createSession>> | undefined;
 	try {
