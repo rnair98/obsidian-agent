@@ -4,8 +4,12 @@
 
 **A LangGraph research pipeline that turns a topic into a report, atomic Zettel notes, and durable memories — through three sequential LLM agents.**
 
+<a href="https://opensource.org/licenses/Apache-2.0">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" />
+</a>
+<br></br>
 *Researcher → Summarizer → Zettelkasten → Persist*
-
+<br></br>
 </div>
 
 A single POST kicks off a full research run: the researcher gathers
