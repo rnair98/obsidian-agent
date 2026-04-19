@@ -449,8 +449,14 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 - **Logging config is loaded on first import of `core/logger`.** Changing
   `LOG_LEVEL` after import has no effect on handlers already attached.
 - **Phoenix `register()` runs in the FastAPI lifespan** with
-  `project_name="code-reviewer"` (historical). If renaming, coordinate with
-  any external Phoenix project dashboards.
+  `project_name="obsidian-agent"`. If renaming, coordinate with any
+  external Phoenix project dashboards.
+- **Two filesystem backends coexist at runtime.** `settings.filesystem`
+  routes agent artifacts (`.memories`, `.vault`, `outputs`) to repo root
+  (`base_path=Path(".")`). `GitHubRepositoryService` instantiates its own
+  backend rooted at `DEFAULT_ASSETS_DIR` so snapshots stay under
+  `.assets/{owner}/{repo}@{sha}`. Do not collapse them into one backend
+  unless you also update every caller — this separation is load-bearing.
 - **`SearchQuery` typed dict is used both by the HTTP request and the
   search-tool query builder.** Changing its shape is a three-way break
   (API, state, tools).

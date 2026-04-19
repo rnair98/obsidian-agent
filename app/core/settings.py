@@ -10,7 +10,6 @@ from pydantic_settings import (
 )
 
 from app.core.paths import (
-    DEFAULT_ASSETS_DIR,
     DEFAULT_LOGS_DIR,
     DEFAULT_MEMORIES_DIR,
     DEFAULT_OUTPUT_DIR,
@@ -62,10 +61,17 @@ class WorkflowConfig(BaseModel):
 
 
 class FilesystemConfig(BaseModel):
-    """Filesystem backend configuration for local artifact persistence."""
+    """Filesystem backend configuration for local artifact persistence.
+
+    ``base_path`` sandboxes every relative path written through the backend.
+    It defaults to the current working directory so that the documented
+    artifact dirs (``.memories``, ``.vault``, ``outputs``) land at repo root
+    rather than nested under ``.assets``. GitHub snapshots opt into the
+    ``.assets`` sandbox explicitly via ``GitHubRepositoryService``.
+    """
 
     backend_type: FilesystemBackendType = FilesystemBackendType.IN_PROCESS
-    base_path: Path = DEFAULT_ASSETS_DIR
+    base_path: Path = Path(".")
 
 
 class Settings(BaseSettings):
