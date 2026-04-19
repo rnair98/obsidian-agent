@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from github import GithubException
@@ -39,6 +38,9 @@ class GitHubRepositoryService:
             base_path=base_path or DEFAULT_ASSETS_DIR
         )
         self.repo = self._get_repo(repo_name)
+        # Per-instance tree cache keyed by commit sha; avoids the
+        # lru_cache-on-method pattern that would pin ``self`` forever.
+        self._tree_cache: dict[str, Any] = {}
 
     def _get_repo(self, repo_name: str | None) -> "Repository | None":
         """Return a repository handle for `<owner>/<repo>` or None on access errors."""
@@ -80,9 +82,13 @@ class GitHubRepositoryService:
             )
             return None
 
-    @lru_cache(maxsize=1)
-    def _get_tree_for_commit_sha(self, commit_sha: str):
-        return self.repo.get_git_tree(commit_sha, recursive=True).tree
+    def _get_tree_for_commit_sha(self, commit_sha: str) -> Any:
+        cached = self._tree_cache.get(commit_sha)
+        if cached is not None:
+            return cached
+        tree = self.repo.get_git_tree(commit_sha, recursive=True).tree
+        self._tree_cache[commit_sha] = tree
+        return tree
 
     def shallow_clone(
         self,
@@ -168,6 +174,16 @@ class GitHubRepositoryService:
                 commit_sha,
                 exc,
             )
+            # Best-effort cleanup of the empty dir we created above.
+            try:
+                self.filesystem_backend.delete_dir(
+                    snapshot_relative_dir, missing_ok=True
+                )
+            except Exception:
+                logger.debug(
+                    "Failed to clean up partial snapshot at '%s'",
+                    snapshot_relative_dir,
+                )
             return None
 
     def _installation_token(self) -> str | None:
