@@ -6,7 +6,7 @@ from phoenix.otel import register
 # Import graphs package to trigger workflow registration
 import app.engine.graphs  # noqa: F401
 from app.api.v1.router import api_router
-from app.logger import logger
+from app.core.logger import logger
 
 
 @asynccontextmanager

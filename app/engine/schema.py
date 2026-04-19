@@ -46,7 +46,7 @@ class ResearchState(TypedDict):
     reasoning: list[str]
     key_insights: list[str]
     backend: FilesystemBackend
-    gh_client: Github
+    gh_client: Github | None
 
 
 class ResearchRequest(BaseModel):

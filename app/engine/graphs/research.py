@@ -8,7 +8,7 @@ from langgraph.graph.state import StateGraph
 from app.engine.nodes.persist import persist_artifacts
 from app.engine.nodes.researcher import create_researcher_agent
 from app.engine.nodes.summarizer import create_summarizer_agent
-from app.engine.nodes.types import NodeName
+from app.engine.nodes.types import Workflow
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
 from app.engine.schema import ResearchContext, ResearchState
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
 
-@workflow(NodeName.RESEARCH)
+@workflow(Workflow.RESEARCH)
 def create_research_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph[
         ResearchState,
@@ -32,14 +32,14 @@ def create_research_workflow(checkpointer: BaseCheckpointSaver) -> CompiledState
     summarizer = create_summarizer_agent()
     zettelkasten = create_zettelkasten_agent()
 
-    graph.add_node(NodeName.RESEARCHER, researcher)
-    graph.add_node(NodeName.SUMMARIZER, summarizer)
-    graph.add_node(NodeName.ZETTELKASTEN, zettelkasten)
-    graph.add_node(NodeName.PERSIST, persist_artifacts)
+    graph.add_node(Workflow.RESEARCHER, researcher)
+    graph.add_node(Workflow.SUMMARIZER, summarizer)
+    graph.add_node(Workflow.ZETTELKASTEN, zettelkasten)
+    graph.add_node(Workflow.PERSIST, persist_artifacts)
 
-    graph.add_edge(START, NodeName.RESEARCHER)
-    graph.add_edge(NodeName.RESEARCHER, NodeName.SUMMARIZER)
-    graph.add_edge(NodeName.SUMMARIZER, NodeName.ZETTELKASTEN)
-    graph.add_edge(NodeName.ZETTELKASTEN, NodeName.PERSIST)
-    graph.add_edge(NodeName.PERSIST, END)
+    graph.add_edge(START, Workflow.RESEARCHER)
+    graph.add_edge(Workflow.RESEARCHER, Workflow.SUMMARIZER)
+    graph.add_edge(Workflow.SUMMARIZER, Workflow.ZETTELKASTEN)
+    graph.add_edge(Workflow.ZETTELKASTEN, Workflow.PERSIST)
+    graph.add_edge(Workflow.PERSIST, END)
     return graph.compile(checkpointer=checkpointer)

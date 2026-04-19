@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import BinaryIO, Protocol, TextIO
+from typing import BinaryIO, Protocol, TextIO, runtime_checkable
 
 
+@runtime_checkable
 class FilesystemBackend(Protocol):
     base_path: Path
 
