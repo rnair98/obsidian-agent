@@ -15,13 +15,13 @@ def timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def ensure_dir(path: Path, backend: FilesystemBackend | None = None) -> None:
+def ensure_dir(path: Path, backend: FilesystemBackend) -> None:
     backend.mkdir(path)
 
 
 def load_memories(
     memories_dir: Path,
-    backend: FilesystemBackend | None = None,
+    backend: FilesystemBackend,
 ) -> list[str]:
     if not backend.is_dir(memories_dir):
         return []
@@ -55,9 +55,9 @@ def persist_memories(
     reasoning: list[str],
     sources: list[dict[str, str]],
     report_path: Path | None,
-    backend: FilesystemBackend | None = None,
+    backend: FilesystemBackend,
 ) -> list[Path]:
-    ensure_dir(memories_dir, filesystem_backend=backend)
+    ensure_dir(memories_dir, backend=backend)
     slug = topic.lower().replace(" ", "-")
     timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
     memory_path = memories_dir / f"{slug}-{timestamp}.md"
@@ -95,9 +95,9 @@ def persist_memories(
 def write_sources(
     sources_path: Path,
     sources: list[dict[str, str]],
-    backend: FilesystemBackend | None = None,
+    backend: FilesystemBackend,
 ) -> None:
-    ensure_dir(sources_path.parent, filesystem_backend=backend)
+    ensure_dir(sources_path.parent, backend=backend)
     frame = pl.DataFrame(
         {
             "title": [entry.get("title", "") for entry in sources],
@@ -127,7 +127,7 @@ def write_report(content: str, runtime: ToolRuntime[ResearchState]) -> str:
     """
     backend: FilesystemBackend = runtime.state["backend"]
     output_path = settings.OUTPUT_DIR / "report.md"
-    ensure_dir(output_path.parent, filesystem_backend=backend)
+    ensure_dir(output_path.parent, backend=backend)
     written_path = backend.write_text(output_path, content, encoding="utf-8")
     return f"Report saved to {written_path}"
 
@@ -148,7 +148,7 @@ def write_zettelkasten_notes(notes: list[ZettelNote], runtime: ToolRuntime) -> s
     """
     vault_dir = settings.VAULT_DIR
     backend: FilesystemBackend = runtime.state["backend"]
-    ensure_dir(vault_dir, filesystem_backend=backend)
+    ensure_dir(vault_dir, backend=backend)
     # Simplified for the tool version, assuming inputs are pre-formatted
     # or we format them here.
     count = 0

@@ -25,18 +25,18 @@ def clean_terms(terms: list[str]) -> list[str]:
 
 
 def build_boolean_query(query: SearchQuery) -> str:
-    if query.raw:
-        return query.raw
+    if query["raw"]:
+        return query["raw"]
 
     parts: list[str] = []
-    any_terms = clean_terms(query.any_terms)
-    all_terms = clean_terms(query.all_terms)
-    phrases = clean_terms(query.phrases)
-    excluded = clean_terms(query.excluded)
-    sites = clean_terms(query.sites)
-    filetypes = clean_terms(query.filetypes)
-    intitle = clean_terms(query.intitle)
-    inurl = clean_terms(query.inurl)
+    any_terms = clean_terms(query["any_terms"])
+    all_terms = clean_terms(query["all_terms"])
+    phrases = clean_terms(query["phrases"])
+    excluded = clean_terms(query["excluded"])
+    sites = clean_terms(query["sites"])
+    filetypes = clean_terms(query["filetypes"])
+    intitle = clean_terms(query["intitle"])
+    inurl = clean_terms(query["inurl"])
 
     if any_terms:
         if len(any_terms) == 1:
@@ -67,11 +67,11 @@ def build_boolean_query(query: SearchQuery) -> str:
 
 
 def build_semantic_query(query: SearchQuery, fallback: str) -> str:
-    if query.raw:
-        return query.raw
-    all_terms = clean_terms(query.all_terms)
-    any_terms = clean_terms(query.any_terms)
-    phrases = clean_terms(query.phrases)
+    if query["raw"]:
+        return query["raw"]
+    all_terms = clean_terms(query["all_terms"])
+    any_terms = clean_terms(query["any_terms"])
+    phrases = clean_terms(query["phrases"])
     parts = phrases + all_terms + any_terms
     return " ".join(parts) if parts else fallback
 
