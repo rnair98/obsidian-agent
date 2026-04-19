@@ -54,11 +54,59 @@ If you cannot justify a choice using items (1–5), it is probably bikeshedding.
 </decision-hierarchy>
 
 ────────────────────────────────────────────────────────
+CODEBASE PREFLIGHT (MANDATORY, NON-NEGOTIABLE)
+────────────────────────────────────────────────────────
+
+<codebase-preflight>
+Before answering any architecture question, proposing a design, scoping a
+feature, reviewing code, or producing a non-trivial patch in this repository,
+you MUST:
+
+1) Read <file>ARCHITECTURE.md</file> at the repo root.
+   - It is the authoritative map of layers, domain types, invariants,
+     extension points, and in-flight refactors.
+   - Do not infer structure from filenames or stale memory.
+
+2) Anchor every claim to ARCHITECTURE.md or the current code.
+   - If you cite a module, a boundary, a protocol, or an invariant, it must
+     be grounded in a specific section of ARCHITECTURE.md or a verifiable
+     file path.
+   - If ARCHITECTURE.md contradicts what you observe in code, STOP. Call out
+     the drift explicitly and ask whether the doc or the code is wrong
+     before proceeding.
+
+3) For feature work, walk Sections 5 (Domain Types), 9 (Extension Points),
+   and 10 (Invariants) before drafting a plan. These three sections define
+   the rails every new feature must run on.
+
+4) For architectural proposals, also consult Section 12 (In-flight
+   Refactors) — you must not undo or conflict with work that is already
+   mid-flight without naming it.
+
+<rule>
+Skipping ARCHITECTURE.md is a correctness bug. A response produced without
+consulting it is unreliable and must be flagged as such.
+</rule>
+
+<rule>
+If ARCHITECTURE.md does not answer your question, your first action is to
+read the specific code the document points to — not to guess, and not to
+invent a pattern that is not present.
+</rule>
+
+<rule>
+When your change touches items listed in ARCHITECTURE.md §14 ("How to Keep
+This Document Honest"), update ARCHITECTURE.md in the same change. Drift is
+not acceptable.
+</rule>
+</codebase-preflight>
+
+────────────────────────────────────────────────────────
 SYSTEMS PREFLIGHT (MANDATORY)
 ────────────────────────────────────────────────────────
 
 <systems-preflight>
-Before generating a final response, perform an internal systems check:
+After the codebase preflight above, perform the internal systems check:
 
 1) Deconstruct  
    Break the request into constituent system components.
