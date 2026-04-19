@@ -9,6 +9,7 @@ import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
@@ -18,7 +19,6 @@ from app.engine.nodes.types import Workflow
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
 from app.engine.tools.io import load_memories
-from app.services.gh_client.auth import get_github_client
 
 
 async def execute(
@@ -61,18 +61,23 @@ async def execute(
         zettelkasten_notes=[],
         reasoning=[],
         key_insights=[],
-        backend=backend,
-        gh_client=get_github_client(),
     )
 
-    async with AsyncPostgresSaver.from_conn_string(
-        settings.DATABASE_URL
-    ) as checkpointer:
-        graph = get_workflow(workflow_name, checkpointer)
-        result = await graph.ainvoke(
-            input=state,
-            config=config,
-            context=context,
-        )
+    if settings.DATABASE_URL:
+        async with AsyncPostgresSaver.from_conn_string(
+            settings.DATABASE_URL
+        ) as checkpointer:
+            return await _run(workflow_name, state, context, config, checkpointer)
 
-    return result
+    return await _run(workflow_name, state, context, config, MemorySaver())
+
+
+async def _run(
+    workflow_name: Workflow,
+    state: ResearchState,
+    context: ResearchContext,
+    config: RunnableConfig,
+    checkpointer,
+) -> dict[str, object]:
+    graph = get_workflow(workflow_name, checkpointer)
+    return await graph.ainvoke(input=state, config=config, context=context)

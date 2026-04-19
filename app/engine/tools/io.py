@@ -3,12 +3,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
-from langchain.tools import ToolRuntime, tool
+from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.core.settings import settings
+from app.engine.backends import get_filesystem_backend
 from app.engine.backends.protocol import FilesystemBackend
-from app.engine.schema import ResearchState
+
+
+def _resolve_backend() -> FilesystemBackend:
+    return get_filesystem_backend(
+        backend_type=settings.filesystem.backend_type,
+        base_path=settings.filesystem.base_path,
+    )
 
 
 def timestamp() -> str:
@@ -59,8 +66,8 @@ def persist_memories(
 ) -> list[Path]:
     ensure_dir(memories_dir, backend=backend)
     slug = topic.lower().replace(" ", "-")
-    timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-    memory_path = memories_dir / f"{slug}-{timestamp}.md"
+    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    memory_path = memories_dir / f"{slug}-{ts}.md"
     content = "\n".join(
         [
             "---",
@@ -110,22 +117,33 @@ def write_sources(
     frame.write_csv(backend.resolve(sources_path))
 
 
-@tool
+@tool(parse_docstring=True)
 def save_note(note: str) -> str:
-    """
-    Save a research note or insight to the shared state.
-    Use this to record important findings, data points, or hypotheses.
+    """Record a research note or insight for later synthesis.
+
+    Use this to capture important findings, data points, or hypotheses
+    during the research phase.
+
+    Args:
+        note: Free-form markdown text of the observation or insight.
+
+    Returns:
+        A short acknowledgement string echoing the saved note.
     """
     return f"Note saved: {note}"
 
 
-@tool
-def write_report(content: str, runtime: ToolRuntime[ResearchState]) -> str:
+@tool(parse_docstring=True)
+def write_report(content: str) -> str:
+    """Write the final research report to ``settings.OUTPUT_DIR / report.md``.
+
+    Args:
+        content: Full markdown body of the report.
+
+    Returns:
+        A status string naming the resolved output path.
     """
-    Write the final research report to the disk.
-    The content should be a complete markdown string.
-    """
-    backend: FilesystemBackend = runtime.state["backend"]
+    backend = _resolve_backend()
     output_path = settings.OUTPUT_DIR / "report.md"
     ensure_dir(output_path.parent, backend=backend)
     written_path = backend.write_text(output_path, content, encoding="utf-8")
@@ -141,13 +159,20 @@ class ZettelNote(BaseModel):
     )
 
 
-@tool
-def write_zettelkasten_notes(notes: list[ZettelNote], runtime: ToolRuntime) -> str:
-    """
-    Save extracted Zettelkasten notes to the vault.
+@tool(parse_docstring=True)
+def write_zettelkasten_notes(notes: list[ZettelNote]) -> str:
+    """Persist extracted atomic notes to ``settings.VAULT_DIR``.
+
+    Args:
+        notes: Collection of atomic notes to write. Each note's ``content``
+            is saved as ``{id}.md`` in the vault.
+
+    Returns:
+        A status string naming the number of notes written and the vault
+        path they were saved to.
     """
     vault_dir = settings.VAULT_DIR
-    backend: FilesystemBackend = runtime.state["backend"]
+    backend = _resolve_backend()
     ensure_dir(vault_dir, backend=backend)
     # Simplified for the tool version, assuming inputs are pre-formatted
     # or we format them here.
