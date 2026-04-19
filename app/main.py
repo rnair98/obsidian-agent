@@ -13,7 +13,7 @@ from app.core.logger import logger
 async def lifespan(app: FastAPI):
     # Startup
     register(
-        project_name="code-reviewer",
+        project_name="obsidian-agent",
         auto_instrument=True,
     )
     logger.info("Phoenix OTEL tracer registered")
@@ -28,4 +28,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Code Reviewer API"}
+    return {"message": "Welcome to the obsidian-agent API"}

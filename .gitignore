@@ -4,7 +4,6 @@
 .vscode
 
 # documentation & logs
-TASKS.md
 PLAN.md
 verify_*
 .logs/
