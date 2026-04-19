@@ -3,34 +3,30 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from langchain.agents.structured_output import ProviderStrategy
-from langchain_core.messages import AnyMessage
-from langgraph.runtime import Runtime
 
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.nodes.builders.agent import build_agent_executor, run_agent_executor
-from app.engine.nodes.types import Workflow
+from app.engine.nodes.types import AgentNode, Workflow
 from app.engine.outputs import SummarizerOutput
 from app.engine.tools.io import write_report
 
 if TYPE_CHECKING:
-    from langchain.agents import AgentState
-    from langchain_core.messages import ResponseT
     from langchain_core.runnables import RunnableConfig
-    from langgraph.graph.state import CompiledStateGraph
     from langgraph.runtime import Runtime
 
+    from app.engine.nodes.builders.agent import AgentRunResult
     from app.engine.schema import ResearchContext, ResearchState
 
 
-def create_summarizer_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
+def create_summarizer_agent() -> AgentNode:
     TOOLS = [write_report]
 
-    def summarizer_node(
+    async def summarizer_node(
         state: ResearchState,
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
-    ) -> dict[str, list[AnyMessage]]:
+    ) -> AgentRunResult:
         logger.debug(
             f"[{Workflow.SUMMARIZER.upper()}] Using responses API: "
             f"{settings.llm.use_responses_api}"
@@ -46,7 +42,7 @@ def create_summarizer_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
             response_format=ProviderStrategy(SummarizerOutput),
         )
 
-        return run_agent_executor(
+        return await run_agent_executor(
             agent_executor,
             state=state,
             runtime_context=runtime.context,
