@@ -83,7 +83,7 @@ class InProcessFilesystemBackend:
         self,
         path: str | Path,
         mode: str = "r",
-        encoding: str = "utf-8",
+        encoding: str | None = "utf-8",
     ) -> TextIO | BinaryIO:
         target = self.resolve(path)
         if "b" in mode:
@@ -94,7 +94,7 @@ class InProcessFilesystemBackend:
         self,
         path: str | Path,
         mode: str = "w",
-        encoding: str = "utf-8",
+        encoding: str | None = "utf-8",
     ) -> TextIO | BinaryIO:
         target = self.resolve(path)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -104,23 +104,28 @@ class InProcessFilesystemBackend:
 
     def delete_file(self, path: str | Path, missing_ok: bool = True) -> None:
         target = self.resolve(path)
-        if missing_ok and not target.exists():
-            return
-        target.unlink(missing_ok=missing_ok)
+        try:
+            target.unlink()
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
 
     def delete_dir(self, path: str | Path, missing_ok: bool = True) -> None:
         target = self.resolve(path)
-        if missing_ok and not target.exists():
-            return
         if target.is_file():
             raise InvalidPathError(f"Expected directory path, got file: {target}")
-        shutil.rmtree(target)
+        try:
+            shutil.rmtree(target)
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
 
     def move(self, src: str | Path, dst: str | Path) -> Path:
         source = self.resolve(src)
         destination = self.resolve(dst)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        source.rename(destination)
+        # shutil.move handles cross-filesystem moves (fallback to copy+delete).
+        shutil.move(source, destination)
         return destination
 
     def extract_tar_bytes(

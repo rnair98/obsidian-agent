@@ -42,15 +42,19 @@ class FilesystemBackend(Protocol):
         self,
         path: str | Path,
         mode: str = "r",
-        encoding: str = "utf-8",
-    ) -> TextIO | BinaryIO: ...
+        encoding: str | None = "utf-8",
+    ) -> TextIO | BinaryIO:
+        """Open ``path`` for reading. ``encoding`` must be ``None`` for binary modes."""
+        ...
 
     def open_write(
         self,
         path: str | Path,
         mode: str = "w",
-        encoding: str = "utf-8",
-    ) -> TextIO | BinaryIO: ...
+        encoding: str | None = "utf-8",
+    ) -> TextIO | BinaryIO:
+        """Open ``path`` for writing. ``encoding`` must be ``None`` for binary modes."""
+        ...
 
     def delete_file(self, path: str | Path, missing_ok: bool = True) -> None: ...
 

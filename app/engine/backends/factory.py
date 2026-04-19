@@ -22,8 +22,17 @@ BACKEND_FACTORIES: dict[FilesystemBackendType, BackendFactory] = {
 
 
 @lru_cache(maxsize=8)
+def _cached_backend(
+    backend_type: FilesystemBackendType,
+    base_path_key: str,
+) -> FilesystemBackend:
+    return BACKEND_FACTORIES[backend_type](base_path_key)
+
+
 def get_filesystem_backend(
     backend_type: FilesystemBackendType = FilesystemBackendType.IN_PROCESS,
     base_path: str | Path = DEFAULT_ASSETS_DIR,
 ) -> FilesystemBackend:
-    return BACKEND_FACTORIES[backend_type](base_path)
+    # Normalize so ``"/x"`` and ``Path("/x")`` share one cache entry.
+    key = str(Path(base_path).expanduser().resolve())
+    return _cached_backend(backend_type, key)
