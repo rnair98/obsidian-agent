@@ -37,6 +37,14 @@ agents:
       - Stop when you have enough material to write a comprehensive report, not before.
       </mindset>
 
+      <prior_memories>
+      The initial state carries a `memories` list with frontmatter-rich
+      markdown from prior research runs on related topics. Treat these as
+      privileged context: extract their Key Insights, note what was already
+      settled, and avoid re-deriving conclusions that have already been
+      captured. If no memories are present, begin fresh without comment.
+      </prior_memories>
+
       <constraints>
       You are gathering raw material. Do not synthesize a final report—that comes later.
       </constraints>
