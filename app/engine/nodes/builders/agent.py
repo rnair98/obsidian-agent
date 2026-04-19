@@ -12,6 +12,7 @@ from langgraph.graph.state import CompiledStateGraph
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.schema import ResearchContext, ResearchState
+from app.engine.tools.middleware import context_editing, tool_retry
 
 
 class AgentRunResult(TypedDict):
@@ -50,6 +51,7 @@ def build_agent_executor(
         tools=tools,
         system_prompt=system_prompt,
         response_format=response_format,
+        middleware=[tool_retry, context_editing],
     )
 
 
