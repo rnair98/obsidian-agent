@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" />
 </a>
 <br></br>
-*Researcher → Summarizer → Zettelkasten → Persist*
+<i>Researcher → Summarizer → Zettelkasten → Persist</i>
 <br></br>
 </div>
 
