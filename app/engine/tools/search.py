@@ -4,8 +4,8 @@ import httpx
 import orjson
 from langchain_core.tools import tool
 
+from app.core.settings import settings
 from app.engine.schema import SearchQuery
-from app.settings import settings
 
 
 def quote_term(term: str) -> str:

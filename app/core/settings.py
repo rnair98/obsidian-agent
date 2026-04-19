@@ -1,13 +1,22 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from app.core.paths import (
+    DEFAULT_ASSETS_DIR,
+    DEFAULT_LOGS_DIR,
+    DEFAULT_MEMORIES_DIR,
+    DEFAULT_OUTPUT_DIR,
+    DEFAULT_VAULT_DIR,
+)
+from app.engine.backends.factory import FilesystemBackendType
 
 
 class GithubConfig(BaseModel):
@@ -22,6 +31,14 @@ class LLMConfig(BaseModel):
     """LLM configuration. Only model is required; all other params pass through."""
 
     model: str
+    use_responses_api: bool = True
+    reasoning_effort: Optional[Literal["low", "medium", "high", "xhigh"]] = None
+    verbosity: Optional[Literal["low", "medium", "high"]] = None
+    streaming: bool = False
+    stream_usage: bool = False
+    timeout: Optional[int] = None
+    temperature: float = 1.0
+    model_kwargs: dict = Field(default_factory=dict)
     api_key: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 
@@ -44,15 +61,23 @@ class WorkflowConfig(BaseModel):
     fetch_code_context: bool = False
 
 
+class FilesystemConfig(BaseModel):
+    """Filesystem backend configuration for local artifact persistence."""
+
+    backend_type: FilesystemBackendType = FilesystemBackendType.IN_PROCESS
+    base_path: Path = DEFAULT_ASSETS_DIR
+
+
 class Settings(BaseSettings):
     github: GithubConfig | None = None
     workflow: WorkflowConfig = WorkflowConfig()
+    filesystem: FilesystemConfig = FilesystemConfig()
 
     # Paths
-    MEMORIES_DIR: Path = Path(".memories")
-    VAULT_DIR: Path = Path(".vault")
-    OUTPUT_DIR: Path = Path("outputs")
-    LOGS_DIR: Path = Path(".logs")
+    MEMORIES_DIR: Path = DEFAULT_MEMORIES_DIR
+    VAULT_DIR: Path = DEFAULT_VAULT_DIR
+    OUTPUT_DIR: Path = DEFAULT_OUTPUT_DIR
+    LOGS_DIR: Path = DEFAULT_LOGS_DIR
 
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -77,7 +102,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         extra="ignore",
-        yaml_file=Path(__file__).parent.parent / "resources" / "agent_config.yaml",
+        yaml_file=Path(__file__).parent / "resources" / "agent_config.yaml",
     )
 
     @classmethod

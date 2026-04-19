@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class NodeName(StrEnum):
+class Workflow(StrEnum):
     RESEARCHER = "researcher"
     SUMMARIZER = "summarizer"
     ZETTELKASTEN = "zettelkasten"

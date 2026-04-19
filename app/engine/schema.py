@@ -3,9 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Annotated, TypedDict
 
+from github import Github
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.engine.backends.protocol import FilesystemBackend
 
 
 class SearchQuery(TypedDict):
@@ -20,7 +23,7 @@ class SearchQuery(TypedDict):
     inurl: list[str]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ResearchContext:
     search_limit: int = 15
     exa_search_type: str = "auto"
@@ -42,6 +45,8 @@ class ResearchState(TypedDict):
     memories: list[str]
     reasoning: list[str]
     key_insights: list[str]
+    backend: FilesystemBackend
+    gh_client: Github
 
 
 class ResearchRequest(BaseModel):

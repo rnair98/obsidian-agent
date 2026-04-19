@@ -1,7 +1,7 @@
 import httpx
 from langchain_core.tools import tool
 
-from app.settings import settings
+from app.core.settings import settings
 
 
 @tool

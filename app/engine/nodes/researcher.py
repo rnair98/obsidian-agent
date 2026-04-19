@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_core.messages import AnyMessage
 from langgraph.runtime import Runtime
 
 from app.core.logger import logger
 from app.core.settings import settings
-from app.engine.nodes.types import NodeName
+from app.engine.nodes.builders.agent import build_agent_executor, run_agent_executor
+from app.engine.nodes.types import Workflow
 from app.engine.outputs import ResearcherOutput
 from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
 from app.engine.tools.io import save_note
@@ -25,8 +26,6 @@ if TYPE_CHECKING:
 
 
 def create_researcher_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
-    USE_RESPONSES_API = True
-
     TOOLS = [
         *OPENAI_TOOLS,
         *MCP_TOOLS,
@@ -38,27 +37,30 @@ def create_researcher_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
         state: ResearchState,
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
-    ) -> dict[str, Any]:
+    ) -> dict[str, list[AnyMessage]]:
         llm_config = settings.llm.model_dump()
         logger.debug(
-            f"[{NodeName.RESEARCHER.upper()}] Using responses API: {USE_RESPONSES_API}"
+            f"[{Workflow.RESEARCHER.upper()}] Using responses API: "
+            f"{llm_config['use_responses_api']}"
         )
         logger.debug(
-            f"[{NodeName.RESEARCHER.upper()}] Using model: {llm_config['model']}"
+            f"[{Workflow.RESEARCHER.upper()}] Using model: {llm_config['model']}"
         )
 
-        model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
-
-        agent_executor = create_agent(
-            model=model,
+        agent_executor = build_agent_executor(
             tools=TOOLS,
-            system_prompt=getattr(settings.agents, NodeName.RESEARCHER).system_prompt,
-            response_format=ResearcherOutput,
+            system_prompt=settings.agents.researcher.system_prompt,
+            response_format=ProviderStrategy(ResearcherOutput),
         )
-        logger.debug(f"[{NodeName.RESEARCHER.upper()}] Agent invoked.")
-        result = agent_executor.invoke(
-            input=state, context=runtime.context, config=config
+
+        return run_agent_executor(
+            agent_executor,
+            state=state,
+            runtime_context=runtime.context,
+            config=config,
+            workflow_name=Workflow.RESEARCHER,
+            stream_mode=["messages", "updates"],
+            log_stream_chunks=True,
         )
-        return {"messages": result["messages"]}
 
     return research_node

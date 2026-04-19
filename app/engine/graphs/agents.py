@@ -11,13 +11,13 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.engine.nodes.researcher import create_researcher_agent
 from app.engine.nodes.summarizer import create_summarizer_agent
-from app.engine.nodes.types import NodeName
+from app.engine.nodes.types import Workflow
 from app.engine.nodes.zettelkasten import create_zettelkasten_agent
 from app.engine.registry import workflow
 from app.engine.schema import ResearchContext, ResearchState
 
 
-@workflow(NodeName.RESEARCHER)
+@workflow(Workflow.RESEARCHER)
 def create_researcher_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph[
         ResearchState,
@@ -25,13 +25,13 @@ def create_researcher_workflow(checkpointer: BaseCheckpointSaver) -> CompiledSta
         ResearchState,
         ResearchState,
     ](ResearchState)
-    graph.add_node(NodeName.RESEARCHER, create_researcher_agent())
-    graph.add_edge(START, NodeName.RESEARCHER)
-    graph.add_edge(NodeName.RESEARCHER, END)
+    graph.add_node(Workflow.RESEARCHER, create_researcher_agent())
+    graph.add_edge(START, Workflow.RESEARCHER)
+    graph.add_edge(Workflow.RESEARCHER, END)
     return graph.compile(checkpointer=checkpointer)
 
 
-@workflow(NodeName.SUMMARIZER)
+@workflow(Workflow.SUMMARIZER)
 def create_summarizer_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph[
         ResearchState,
@@ -39,13 +39,13 @@ def create_summarizer_workflow(checkpointer: BaseCheckpointSaver) -> CompiledSta
         ResearchState,
         ResearchState,
     ](ResearchState)
-    graph.add_node(NodeName.SUMMARIZER, create_summarizer_agent())
-    graph.add_edge(START, NodeName.SUMMARIZER)
-    graph.add_edge(NodeName.SUMMARIZER, END)
+    graph.add_node(Workflow.SUMMARIZER, create_summarizer_agent())
+    graph.add_edge(START, Workflow.SUMMARIZER)
+    graph.add_edge(Workflow.SUMMARIZER, END)
     return graph.compile(checkpointer=checkpointer)
 
 
-@workflow(NodeName.ZETTELKASTEN)
+@workflow(Workflow.ZETTELKASTEN)
 def create_zettelkasten_workflow(
     checkpointer: BaseCheckpointSaver,
 ) -> CompiledStateGraph:
@@ -55,7 +55,7 @@ def create_zettelkasten_workflow(
         ResearchState,
         ResearchState,
     ](ResearchState)
-    graph.add_node(NodeName.ZETTELKASTEN, create_zettelkasten_agent())
-    graph.add_edge(START, NodeName.ZETTELKASTEN)
-    graph.add_edge(NodeName.ZETTELKASTEN, END)
+    graph.add_node(Workflow.ZETTELKASTEN, create_zettelkasten_agent())
+    graph.add_edge(START, Workflow.ZETTELKASTEN)
+    graph.add_edge(Workflow.ZETTELKASTEN, END)
     return graph.compile(checkpointer=checkpointer)

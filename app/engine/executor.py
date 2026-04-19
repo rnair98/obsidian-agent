@@ -13,12 +13,15 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
 from app.core.settings import settings
+from app.engine.nodes.types import Workflow
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
 from app.engine.tools.io import load_memories
 
 
-def execute(workflow_name: str, request: ResearchRequest) -> dict:
+async def execute(
+    workflow_name: Workflow, request: ResearchRequest
+) -> dict[str, object]:
     """
     Execute a registered workflow with the given request.
     """
@@ -57,7 +60,7 @@ def execute(workflow_name: str, request: ResearchRequest) -> dict:
         key_insights=[],
     )
 
-    result = graph.invoke(
+    result = await graph.ainvoke(
         input=state,
         config=config,
         context=context,

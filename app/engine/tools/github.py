@@ -1,19 +1,31 @@
 """GitHub helpers: plain functions and context-backed client/repo for tools."""
 
-from typing import TYPE_CHECKING
+from langchain.tools import ToolRuntime, tool
 
-from app.services.github.repo import get_github_client, get_github_repo
-
-if TYPE_CHECKING:
-    from github import Github
-    from github.Repository import Repository
+from app.engine.schema import ResearchState
+from app.services.gh_client.repo import GitHubRepositoryService
 
 
-def resolve_github_client() -> "Github | None":
-    """Return shared GitHub client for engine/tool callers."""
-    return get_github_client()
+@tool("get_repo_tree", parse_docstring=True)
+def get_repo_tree(
+    repo_name: str,
+    runtime: ToolRuntime[ResearchState],
+) -> list[str] | None:
+    """Fetch the default-branch file tree for a GitHub repository.
 
+    Input should be in the format 'owner/repo' (for example,
+    'octocat/Hello-World'). Returns a list of file paths in the repository
+    or `None` if access fails or GitHub is not configured.
+    """
+    if runtime.state["gh_client"] is None:
+        return None
 
-def resolve_github_repo(repo_name: str) -> "Repository | None":
-    """Return repository handle for `<owner>/<repo>` name."""
-    return get_github_repo(repo_name)
+    service = GitHubRepositoryService(
+        runtime.state["gh_client"],
+        repo_name=repo_name,
+    )
+    tree = service.get_tree()
+    if tree is None:
+        return None
+
+    return [entry.path for entry in tree]

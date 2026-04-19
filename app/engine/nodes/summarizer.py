@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_core.messages import AnyMessage
 from langgraph.runtime import Runtime
 
 from app.core.logger import logger
 from app.core.settings import settings
-from app.engine.nodes.types import NodeName
+from app.engine.nodes.builders.agent import build_agent_executor, run_agent_executor
+from app.engine.nodes.types import Workflow
 from app.engine.outputs import SummarizerOutput
 from app.engine.tools.io import write_report
 
@@ -23,32 +24,31 @@ if TYPE_CHECKING:
 
 
 def create_summarizer_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
-    USE_RESPONSES_API = True
     TOOLS = [write_report]
 
     def summarizer_node(
         state: ResearchState,
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
-    ) -> dict[str, Any]:
-        llm_config = settings.llm.model_dump()
+    ) -> dict[str, list[AnyMessage]]:
         logger.debug(
-            f"[{NodeName.SUMMARIZER.upper()}] Using responses API: {USE_RESPONSES_API}"
+            f"[{Workflow.SUMMARIZER.upper()}] Using responses API: "
+            f"{settings.llm.use_responses_api}"
         )
-        logger.debug(f"[{NodeName.SUMMARIZER.upper()}] LLM Config: {llm_config}")
+        logger.debug(f"[{Workflow.SUMMARIZER.upper()}] LLM Config: {settings.llm}")
 
-        model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
-
-        agent_executor = create_agent(
-            model=model,
+        agent_executor = build_agent_executor(
             tools=TOOLS,
-            system_prompt=getattr(settings.agents, NodeName.SUMMARIZER).system_prompt,
-            response_format=SummarizerOutput,
+            system_prompt=settings.agents.summarizer.system_prompt,
+            response_format=ProviderStrategy(SummarizerOutput),
         )
-        logger.debug(f"[{NodeName.SUMMARIZER.upper()}] Agent invoked.")
-        result = agent_executor.invoke(
-            input=state, context=runtime.context, config=config
+
+        return run_agent_executor(
+            agent_executor,
+            state=state,
+            runtime_context=runtime.context,
+            config=config,
+            workflow_name=Workflow.SUMMARIZER,
         )
-        return {"messages": result["messages"]}
 
     return summarizer_node

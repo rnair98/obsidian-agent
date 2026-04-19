@@ -1,8 +1,15 @@
 llm:
   model: "gpt-5.2-2025-12-11"
+  reasoning_effort: medium
+  verbosity: low
   temperature: 1.0
+  streaming: true
+  timeout: 600
+  use_responses_api: true
+  stream_usage: true
   model_kwargs:
     parallel_tool_calls: true
+    tool_choice: auto
 
 agents:
   researcher:

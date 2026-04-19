@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_core.messages import AnyMessage
 from langgraph.runtime import Runtime
 
 from app.core.logger import logger
 from app.core.settings import settings
-from app.engine.nodes.types import NodeName
+from app.engine.nodes.builders.agent import build_agent_executor, run_agent_executor
+from app.engine.nodes.types import Workflow
 from app.engine.outputs import ZettelkastenOutput
 from app.engine.tools.io import write_zettelkasten_notes
 
@@ -23,34 +24,32 @@ if TYPE_CHECKING:
 
 
 def create_zettelkasten_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
-    USE_RESPONSES_API = True
     TOOLS = [write_zettelkasten_notes]
 
     def zettelkasten_node(
         state: ResearchState,
         runtime: Runtime[ResearchContext],
         config: RunnableConfig,
-    ) -> dict[str, Any]:
-        llm_config = settings.llm.model_dump()
+    ) -> dict[str, list[AnyMessage]]:
         logger.debug(
             "[%s] Using responses API: %s",
-            NodeName.ZETTELKASTEN.upper(),
-            USE_RESPONSES_API,
+            Workflow.ZETTELKASTEN.upper(),
+            settings.llm.use_responses_api,
         )
-        logger.debug(f"[{NodeName.ZETTELKASTEN.upper()}] LLM Config: {llm_config}")
+        logger.debug(f"[{Workflow.ZETTELKASTEN.upper()}] LLM Config: {settings.llm}")
 
-        model = ChatOpenAI(use_responses_api=USE_RESPONSES_API, **llm_config)
-
-        agent_executor = create_agent(
-            model=model,
+        agent_executor = build_agent_executor(
             tools=TOOLS,
-            system_prompt=getattr(settings.agents, NodeName.ZETTELKASTEN).system_prompt,
-            response_format=ZettelkastenOutput,
+            system_prompt=settings.agents.zettelkasten.system_prompt,
+            response_format=ProviderStrategy(ZettelkastenOutput),
         )
-        logger.debug(f"[{NodeName.ZETTELKASTEN.upper()}] Agent invoked.")
-        result = agent_executor.invoke(
-            input=state, context=runtime.context, config=config
+
+        return run_agent_executor(
+            agent_executor,
+            state=state,
+            runtime_context=runtime.context,
+            config=config,
+            workflow_name=Workflow.ZETTELKASTEN,
         )
-        return {"messages": result["messages"]}
 
     return zettelkasten_node
