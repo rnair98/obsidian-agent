@@ -76,11 +76,19 @@ def build_semantic_query(query: SearchQuery, fallback: str) -> str:
     return " ".join(parts) if parts else fallback
 
 
-@tool
+@tool(parse_docstring=True)
 def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
-    """
-    Search the web using Brave Search to find relevant documents and sources.
-    Returns a list of search results and an optional error message.
+    """Search the web using Brave Search.
+
+    Args:
+        query: Boolean or natural-language search expression to send to
+            Brave. Capped to ``settings.DEFAULT_SEARCH_LIMIT`` results.
+
+    Returns:
+        A ``(results, error)`` pair. ``results`` is a list of dictionaries
+        with ``title``, ``url``, ``notes``, ``provider``, and ``score``
+        keys. ``error`` is ``None`` on success or a descriptive string if
+        the API key is missing or the request failed.
     """
     limit = settings.DEFAULT_SEARCH_LIMIT
     api_key = settings.BRAVE_SEARCH_API_KEY
@@ -117,13 +125,23 @@ def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
     return results, None
 
 
-@tool
+@tool(parse_docstring=True)
 def call_exa_search(
     query: str, search_type: str = "auto"
 ) -> tuple[list[dict[str, str]], str | None]:
-    """
-    Search using Exa.ai, which is optimized for neural/semantic search.
-    Useful for finding similar concepts or handling complex queries.
+    """Search using Exa.ai's neural/semantic search.
+
+    Args:
+        query: Natural-language search expression. Exa's autoprompt is
+            always enabled.
+        search_type: Optional search mode, e.g. ``auto`` (default),
+            ``neural``, or ``keyword``. ``auto`` lets Exa choose.
+
+    Returns:
+        A ``(results, error)`` pair. ``results`` is a list of dictionaries
+        with ``title``, ``url``, ``notes``, ``provider``, and ``score``
+        keys. ``error`` is ``None`` on success or a descriptive string if
+        the API key is missing or the request failed.
     """
     limit = settings.DEFAULT_SEARCH_LIMIT
     api_key = settings.EXA_API_KEY
@@ -172,11 +190,21 @@ def call_exa_search(
     return results, None
 
 
-@tool
+@tool(parse_docstring=True)
 def call_exa_context(query: str) -> tuple[str | None, str | None]:
-    """
-    Get code context or snippets from Exa for a programming-related query.
-    Useful to fetch code examples or library documentation.
+    """Fetch code context or snippets from Exa for a programming query.
+
+    Useful for retrieving code examples or library documentation relevant
+    to a task.
+
+    Args:
+        query: Natural-language description of the code context needed.
+
+    Returns:
+        A ``(response, error)`` pair. ``response`` is the Markdown context
+        string on success or ``None`` otherwise. ``error`` is ``None`` on
+        success or a descriptive string if the API key is missing or the
+        request failed.
     """
     tokens_num = 1000  # Default
     api_key = settings.EXA_API_KEY

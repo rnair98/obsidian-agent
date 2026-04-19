@@ -12,12 +12,17 @@ def format_execution_result(result: ExecutionResult) -> str:
     return result.stdout or NO_OUTPUT_MESSAGE
 
 
-@tool
+@tool(parse_docstring=True)
 def run_python_experiment(code: str) -> str:
-    """
-    Run a snippet of Python code in a sandbox (subprocess).
-    Useful for verifying data processing or running small calculations.
-    Returns the stdout of the execution.
+    """Run a snippet of Python code in a sandboxed subprocess.
+
+    Args:
+        code: Python source to execute. Runs with a 10-second timeout.
+
+    Returns:
+        The captured stdout on success, a message prefixed with
+        ``Experiment error:`` on failure, or a placeholder when stdout is
+        empty.
     """
     result = LocalSubprocessSandboxBackend().run_python(code, timeout_s=10)
     return format_execution_result(result)

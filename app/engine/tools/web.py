@@ -4,11 +4,17 @@ from langchain_core.tools import tool
 from app.core.settings import settings
 
 
-@tool
+@tool(parse_docstring=True)
 def fetch_url(url: str) -> str:
-    """
-    Fetch the content of a specific URL using Jina Reader API
-    and convert it to Markdown. Returns the markdown content or an error message.
+    """Fetch a URL via Jina Reader and return its Markdown rendering.
+
+    Args:
+        url: Absolute URL to fetch. Jina Reader will render the page and
+            return a Markdown transcription.
+
+    Returns:
+        The Markdown content of the page, or an error string prefixed with
+        ``Error fetching URL`` if the request failed.
     """
     jina_url = f"https://r.jina.ai/{url}"
     headers = {"User-Agent": "langgraph-researcher/1.0"}
