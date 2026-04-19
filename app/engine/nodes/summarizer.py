@@ -35,7 +35,10 @@ def create_summarizer_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
             f"[{Workflow.SUMMARIZER.upper()}] Using responses API: "
             f"{settings.llm.use_responses_api}"
         )
-        logger.debug(f"[{Workflow.SUMMARIZER.upper()}] LLM Config: {settings.llm}")
+        logger.debug(
+            f"[{Workflow.SUMMARIZER.upper()}] LLM Config: "
+            f"{settings.llm.model_dump(exclude={'api_key'})}"
+        )
 
         agent_executor = build_agent_executor(
             tools=TOOLS,

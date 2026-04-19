@@ -36,7 +36,10 @@ def create_zettelkasten_agent() -> "CompiledStateGraph[AgentState[ResponseT]]":
             Workflow.ZETTELKASTEN.upper(),
             settings.llm.use_responses_api,
         )
-        logger.debug(f"[{Workflow.ZETTELKASTEN.upper()}] LLM Config: {settings.llm}")
+        logger.debug(
+            f"[{Workflow.ZETTELKASTEN.upper()}] LLM Config: "
+            f"{settings.llm.model_dump(exclude={'api_key'})}"
+        )
 
         agent_executor = build_agent_executor(
             tools=TOOLS,
