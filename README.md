@@ -1,14 +1,19 @@
+<div align="center">
+
 # obsidian-agent
 
-A FastAPI-fronted **LangGraph research pipeline** that drives three
-sequential LLM agents — **Researcher → Summarizer → Zettelkasten** —
-followed by a **Persist** node. A single POST kicks off a full research
-run: the researcher gathers sources (web search, MCP tools, sandboxed
-code execution), the summarizer produces a Markdown report, the
-zettelkasten agent extracts atomic notes into `.vault/`, and the
-persist node writes a Polars CSV of sources and a frontmatter-rich
-memory that subsequent runs re-read to avoid re-deriving settled
-insights.
+**A LangGraph research pipeline that turns a topic into a report, atomic Zettel notes, and durable memories — through three sequential LLM agents.**
+
+*Researcher → Summarizer → Zettelkasten → Persist*
+
+</div>
+
+A single POST kicks off a full research run: the researcher gathers
+sources (web search, MCP tools, sandboxed code execution), the
+summarizer produces a Markdown report, the zettelkasten agent extracts
+atomic notes into `.vault/`, and the persist node writes a Polars CSV
+of sources and a frontmatter-rich memory that subsequent runs re-read
+to avoid re-deriving settled insights.
 
 See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
