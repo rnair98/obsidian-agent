@@ -21,6 +21,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pygithub>=2.8.1",
     "langgraph-checkpoint-postgres>=3.0.4",
+    "modal>=1.4.1",
 ]
 
 [tool.uv]
