@@ -1,10 +1,10 @@
+from httpx import HTTPError, TimeoutException
 from langchain.agents.middleware import ContextEditingMiddleware, ToolRetryMiddleware
-from requests import RequestException, Timeout
 
 tool_retry = ToolRetryMiddleware(
-    max_retries=2,
-    retry_on=(RequestException, Timeout),
-    backoff_factor=1.5,
+    max_retries=1,
+    retry_on=(HTTPError, TimeoutException),
+    backoff_factor=0.5,
 )
 
 context_editing = ContextEditingMiddleware()

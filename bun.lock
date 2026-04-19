@@ -4,7 +4,7 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@openai/codex-sdk": "^0.101.0",
+        "@github/copilot-sdk": "0.2.0",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.0",
@@ -33,21 +33,21 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.0", "", { "os": "win32", "cpu": "x64" }, "sha512-g47s+V+OqsGxbSZN3lpav6WYOk0PIc3aCBAq+p6dwSynL3K5MA6Cg6nkzDOlu28GEHwbakW+BllzHCJCxnfK5Q=="],
 
-    "@openai/codex": ["@openai/codex@0.101.0", "", { "optionalDependencies": { "@openai/codex-darwin-arm64": "npm:@openai/codex@0.101.0-darwin-arm64", "@openai/codex-darwin-x64": "npm:@openai/codex@0.101.0-darwin-x64", "@openai/codex-linux-arm64": "npm:@openai/codex@0.101.0-linux-arm64", "@openai/codex-linux-x64": "npm:@openai/codex@0.101.0-linux-x64", "@openai/codex-win32-arm64": "npm:@openai/codex@0.101.0-win32-arm64", "@openai/codex-win32-x64": "npm:@openai/codex@0.101.0-win32-x64" }, "bin": { "codex": "bin/codex.js" } }, "sha512-H874q5K5I3chrT588BaddMr7GNvRYypc8C1MKWytNUF2PgxWMko2g/2DgKbt5OdajZKMsWdbsPywu34KQGf5Qw=="],
+    "@github/copilot": ["@github/copilot@1.0.12", "", { "optionalDependencies": { "@github/copilot-darwin-arm64": "1.0.12", "@github/copilot-darwin-x64": "1.0.12", "@github/copilot-linux-arm64": "1.0.12", "@github/copilot-linux-x64": "1.0.12", "@github/copilot-win32-arm64": "1.0.12", "@github/copilot-win32-x64": "1.0.12" }, "bin": { "copilot": "npm-loader.js" } }, "sha512-GpmoJbs1ECyLLKtY4PcFzO8Cz6GgDTOKkrzwNdkirNdfsB+o6x0OOlFyrOdNXNPII7pk9+GcpIjF87sLwWzpPQ=="],
 
-    "@openai/codex-darwin-arm64": ["@openai/codex@0.101.0-darwin-arm64", "", { "os": "darwin", "cpu": "arm64" }, "sha512-unk4rTRQQ9o0w2Upu35IsJHpoZHJ+tU/myn6LNhUjcP9FrjLnEcAQJ6WIMtdTYVPja1PGhFSO0DNxV79GMvehw=="],
+    "@github/copilot-darwin-arm64": ["@github/copilot-darwin-arm64@1.0.12", "", { "os": "darwin", "cpu": "arm64", "bin": { "copilot-darwin-arm64": "copilot" } }, "sha512-fjbwRIUZAH06Eyg5ZkfZXg8SVXpqI3HaFhtXZ803CZs9mfIgfOSR3URZxUnv7SIv6aI/7f6ws8RxKnPGavJ/tg=="],
 
-    "@openai/codex-darwin-x64": ["@openai/codex@0.101.0-darwin-x64", "", { "os": "darwin", "cpu": "x64" }, "sha512-+KFi1IapCQGd3vLQp2lI4xI3hu2QffDZYt7Fhfw6NxEFOKhHnTamRtQ5yI8jYQcYF+pQfYF2fyiuXLM1lITLQw=="],
+    "@github/copilot-darwin-x64": ["@github/copilot-darwin-x64@1.0.12", "", { "os": "darwin", "cpu": "x64", "bin": { "copilot-darwin-x64": "copilot" } }, "sha512-/tJGJEEm8kpTW/sJRNnvhMSHKIHApNun14biuIkC5CXDqVgFakbKlckn/FlIkT48eEUysc0YbEatrHIDz/8XbA=="],
 
-    "@openai/codex-linux-arm64": ["@openai/codex@0.101.0-linux-arm64", "", { "os": "linux", "cpu": "arm64" }, "sha512-RkDnQeq7M6ZBtD+8i+I5ewjjOf02BcJq6r1kN4RBewfAQBsz6B73Ns3OrI2bHVRsuPtAf8Cf1S4xg/eFZT2Omg=="],
+    "@github/copilot-linux-arm64": ["@github/copilot-linux-arm64@1.0.12", "", { "os": "linux", "cpu": "arm64", "bin": { "copilot-linux-arm64": "copilot" } }, "sha512-4977LVJi3/9Yc+ivj+VKDVtHg0kT5yqOrN8F35/jgqerx4Mdtk1pOMlWztXxLicBHN4y2V7/EY/wc0WqFW0Zvg=="],
 
-    "@openai/codex-linux-x64": ["@openai/codex@0.101.0-linux-x64", "", { "os": "linux", "cpu": "x64" }, "sha512-SJeEdQ4ReEU3nvtceZ1uY3me6oWoB3djr3GnZmAUCEUuYEWD1kRGprAyJB1N0B+8zhSv0SU2e9sX5t3aCV4AwQ=="],
+    "@github/copilot-linux-x64": ["@github/copilot-linux-x64@1.0.12", "", { "os": "linux", "cpu": "x64", "bin": { "copilot-linux-x64": "copilot" } }, "sha512-9QevJZD29PVltYDV4xHWbdN6ud/966clERL5Frh2+9D3+spaVDO1hFllzoFiEwD/M4f2GkSh7/fT3hV0LKl9Ag=="],
 
-    "@openai/codex-sdk": ["@openai/codex-sdk@0.101.0", "", { "dependencies": { "@openai/codex": "0.101.0" } }, "sha512-Lrar2pDvGUX64itSbMNKuNBzxh72UwKokY4TPuXJRURwGX0qyDi80n7DiVivC40BwFsQWNs6behSo/9Mr6PoLw=="],
+    "@github/copilot-sdk": ["@github/copilot-sdk@0.2.0", "", { "dependencies": { "@github/copilot": "^1.0.10", "vscode-jsonrpc": "^8.2.1", "zod": "^4.3.6" } }, "sha512-fCEpD9W9xqcaCAJmatyNQ1PkET9P9liK2P4Vk0raDFoMXcvpIdqewa5JQeKtWCBUsN/HCz7ExkkFP8peQuo+DA=="],
 
-    "@openai/codex-win32-arm64": ["@openai/codex@0.101.0-win32-arm64", "", { "os": "win32", "cpu": "arm64" }, "sha512-WQ8QsychjHyvlr+vCSTMbd2/yrBIZre5tRuM79eZi973BJz0CSEiFsNSGg5fvpnJuiHHawZ/8HWeir7nlatamQ=="],
+    "@github/copilot-win32-arm64": ["@github/copilot-win32-arm64@1.0.12", "", { "os": "win32", "cpu": "arm64", "bin": { "copilot-win32-arm64": "copilot.exe" } }, "sha512-RLAbAsLniI8vA2utgZdIsvD8slZpz1fb8l6cmIiQvDE/BwQb2zNV9VepZ+CwzYtNx9ifxBtgIwYwUJq5bxeSaQ=="],
 
-    "@openai/codex-win32-x64": ["@openai/codex@0.101.0-win32-x64", "", { "os": "win32", "cpu": "x64" }, "sha512-H+7h9x0fYrJRUZZHCA62Dzb/CS5Scl1sUw1aamfmHJzzorX+uTFOgGsibzqFpHTd6nRM4q8//fCdSxe5wUpOQQ=="],
+    "@github/copilot-win32-x64": ["@github/copilot-win32-x64@1.0.12", "", { "os": "win32", "cpu": "x64", "bin": { "copilot-win32-x64": "copilot.exe" } }, "sha512-4SYV09F4Sw20DAib1do26+ALZmCZrghzo+5e6IZbQOsm4B7NhBFaLpKFU+kEijfmWacLlh/at5CpGGGKlwlbcg=="],
 
     "@types/bun": ["@types/bun@1.3.9", "", { "dependencies": { "bun-types": "1.3.9" } }, "sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw=="],
 
@@ -58,5 +58,9 @@
     "husky": ["husky@9.1.7", "", { "bin": { "husky": "bin.js" } }, "sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA=="],
 
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "vscode-jsonrpc": ["vscode-jsonrpc@8.2.1", "", {}, "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="],
+
+    "zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
   }
 }

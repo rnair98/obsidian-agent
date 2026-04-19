@@ -1,4 +1,4 @@
-import { Codex } from "@openai/codex-sdk";
+import { CopilotClient, type PermissionRequest } from "@github/copilot-sdk";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -39,28 +39,38 @@ function buildPrompt(preCommitOutput: string) {
 	].join("\n");
 }
 
-async function codexFix(prompt: string) {
-	const codex = new Codex();
-	const thread = codex.startThread({
-		model: "gpt-5.1-codex-mini",
-	});
-	const { events } = await thread.runStreamed(prompt);
+async function copilotFix(prompt: string, model: string) {
+	const cliUrl = process.env.COPILOT_CLI_URL;
+	const client = new CopilotClient(cliUrl ? { cliUrl } : {});
 
-	for await (const ev of events) {
-		// Stream agent text
-		if (ev.type === "item.completed" && ev.item.type === "agent_message") {
-			process.stdout.write(`${ev.item.text}\n`);
+	let session: Awaited<ReturnType<typeof client.createSession>> | undefined;
+	try {
+		session = await client.createSession({
+			sessionId: `pre-commit-${Date.now()}`,
+			model,
+			onPermissionRequest: async (req: PermissionRequest) => {
+				if (req.kind === "write" || req.kind === "read") {
+					return { kind: "approved" };
+				}
+				console.warn(`Denied permission request: ${req.kind}`);
+				return { kind: "denied-interactively-by-user" };
+			},
+		});
+		const response = await session.sendAndWait({ prompt });
+		const text = response?.data?.content;
+		if (!text) {
+			throw new Error("Copilot returned no actionable response.");
 		}
-		if (ev.type === "turn.failed") {
-			process.stderr.write(`Turn failed: ${ev.error.message}\n`);
-		}
+		process.stdout.write(`${text}\n\n`);
+	} finally {
+		await session?.disconnect();
 	}
-	process.stdout.write("\n");
 }
 
 async function main() {
-	const maxIter = Number(process.env.CODEX_MAX_ITER ?? "3");
+	const maxIter = Number(process.env.COPILOT_MAX_ITER ?? process.env.CODEX_MAX_ITER ?? "3");
 	const allFiles = process.env.ALL_FILES === "1";
+	const model = "gpt-5.4-mini";
 
 	const repoRoot = process.cwd();
 	const precommitHome = resolve(repoRoot, ".cache", "pre-commit");
@@ -76,6 +86,8 @@ async function main() {
 		? ["pre-commit", "run", "--all-files"]
 		: ["pre-commit", "run"]; // staged-only by default
 
+	let prevFailCount: number | null = null;
+
 	for (let i = 1; i <= maxIter; i++) {
 		console.log(`\n=== pre-commit pass ${i}/${maxIter} ===`);
 		const res = await run(pcCmd, { env });
@@ -86,9 +98,37 @@ async function main() {
 			process.exit(0);
 		}
 
-		// Call Codex to fix based on raw output (you can add structured parsing later).
-		console.log("\n=== Codex SDK run ===");
-		await codexFix(buildPrompt(res.out));
+		const failCount = (res.out.match(/^Failed$/gm) ?? []).length;
+		if (prevFailCount !== null && failCount >= prevFailCount) {
+			console.error("⚠️  Failures not decreasing after fix; aborting.");
+			process.exit(1);
+		}
+		prevFailCount = failCount;
+
+		// Check if pre-commit already auto-fixed files (e.g., ruff --fix)
+		const autoFixed = await run(["git", "diff", "--name-only"], { env });
+		if (autoFixed.out.trim()) {
+			console.log("Pre-commit auto-fixed files; re-staging and retrying...");
+			await run(["git", "add", "-u"], { env });
+			continue;
+		}
+
+		// No auto-fixes — ask Copilot to fix the remaining issues
+		console.log("\n=== Copilot SDK run ===");
+		try {
+			await copilotFix(buildPrompt(res.out), model);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`Copilot SDK failed: ${message}`);
+			process.exit(1);
+		}
+
+		const diff = await run(["git", "diff", "--name-only"], { env });
+		if (!diff.out.trim()) {
+			console.error("⚠️  Copilot made no file changes; aborting.");
+			process.exit(1);
+		}
+		await run(["git", "add", "-u"], { env });
 	}
 
 	console.error("❌ Max iterations reached; still failing.");

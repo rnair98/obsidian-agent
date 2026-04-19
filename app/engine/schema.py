@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
-from pydantic import BaseModel, Field
-
-from app.settings import LLMConfig
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchQuery(TypedDict):
@@ -22,14 +20,13 @@ class SearchQuery(TypedDict):
     inurl: list[str]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ResearchContext:
     search_limit: int = 15
     exa_search_type: str = "auto"
     fetch_code_context: bool = False
     seed_urls: list[str] = field(default_factory=list)
     experiment_snippets: list[str] = field(default_factory=list)
-    llm_config: Optional[LLMConfig] = None
 
 
 class ResearchState(TypedDict):
@@ -48,11 +45,9 @@ class ResearchState(TypedDict):
 
 
 class ResearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     topic: str = Field(..., min_length=3)
     seed_urls: list[str] = Field(default_factory=list)
     experiment_snippets: list[str] = Field(default_factory=list)
     search: SearchQuery | None = None
-    search_limit: int = Field(15, ge=1, le=15)
-    exa_search_type: str = Field("auto")
-    fetch_code_context: bool = False
-    llm_config: LLMConfig | None = None

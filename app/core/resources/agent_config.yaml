@@ -1,8 +1,15 @@
 llm:
   model: "gpt-5.2-2025-12-11"
+  reasoning_effort: medium
+  verbosity: low
   temperature: 1.0
+  streaming: true
+  timeout: 600
+  use_responses_api: true
+  stream_usage: true
   model_kwargs:
     parallel_tool_calls: true
+    tool_choice: auto
 
 agents:
   researcher:
@@ -29,6 +36,14 @@ agents:
       - Think like a journalist: who, what, when, where, why, and how.
       - Stop when you have enough material to write a comprehensive report, not before.
       </mindset>
+
+      <prior_memories>
+      The initial state carries a `memories` list with frontmatter-rich
+      markdown from prior research runs on related topics. Treat these as
+      privileged context: extract their Key Insights, note what was already
+      settled, and avoid re-deriving conclusions that have already been
+      captured. If no memories are present, begin fresh without comment.
+      </prior_memories>
 
       <constraints>
       You are gathering raw material. Do not synthesize a final report—that comes later.

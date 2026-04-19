@@ -6,14 +6,14 @@ from phoenix.otel import register
 # Import graphs package to trigger workflow registration
 import app.engine.graphs  # noqa: F401
 from app.api.v1.router import api_router
-from app.logger import logger
+from app.core.logger import logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     register(
-        project_name="code-reviewer",
+        project_name="obsidian-agent",
         auto_instrument=True,
     )
     logger.info("Phoenix OTEL tracer registered")
@@ -28,4 +28,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Code Reviewer API"}
+    return {"message": "Welcome to the obsidian-agent API"}

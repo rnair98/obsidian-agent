@@ -3,26 +3,41 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
-from langchain_core.tools import tool
+from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from app.settings import settings
+from app.core.settings import settings
+from app.engine.backends import get_filesystem_backend
+from app.engine.backends.protocol import FilesystemBackend
+
+
+def _resolve_backend() -> FilesystemBackend:
+    return get_filesystem_backend(
+        backend_type=settings.filesystem.backend_type,
+        base_path=settings.filesystem.base_path,
+    )
 
 
 def timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def ensure_dir(path: Path) -> None:
-    path.mkdir(parents=True, exist_ok=True)
+def ensure_dir(path: Path, backend: FilesystemBackend) -> None:
+    backend.mkdir(path)
 
 
-def load_memories(memories_dir: Path) -> list[str]:
-    if not memories_dir.exists():
+def load_memories(
+    memories_dir: Path,
+    backend: FilesystemBackend,
+) -> list[str]:
+    if not backend.is_dir(memories_dir):
         return []
+
     memories: list[str] = []
-    for memory in sorted(memories_dir.glob("*.md")):
-        memories.append(memory.read_text(encoding="utf-8"))
+    for memory in backend.list_dir(memories_dir):
+        if memory.suffix != ".md":
+            continue
+        memories.append(backend.read_text(memory, encoding="utf-8"))
     return memories
 
 
@@ -47,11 +62,12 @@ def persist_memories(
     reasoning: list[str],
     sources: list[dict[str, str]],
     report_path: Path | None,
+    backend: FilesystemBackend,
 ) -> list[Path]:
-    ensure_dir(memories_dir)
+    ensure_dir(memories_dir, backend=backend)
     slug = topic.lower().replace(" ", "-")
-    timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-    memory_path = memories_dir / f"{slug}-{timestamp}.md"
+    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    memory_path = memories_dir / f"{slug}-{ts}.md"
     content = "\n".join(
         [
             "---",
@@ -79,12 +95,16 @@ def persist_memories(
             "",
         ]
     )
-    memory_path.write_text(content, encoding="utf-8")
-    return [memory_path]
+    backend.write_text(memory_path, content, encoding="utf-8")
+    return [backend.resolve(memory_path)]
 
 
-def write_sources(sources_path: Path, sources: list[dict[str, str]]) -> None:
-    ensure_dir(sources_path.parent)
+def write_sources(
+    sources_path: Path,
+    sources: list[dict[str, str]],
+    backend: FilesystemBackend,
+) -> None:
+    ensure_dir(sources_path.parent, backend=backend)
     frame = pl.DataFrame(
         {
             "title": [entry.get("title", "") for entry in sources],
@@ -94,28 +114,40 @@ def write_sources(sources_path: Path, sources: list[dict[str, str]]) -> None:
             "score": [entry.get("score", "") for entry in sources],
         }
     )
-    frame.write_csv(sources_path)
+    frame.write_csv(backend.resolve(sources_path))
 
 
-@tool
+@tool(parse_docstring=True)
 def save_note(note: str) -> str:
-    """
-    Save a research note or insight to the shared state.
-    Use this to record important findings, data points, or hypotheses.
+    """Record a research note or insight for later synthesis.
+
+    Use this to capture important findings, data points, or hypotheses
+    during the research phase.
+
+    Args:
+        note: Free-form markdown text of the observation or insight.
+
+    Returns:
+        A short acknowledgement string echoing the saved note.
     """
     return f"Note saved: {note}"
 
 
-@tool
+@tool(parse_docstring=True)
 def write_report(content: str) -> str:
+    """Write the final research report to ``settings.OUTPUT_DIR / report.md``.
+
+    Args:
+        content: Full markdown body of the report.
+
+    Returns:
+        A status string naming the resolved output path.
     """
-    Write the final research report to the disk.
-    The content should be a complete markdown string.
-    """
+    backend = _resolve_backend()
     output_path = settings.OUTPUT_DIR / "report.md"
-    ensure_dir(output_path.parent)
-    output_path.write_text(content, encoding="utf-8")
-    return f"Report saved to {output_path}"
+    ensure_dir(output_path.parent, backend=backend)
+    written_path = backend.write_text(output_path, content, encoding="utf-8")
+    return f"Report saved to {written_path}"
 
 
 class ZettelNote(BaseModel):
@@ -127,19 +159,27 @@ class ZettelNote(BaseModel):
     )
 
 
-@tool
+@tool(parse_docstring=True)
 def write_zettelkasten_notes(notes: list[ZettelNote]) -> str:
-    """
-    Save extracted Zettelkasten notes to the vault.
+    """Persist extracted atomic notes to ``settings.VAULT_DIR``.
+
+    Args:
+        notes: Collection of atomic notes to write. Each note's ``content``
+            is saved as ``{id}.md`` in the vault.
+
+    Returns:
+        A status string naming the number of notes written and the vault
+        path they were saved to.
     """
     vault_dir = settings.VAULT_DIR
-    ensure_dir(vault_dir)
+    backend = _resolve_backend()
+    ensure_dir(vault_dir, backend=backend)
     # Simplified for the tool version, assuming inputs are pre-formatted
     # or we format them here.
     count = 0
     for note in notes:
         # note is now a ZettelNote object
         p = vault_dir / f"{note.id}.md"
-        p.write_text(note.content, encoding="utf-8")
+        backend.write_text(p, note.content, encoding="utf-8")
         count += 1
-    return f"Saved {count} notes to {vault_dir}"
+    return f"Saved {count} notes to {backend.resolve(vault_dir)}"
