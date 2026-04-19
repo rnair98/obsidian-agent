@@ -206,8 +206,8 @@ app/
 │   │   ├── web.py                # fetch_url (Jina Reader → markdown)
 │   │   ├── sandbox.py            # run_python_experiment (wraps LocalSubprocessSandboxBackend)
 │   │   ├── github.py             # get_repo_tree (wraps GitHubRepositoryService)
-│   │   └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (defined, not yet wired)
-│   └── middleware/               # (currently empty) — reserved for future LangChain middleware
+│   │   └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
+│   └── middleware/               # reserved for future LangChain middleware (empty placeholder)
 └── services/
     └── gh_client/
         ├── auth.py               # get_github_client — lru_cached PyGithub app-installation client
@@ -230,7 +230,9 @@ app/
 ├── docker-compose.yaml           # app + postgres + phoenix stack
 ├── Containerfile                 # uv-alpine based image
 ├── setup-agents.sh               # provisions .agents/ scaffold + per-IDE symlinks
-└── tests/                        # pytest: backends, sandbox, gh_client, settings
+├── docs/setup-agents.md          # specification for setup-agents.sh
+├── scripts/explore_modal.py      # exploratory Modal harness (not wired)
+└── tests/                        # pytest: backends, sandbox, gh_client, settings, imports, nodes/persist
 ```
 
 ### Artifact directories (runtime, created on demand)
@@ -268,8 +270,10 @@ by merging node return values.
 | `zettelkasten_notes` | `list[dict[str,str]]` | zettelkasten | — |
 | `reasoning` | `list[str]` | researcher | persist |
 | `key_insights` | `list[str]` | researcher | persist |
-| `backend` | `FilesystemBackend` | DI (runtime) | tools via `ToolRuntime` |
-| `gh_client` | `Github` | DI (runtime) | `get_repo_tree` tool |
+
+Tools that need a filesystem backend or a GitHub client resolve them via
+the `get_filesystem_backend(...)` / `get_github_client()` factories — they
+are *not* carried in state.
 
 ### `ResearchContext` (frozen dataclass)
 
@@ -390,8 +394,10 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 ### Add a new tool
 
 1. Add a `@tool` function under `app/engine/tools/`.
-2. If it writes to disk, pull `backend: FilesystemBackend = runtime.state["backend"]`
-   — do **not** open paths directly.
+2. If it writes to disk, resolve the backend via
+   `get_filesystem_backend(backend_type=settings.filesystem.backend_type, base_path=settings.filesystem.base_path)`
+   — do **not** open paths directly and do **not** expect the backend in
+   `runtime.state`.
 3. Import and append it to the relevant agent's `TOOLS` list in
    `app/engine/nodes/<agent>.py`.
 
@@ -459,9 +465,11 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/sandbox/test_local_backend.py` | `LocalSubprocessSandboxBackend` stdout capture; `format_execution_result` stderr/empty-output branching |
 | `tests/test_gh_client_repo.py` | `get_tree` caches per commit SHA; `shallow_clone` skips when snapshot dir is populated |
 | `tests/test_settings.py` | `FilesystemConfig.backend_type` defaults to a supported enum value |
+| `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
+| `tests/nodes/test_persist.py` | `persist_artifacts` writes `sources.csv` and memory markdown end-to-end against a tmp filesystem |
 
-Agent pipeline behavior (nodes, graphs, executor) is **not** covered by
-tests yet — treat this gap as high priority when touching node logic.
+LangGraph executor end-to-end behavior (requires a fake LLM and
+checkpointer) is still uncovered — next high-priority gap.
 
 ---
 
@@ -482,12 +490,8 @@ the filesystem and update this file.
 - **Config relocated.** `agent_config.yaml` lives under
   `app/core/resources/` (previously `app/resources/`). `core/settings.py`
   references it with a `Path(__file__).parent / "resources" / ...`.
-- **`tools/middleware.py` defines `ToolRetryMiddleware` + `ContextEditingMiddleware`**
-  but these are **not yet wired** into `build_agent_executor`. The
-  `engine/middleware/` directory is reserved for LangChain middleware; it
-  is currently empty.
-- **Modal sandbox is planned, not implemented.** `test_modal.py` is an
-  exploratory harness. Do not import from it.
+- **Modal sandbox is planned, not implemented.** `scripts/explore_modal.py`
+  is an exploratory harness. Do not import from it.
 
 ---
 
