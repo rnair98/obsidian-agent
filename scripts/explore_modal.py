@@ -4,7 +4,7 @@ app = App("example-get-started")
 image = Image.micromamba(python_version="3.13")
 
 
-@app.function()
+@app.function(image=image)
 def square(x):
     print("This code is running on a remote worker!")
     return x**2
