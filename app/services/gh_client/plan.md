@@ -12,43 +12,72 @@
 > Each slice ends with concrete deliverables, a test strategy, and an
 > explicit "done when" definition.
 
+## GitNexus alignment
+
+GitNexus is not just a code-search backend. The current repository already
+has a concrete product shape: a native CLI/MCP path, a browser-based Web UI,
+bridge mode for reusing local indexes, multi-repo/group workflows, and an eval
+harness for tool quality. This roadmap should therefore stay centered on:
+
+- repo access and snapshotting as the ingestion boundary
+- graph construction and retrieval as the core intelligence layer
+- MCP/CLI tool parity with `query`, `context`, `impact`, `detect_changes`,
+  `rename`, and `cypher`
+- multi-repo and group-level operations, not single-repo only flows
+- local-first storage with explicit browser, bridge, and native runtime paths
+- evaluation and observability as first-class deliverables, not an afterthought
+
 ---
 
 ## Architecture overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
-│                    Agent API (FastAPI / MCP tools)       │  ← Phase 5+
+│              CLI / MCP / Web UI tool surface             │  ← Phase 5+
 ├─────────────────────────────────────────────────────────┤
-│  Query Planner  │  Fusion / Reranking                   │  ← Phase 6
-├─────────────────┼───────────────────────────────────────┤
+│  Query Planner  │  Fusion / Reranking  │  Eval Harness  │  ← Phase 6+
+├─────────────────┼──────────────────────┼────────────────┤
 │  AST Search     │  Lexical Index  │  Semantic Index     │  ← Phases 2–4
 ├─────────────────┴───────────────────────────────────────┤
 │  Code IR (tree-sitter parse → symbols, scopes, refs)    │  ← Phase 2
 ├─────────────────────────────────────────────────────────┤
-│  Repo Snapshot (tarball → local tree @ commit SHA)       │  ← Phase 1
+│  Repo Snapshot + Registry (tree @ commit SHA + metadata) │  ← Phase 1
 ├─────────────────────────────────────────────────────────┤
 │  GitHub Client (app-installation auth, PyGithub)         │  ← exists: repo.py
 └─────────────────────────────────────────────────────────┘
-   Storage: .agent-outputs/github/repos/<owner>/<repo>@<sha>
+  Storage: local filesystem by default; bridge/native/web runtimes may
+  project the same logical repo state into LadybugDB or WASM-backed stores.
 ```
+
+## Roadmap shape
+
+This document intentionally keeps the early slices focused on ingestion and
+navigation primitives, then layers the GitNexus-specific delivery surfaces on
+top. The practical sequence should be:
+
+1. Make repo access and snapshotting deterministic.
+2. Build a shared IR that supports graph construction and search.
+3. Expose the exact tool primitives GitNexus agents need.
+4. Add multi-repo, bridge, and evaluation workflows only after the core graph
+  is trustworthy.
 
 ---
 
-## Slice 1 — Repo Snapshot
+## Slice 1 — Repo Access & Snapshot Registry
 
-**Goal**: Download a point-in-time tarball of any accessible repo and extract
-it to a deterministic local path. This is the foundation everything else
-builds on.
+**Goal**: Resolve accessible GitHub repos, snapshot them at a concrete commit,
+and register local metadata so downstream indexing and MCP tools can operate on
+stable repo identities.
 
 ### Deliverables
 
 | # | Item | Detail |
 |---|------|--------|
-| 1 | `snapshot_repo(repo_name, ref=None) → SnapshotResult` | Uses `Repository.get_archive_link("tarball", ref)` to fetch a tarball, extracts to `.agent-outputs/github/repos/<owner>/<repo>@<sha>/`. Returns a Pydantic model with `path`, `commit_sha`, `ref`, `repo_name`, `timestamp`. |
+| 1 | `snapshot_repo(repo_name, ref=None) → SnapshotResult` | Uses `Repository.get_archive_link("tarball", ref)` to fetch a tarball, extracts to `.agent-outputs/github/repos/<owner>/<repo>@<sha>/`. Returns a Pydantic model with `path`, `commit_sha`, `ref`, `repo_name`, `timestamp`, and registry metadata. |
 | 2 | Idempotency check | If `<owner>/<repo>@<sha>/` already exists and is non-empty, skip download. |
-| 3 | `list_snapshots(repo_name=None) → list[SnapshotResult]` | Enumerate existing snapshots on disk. |
-| 4 | `delete_snapshot(repo_name, sha)` | Cleanup helper. |
+| 3 | `list_snapshots(repo_name=None) → list[SnapshotResult]` | Enumerate existing snapshots on disk and expose registry state for `list`/`status` flows. |
+| 4 | `delete_snapshot(repo_name, sha)` | Cleanup helper that also unregisters the snapshot. |
+| 5 | `resolve_default_ref(repo_name) → str` | Resolve default branches and symbolic refs before download so every snapshot is pinned to a commit SHA. |
 
 ### File layout
 
@@ -68,6 +97,9 @@ app/services/github/
   same commit are a no-op.
 - **`ref` defaults to repo default branch**: Resolved to a concrete SHA before
   download so the path is always `@<sha>`, never `@main`.
+- **Registry is authoritative**: Repo listings, status, cleanup, and group
+  membership should all read from the same snapshot registry instead of
+  reconstructing state ad hoc.
 
 ### Test strategy
 
@@ -415,16 +447,17 @@ app/services/codesearch/
 
 ## Slice 9 — Agent API
 
-**Goal**: Expose the code intelligence system as tool endpoints consumable
-by LangGraph agents (and optionally as an MCP server).
+**Goal**: Expose the GitNexus-aligned tool surface as LangGraph wrappers,
+HTTP routes, and MCP tools so agents can use the same graph primitives from
+CLI, bridge, and server contexts.
 
 ### Deliverables
 
 | # | Item | Detail |
 |---|------|--------|
-| 1 | LangGraph tool wrappers | `@tool` functions: `search_code`, `get_symbol`, `find_references`, `get_context`, `semantic_neighbors`, `impact_analysis`, `repo_snapshot`. |
-| 2 | FastAPI endpoints | REST API mirror of the tool functions for external consumers. |
-| 3 | MCP server (optional) | Expose tools via MCP for use by other agents (Claude, Cursor, etc.). |
+| 1 | LangGraph tool wrappers | `@tool` functions that mirror GitNexus concepts: `query`, `context`, `impact`, `detect_changes`, `rename`, `cypher`, `list_repos`, plus lower-level search and snapshot helpers. |
+| 2 | FastAPI endpoints | REST API mirror of the tool functions for external consumers and bridge mode. |
+| 3 | MCP server | Expose tools via MCP for use by other agents (Claude, Cursor, etc.) with the same semantics as the CLI. |
 
 ### File layout
 
@@ -565,8 +598,8 @@ confidence scores, provenance, and explanations to rely on results deeply.
 
 ## Suggested build order
 
-```
-Slice 1: Repo Snapshot        ← start here, unblocks everything
+```text
+Slice 1: Repo Access & Snapshot Registry ← start here, unblocks everything
 Slice 2: Code IR              ← tree-sitter parse, core data model
 Slice 3: AST-Aware Search     ← first usable search for agents
   ─── MVP: agents can snapshot a repo and search it ───
@@ -576,7 +609,7 @@ Slice 6: Semantic Retrieval   ← fuzzy/conceptual search
 Slice 7: Query Planner        ← unified interface
   ─── Full code intelligence ───
 Slice 8: Impact Analysis      ← change reasoning
-Slice 9: Agent API            ← tool endpoints for LangGraph/MCP
+Slice 9: Agent API            ← tool endpoints for LangGraph/MCP parity
 Slice 10: Workspace Sync      ← incremental updates
 Slice 11: Secure Sharing      ← multi-tenant index reuse
 Slice 12: Agent UX            ← trust, telemetry, eval
