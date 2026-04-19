@@ -67,6 +67,8 @@ async def execute(
         async with AsyncPostgresSaver.from_conn_string(
             settings.DATABASE_URL
         ) as checkpointer:
+            # Idempotent; creates checkpoint tables on first run.
+            await checkpointer.setup()
             return await _run(workflow_name, state, context, config, checkpointer)
 
     return await _run(workflow_name, state, context, config, MemorySaver())
