@@ -78,7 +78,8 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
 │   tools/    ← agent-facing LangChain @tool functions             │
 ├──────────────────────────────────────────────────────────────────┤
 │                     services/ (external integrations)            │
-│            gh_client (PyGithub app-installation auth)            │
+│   gh_client (PyGithub app-installation auth) ·                   │
+│   codesearch (tree-sitter IR parsing over local snapshots)       │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -209,10 +210,15 @@ app/
 │   │   └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
 │   └── middleware/               # reserved for future LangChain middleware (empty placeholder)
 └── services/
+    ├── codesearch/
+    │   ├── __init__.py           # public exports for parsing helpers and IR models
+    │   ├── languages.py          # file extension → tree-sitter language mapping
+    │   ├── models.py             # FileIR / Symbol / Scope / Import Pydantic models
+    │   └── parser.py             # parse_file / parse_snapshot with skip heuristics
     └── gh_client/
         ├── auth.py               # get_github_client — lru_cached PyGithub app-installation client
         ├── repo.py               # GitHubRepositoryService.get_tree / .shallow_clone (tarball → backend)
-        └── types.py              # SnapshotResult TypedDict
+        └── types.py              # SnapshotResult Pydantic model
 ```
 
 ### Project root
@@ -232,7 +238,7 @@ app/
 ├── setup-agents.sh               # provisions .agents/ scaffold + per-IDE symlinks
 ├── docs/setup-agents.md          # specification for setup-agents.sh
 ├── scripts/explore_modal.py      # exploratory Modal harness (not wired)
-└── tests/                        # pytest: backends, sandbox, gh_client, settings, imports, nodes/persist
+└── tests/                        # pytest: backends, sandbox, gh_client, codesearch, settings, imports, nodes/persist
 ```
 
 ### Artifact directories (runtime, created on demand)
@@ -368,6 +374,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | URL → Markdown | Jina Reader (`r.jina.ai`) | `tools/web.py` |
 | Sandboxed code exec | subprocess (local), Modal (planned) | `sandbox/local.py`, `test_modal.py` |
 | GitHub | PyGithub (App-installation auth) | `services/gh_client/` |
+| Code IR parsing | tree-sitter + tree-sitter-language-pack | `services/codesearch/` |
 | Tabular sources | Polars | `tools/io.py: write_sources` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
@@ -470,6 +477,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/backends/test_inprocess_backend.py` | `InProcessFilesystemBackend` read/write/move/delete, path-escape rejection, tar extraction with `strip_components` |
 | `tests/sandbox/test_local_backend.py` | `LocalSubprocessSandboxBackend` stdout capture; `format_execution_result` stderr/empty-output branching |
 | `tests/test_gh_client_repo.py` | `get_tree` caches per commit SHA; `shallow_clone` skips when snapshot dir is populated |
+| `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
 | `tests/test_settings.py` | `FilesystemConfig.backend_type` defaults to a supported enum value |
 | `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
 | `tests/nodes/test_persist.py` | `persist_artifacts` writes `sources.csv` and memory markdown end-to-end against a tmp filesystem |

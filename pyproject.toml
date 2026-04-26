@@ -22,6 +22,8 @@ dependencies = [
     "pygithub>=2.8.1",
     "langgraph-checkpoint-postgres>=3.0.4",
     "modal>=1.4.1",
+    "tree-sitter>=0.25.2",
+    "tree-sitter-language-pack>=1.5.0",
 ]
 
 [tool.uv]
