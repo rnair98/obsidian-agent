@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from github import GithubException
+from github import Github, GithubException
+from github.Repository import Repository
 
 from app.core.logger import logger
 from app.core.paths import DEFAULT_ASSETS_DIR
@@ -17,9 +18,6 @@ from app.services.gh_client.types import SnapshotResult
 GITHUB_ARCHIVE_FORMAT = "tarball"
 
 if TYPE_CHECKING:
-    from github import Github
-    from github.Repository import Repository
-
     from app.engine.backends import FilesystemBackend
 
 
@@ -28,10 +26,10 @@ class GitHubRepositoryService:
 
     def __init__(
         self,
-        client: "Github",
+        client: Github,
         base_path: Path | None = None,
         repo_name: str | None = None,
-        filesystem_backend: "FilesystemBackend | None" = None,
+        filesystem_backend: FilesystemBackend | None = None,
     ) -> None:
         self.client = client
         self.filesystem_backend = filesystem_backend or get_filesystem_backend(
@@ -42,7 +40,7 @@ class GitHubRepositoryService:
         # lru_cache-on-method pattern that would pin ``self`` forever.
         self._tree_cache: dict[str, Any] = {}
 
-    def _get_repo(self, repo_name: str | None) -> "Repository | None":
+    def _get_repo(self, repo_name: str | None) -> Repository | None:
         """Return a repository handle for `<owner>/<repo>` or None on access errors."""
         if not repo_name:
             return None
