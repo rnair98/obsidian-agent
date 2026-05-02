@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 from tree_sitter import Node
@@ -46,6 +48,8 @@ def parse_file(path: Path) -> FileIR | None:
         return None
 
     try:
+        if path.stat().st_size > MAX_FILE_SIZE_BYTES:
+            return None
         source_bytes = path.read_bytes()
     except OSError:
         return None
@@ -53,8 +57,11 @@ def parse_file(path: Path) -> FileIR | None:
     if _is_binary(source_bytes):
         return None
 
-    parser = get_parser(language)
-    tree = parser.parse(source_bytes)
+    try:
+        parser = get_parser(language)
+        tree = parser.parse(source_bytes)
+    except Exception:
+        return None
     lines = source_bytes.decode("utf-8", errors="replace").splitlines()
 
     symbols: list[Symbol] = []
@@ -100,15 +107,23 @@ def parse_file(path: Path) -> FileIR | None:
 def parse_snapshot(snapshot_path: Path) -> list[FileIR]:
     """Walk a snapshot tree and parse all supported files that pass skip heuristics."""
     results: list[FileIR] = []
-    for path in sorted(snapshot_path.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in _iter_files(snapshot_path):
         if _should_skip_file(snapshot_path, path):
             continue
         parsed = parse_file(path)
         if parsed is not None:
             results.append(parsed)
     return results
+
+
+def _iter_files(snapshot_path: Path) -> Iterator[Path]:
+    """Yield files deterministically without materializing the full tree."""
+    for root, dirnames, filenames in os.walk(snapshot_path):
+        dirnames[:] = sorted(
+            dirname for dirname in dirnames if dirname not in SKIP_DIRECTORIES
+        )
+        for filename in sorted(filenames):
+            yield Path(root) / filename
 
 
 def _should_skip_file(snapshot_path: Path, path: Path) -> bool:
@@ -263,20 +278,27 @@ def _extract_js_imports(
     text = _node_text(node, source_bytes)
     module_match = re.search(r"""from\s+["']([^"']+)["']""", text)
     names_match = re.search(r"\{([^}]*)\}", text)
-    default_match = re.match(r"import\s+([A-Za-z_$][\w$]*)", text)
+    default_match = re.match(
+        r"import\s+(?:type\s+)?([A-Za-z_$][\w$]*)\s*(?:,|from\b)",
+        text,
+    )
 
     names: list[str] = []
     if default_match:
         names.append(default_match.group(1))
     if names_match:
         names.extend(
-            part.strip().split(" as ")[0]
+            _normalize_js_import_name(part)
             for part in names_match.group(1).split(",")
             if part.strip()
         )
 
     module = module_match.group(1) if module_match else ""
     return [Import(module=module, names=names, line=line)] if module else []
+
+
+def _normalize_js_import_name(part: str) -> str:
+    return part.strip().removeprefix("type ").split(" as ")[0].strip()
 
 
 def _extract_go_imports(
@@ -286,19 +308,25 @@ def _extract_go_imports(
 ) -> list[Import]:
     text = _node_text(node, source_bytes)
     results: list[Import] = []
-    for raw_line in text.splitlines():
-        stripped = raw_line.strip().rstrip(")")
-        if not stripped or stripped == "import (" or stripped == "import":
+    for offset, raw_line in enumerate(text.splitlines()):
+        current_line = line + offset
+        stripped = raw_line.strip()
+        if not stripped or stripped in {"import (", "import", ")"}:
+            continue
+        if stripped.startswith("import "):
+            stripped = stripped.removeprefix("import ").strip()
+        stripped = stripped.rstrip(")")
+        if not stripped:
             continue
         parts = stripped.split()
         if len(parts) == 1:
             module = parts[0].strip('"')
-            results.append(Import(module=module, names=[], line=line))
+            results.append(Import(module=module, names=[], line=current_line))
             continue
         if len(parts) >= 2:
             alias = parts[0]
             module = parts[-1].strip('"')
-            results.append(Import(module=module, names=[alias], line=line))
+            results.append(Import(module=module, names=[alias], line=current_line))
     return results
 
 

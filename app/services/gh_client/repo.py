@@ -37,6 +37,7 @@ class GitHubRepositoryService:
         self.filesystem_backend = filesystem_backend or get_filesystem_backend(
             base_path=base_path or DEFAULT_ASSETS_DIR
         )
+        self.repo_name = repo_name
         self.repo = self._get_repo(repo_name)
         # Per-instance tree cache keyed by commit sha; avoids the
         # lru_cache-on-method pattern that would pin ``self`` forever.
@@ -92,12 +93,18 @@ class GitHubRepositoryService:
 
     def list_snapshots(self) -> list[SnapshotResult]:
         """List all snapshots for the repository."""
-        if self.repo is None:
+        if self.repo_name is None:
             return []
 
         snapshots: list[SnapshotResult] = []
-        owner = self.repo.owner.login
-        repo_name = self.repo.name
+        try:
+            owner, repo_name = self.repo_name.split("/", maxsplit=1)
+        except ValueError:
+            logger.warning(
+                "Invalid GitHub repo name for snapshot listing: %s",
+                self.repo_name,
+            )
+            return []
         snapshot_root = Path(owner)
         snapshot_prefix = f"{repo_name}@"
 
@@ -108,7 +115,7 @@ class GitHubRepositoryService:
             commit_sha = path.name[len(snapshot_prefix) :]
             snapshots.append(
                 SnapshotResult(
-                    repo_name=self.repo.full_name,
+                    repo_name=self.repo_name,
                     commit_sha=commit_sha,
                     requested_ref=commit_sha,
                     path=path,

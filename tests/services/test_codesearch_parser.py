@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.services.codesearch import parser
 from app.services.codesearch.languages import detect_language
 from app.services.codesearch.parser import parse_file, parse_snapshot
 
@@ -56,6 +57,78 @@ def test_parse_file_builds_python_ir(tmp_path: Path) -> None:
     assert {(item.module, tuple(item.names), item.line) for item in result.imports} == {
         ("os", (), 1),
         ("pkg", ("alpha", "beta"), 2),
+    }
+
+
+def test_parse_file_skips_large_direct_input(tmp_path: Path) -> None:
+    path = tmp_path / "large.py"
+    path.write_text("#" * (parser.MAX_FILE_SIZE_BYTES + 1), encoding="utf-8")
+
+    assert parse_file(path) is None
+
+
+def test_parse_file_skips_when_parser_cannot_load(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    path = tmp_path / "sample.py"
+    path.write_text("def run():\n    return 1\n", encoding="utf-8")
+
+    def fail_get_parser(language: str):
+        raise RuntimeError(f"no grammar for {language}")
+
+    monkeypatch.setattr(parser, "get_parser", fail_get_parser)
+
+    assert parse_file(path) is None
+
+
+def test_parse_file_extracts_typescript_type_imports(tmp_path: Path) -> None:
+    path = tmp_path / "sample.ts"
+    path.write_text(
+        "\n".join(
+            [
+                'import type { Foo } from "./types";',
+                'import type Bar from "./bar";',
+                'import { type Baz, Quux as Renamed } from "./mixed";',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = parse_file(path)
+
+    assert result is not None
+    assert {(item.module, tuple(item.names), item.line) for item in result.imports} == {
+        ("./types", ("Foo",), 1),
+        ("./bar", ("Bar",), 2),
+        ("./mixed", ("Baz", "Quux"), 3),
+    }
+
+
+def test_parse_file_extracts_go_imports_without_fake_aliases(tmp_path: Path) -> None:
+    path = tmp_path / "main.go"
+    path.write_text(
+        "\n".join(
+            [
+                'import "fmt"',
+                'import alias "example.com/pkg"',
+                "import (",
+                '    "os"',
+                '    nethttp "net/http"',
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = parse_file(path)
+
+    assert result is not None
+    assert {(item.module, tuple(item.names), item.line) for item in result.imports} == {
+        ("fmt", (), 1),
+        ("example.com/pkg", ("alias",), 2),
+        ("os", (), 4),
+        ("net/http", ("nethttp",), 5),
     }
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from app.core.paths import DEFAULT_ASSETS_DIR
+from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.services.gh_client.repo import GITHUB_ARCHIVE_FORMAT, GitHubRepositoryService
 
 
@@ -32,6 +33,16 @@ class _FakeRepo:
     def get_archive_link(self, archive_format: str, ref: str) -> str:
         assert archive_format == GITHUB_ARCHIVE_FORMAT
         return f"https://example.invalid/{ref}.tar.gz"
+
+
+class _LazyPropertyRepo(_FakeRepo):
+    @property
+    def owner(self):
+        raise AssertionError("list_snapshots must not load repo.owner")
+
+    @property
+    def name(self):
+        raise AssertionError("list_snapshots must not load repo.name")
 
 
 class _FakeClient:
@@ -117,5 +128,27 @@ def test_shallow_clone_skips_when_snapshot_directory_is_non_empty() -> None:
     result = service.shallow_clone()
 
     assert result is not None
-    assert result["skipped"] is True
-    assert result["commit_sha"] == repo._sha
+    assert result.skipped is True
+    assert result.commit_sha == repo._sha
+
+
+def test_list_snapshots_uses_repo_name_without_lazy_github_properties(
+    tmp_path: Path,
+) -> None:
+    repo = _LazyPropertyRepo()
+    backend = InProcessFilesystemBackend(base_path=tmp_path)
+    snapshot_dir = backend.mkdir(f"owner/repo@{repo._sha}")
+    service = GitHubRepositoryService(
+        _FakeClient(repo),
+        repo_name=repo.full_name,
+        filesystem_backend=backend,
+    )
+
+    result = service.list_snapshots()
+
+    assert len(result) == 1
+    assert result[0].repo_name == repo.full_name
+    assert result[0].commit_sha == repo._sha
+    assert result[0].requested_ref == repo._sha
+    assert result[0].path == snapshot_dir
+    assert result[0].skipped is False

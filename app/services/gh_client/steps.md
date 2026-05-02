@@ -49,7 +49,9 @@ def delete_snapshot(base_path: Path, repo_name: str, commit_sha: str) -> None:
 ```
 
 `list_snapshots` should reconstruct `SnapshotResult` from the directory name
-(parse `owner/repo@sha` from the path). `created_at` can use `Path.stat().st_ctime`.
+(parse `owner/repo@sha` from the path). Use `Path.stat().st_mtime` for the
+portable filesystem timestamp; `st_ctime` is metadata-change time on Unix-like
+systems, not creation time.
 
 ### Done when
 
@@ -567,7 +569,7 @@ def cache_set(db_path: Path, key: str, value: str) -> None: ...
 
 ### Done when
 
-- `execute_plan(plan_query("how does auth work?", repo="org/app"), snapshot)`
+- `execute_plan(plan_query("how does auth work?", scope={"repo": "org/app"}), snapshot)`
   returns ranked results from multiple legs with source tags.
 - A repeated query hits `llm_cache` instead of calling the LLM again.
 - BM25 gate skips semantic search for an exact identifier query.

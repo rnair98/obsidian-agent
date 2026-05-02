@@ -395,9 +395,6 @@ app/services/codesearch/
   indexing. **Fallback**: if the custom scoring integration is too rough,
   drop back to LanceDB's default IVF-PQ index, which is fast enough at
   repo scale and requires no extra work.
-- **Prefer Matryoshka-trained embedding models**: e.g., `nomic-embed-code`
-  or `jina-embeddings-v3`. Allows dimension truncation at query time for
-  faster ANN with minimal recall loss.
 - **Prefer Matryoshka-trained embedding models**: Models trained with
   Matryoshka representation learning (e.g., `nomic-embed-code`,
   `jina-embeddings-v3`) allow truncating embedding dimensions at query time
