@@ -37,6 +37,7 @@ class GitHubRepositoryService:
         self.filesystem_backend = filesystem_backend or get_filesystem_backend(
             base_path=base_path or DEFAULT_ASSETS_DIR
         )
+        self.repo_name = repo_name
         self.repo = self._get_repo(repo_name)
         # Per-instance tree cache keyed by commit sha; avoids the
         # lru_cache-on-method pattern that would pin ``self`` forever.
@@ -89,6 +90,60 @@ class GitHubRepositoryService:
         tree = self.repo.get_git_tree(commit_sha, recursive=True).tree
         self._tree_cache[commit_sha] = tree
         return tree
+
+    def list_snapshots(self) -> list[SnapshotResult]:
+        """List all snapshots for the repository."""
+        if self.repo_name is None:
+            return []
+
+        snapshots: list[SnapshotResult] = []
+        try:
+            owner, repo_name = self.repo_name.split("/", maxsplit=1)
+        except ValueError:
+            logger.warning(
+                "Invalid GitHub repo name for snapshot listing: %s",
+                self.repo_name,
+            )
+            return []
+        snapshot_root = Path(owner)
+        snapshot_prefix = f"{repo_name}@"
+
+        for path in self.filesystem_backend.list_dir(snapshot_root):
+            if not path.is_dir() or not path.name.startswith(snapshot_prefix):
+                continue
+
+            commit_sha = path.name[len(snapshot_prefix) :]
+            snapshots.append(
+                SnapshotResult(
+                    repo_name=self.repo_name,
+                    commit_sha=commit_sha,
+                    requested_ref=commit_sha,
+                    path=path,
+                    created_at=datetime.fromtimestamp(
+                        path.stat().st_mtime,
+                        tz=timezone.utc,
+                    ),
+                    skipped=False,
+                )
+            )
+        return snapshots
+
+    def delete_snapshot(self, snapshot: SnapshotResult) -> bool:
+        """Delete a snapshot directory from the local filesystem backend."""
+        try:
+            if not self.filesystem_backend.exists(snapshot.path):
+                return False
+
+            self.filesystem_backend.delete_dir(snapshot.path, missing_ok=True)
+            return True
+        except Exception as exc:
+            logger.exception(
+                "Failed to delete snapshot '%s' for '%s': %s",
+                snapshot.commit_sha,
+                snapshot.repo_name,
+                exc,
+            )
+            return False
 
     def shallow_clone(
         self,

@@ -259,12 +259,23 @@ app/services/codesearch/
   source tree. Deleting a snapshot deletes its index.
 - **Trigram index for substrings**: FTS5 tokenizer handles word-boundary
   queries; a separate trigram table handles arbitrary substring matching.
+- **Production retrieval: impact-ordered + WAND pruning**: `query_index()`
+  should use the highest-IDF query terms to build a targeted candidate set
+  first, then apply WAND-style threshold pruning to eliminate documents that
+  cannot mathematically reach top-k before fully scoring them. This keeps
+  retrieval sub-linear even without clustering. Delta + variable-length
+  encoding for doc IDs (4 bytes → ~1.3 bytes avg) and frequency-grouped
+  postings reduce memory 50%+ at scale. (Exa achieved this on their BM25
+  index across billions of documents.)
 
 ### Inspiration
 
 - **GitHub Blackbird**: Inverted token index + n-gram substring index +
   filename/path index, sharded by blob ID, with Boolean query parsing.
   ([Source](https://github.blog/engineering/architecture-optimization/the-technology-behind-githubs-new-code-search/))
+- **Exa BM25**: Impact-ordered retrieval + WAND dynamic pruning + frequency-
+  grouped postings + delta encoding → 50%+ memory reduction, 10% latency
+  improvement. ([Source](https://exa.ai/blog/bm25-optimization))
 
 ### Dependencies
 
@@ -312,16 +323,23 @@ app/services/codesearch/
 
 ### Key decisions
 
-- **networkx for prototyping**: Simple, well-documented graph library.
-  Swap to a custom adjacency store if memory becomes an issue on large repos.
+- **KuzuDB, not networkx**: KuzuDB is an embedded graph DB (MIT, C++ core,
+  Python bindings, no server). Graphs are stored persistently at
+  `<snapshot_path>/.graph/` — no serialization, no rebuild on every
+  process start. Cypher queries work natively, which directly enables
+  Slice 9's `cypher` tool without additional work. networkx has no
+  persistence and no query language; KuzuDB has both. GitNexus validated
+  this combination before migrating to LadybugDB solely for WASM browser
+  support — which this project does not need.
 - **Approximated, not sound**: Static analysis without type inference. Good
   enough for navigation and impact estimation, not a compiler.
-- **Stored as pickle or JSON alongside snapshot**: Same co-location pattern
-  as the lexical index.
+- **Schema**: Nodes typed as `Symbol(id, name, kind, file, start_line,
+  end_line, repo)`. Edges typed as `IMPORTS`, `CALLS`, `REFERENCES`,
+  `DEFINES`. KuzuDB's typed schema enforces this without manual validation.
 
 ### Dependencies
 
-- Add to `pyproject.toml`: `networkx>=3.0`
+- Add to `pyproject.toml`: `kuzu` (Python bindings, bundles the C++ engine)
 
 ### Done when
 
@@ -341,10 +359,9 @@ terminology differs.
 
 | # | Item | Detail |
 |---|------|--------|
-| 1 | `build_embeddings(snapshot_path) → EmbeddingIndex` | AST-aware chunking (function-level, class-level), embed with `sentence-transformers`, store in FAISS. |
-| 2 | `semantic_search(index, query, top_k=10) → list[SemanticResult]` | ANN retrieval over embedded chunks. |
-| 3 | Chunk metadata store | Map chunk IDs back to `(file, start_line, end_line, symbol_name)`. |
-| 4 | Dedup by content hash | Identical chunks (copy-pasted code) indexed once. |
+| 1 | `build_embeddings(snapshot_path) → EmbeddingIndex` | AST-aware chunking (function-level, class-level), embed with `sentence-transformers`, store in a LanceDB table at `<snapshot_path>/.embeddings/`. Table columns: `chunk_id`, `file`, `start_line`, `end_line`, `symbol_name`, `language`, `repo`, `content`, `vector`. |
+| 2 | `semantic_search(index, query, top_k=10, **filters) → list[SemanticResult]` | Single LanceDB query: SQL `WHERE` clause for filters (language, path_glob, symbol_kind) + vector search over matching rows. LanceDB handles filter+ANN natively — no manual pre-filter dicts. |
+| 3 | Dedup by content hash | Identical chunks (copy-pasted code) indexed once. |
 
 ### File layout
 
@@ -357,16 +374,38 @@ app/services/codesearch/
 ### Key decisions
 
 - **AST-aware chunking, not sliding window**: Chunk boundaries align with
-  function/class definitions from `FileIR`. Produces coherent, meaningful
-  chunks.
-- **sentence-transformers + FAISS**: Already in the ecosystem (fastembed
-  cache exists in workspace). HNSW for approximate nearest neighbor.
+  function/class definitions from `FileIR`. Target 900 tokens per chunk,
+  15% overlap. Large functions that exceed the target are split at the
+  highest-quality AST sub-boundary — scored by tree-sitter node type
+  (function def > block > expression > statement) so chunks always end
+  at a meaningful syntactic boundary rather than mid-expression.
+- **LanceDB as the container**: LanceDB owns the table schema, SQL
+  filtering, persistence, and cloud-backed storage (S3/GCS upgrade path).
+  It stores vectors and chunk metadata in one table, applying SQL `WHERE`
+  filters before the ANN scan — no manual pre-filter dicts. Continue IDE
+  uses it for exactly this use case (code semantic search, local-first).
+- **TurboQuant compression as an experiment**: Rather than using LanceDB's
+  default IVF-PQ index, try pre-compressing embeddings with TurboQuant
+  (rotate → Lloyd-Max scalar quantize → store codes + norm as a binary
+  column) and scoring via asymmetric dot product at query time. LanceDB's
+  Lance format supports custom binary columns alongside the vector column;
+  the query path can fetch the binary codes and run the TurboQuant scoring
+  kernel directly. If this works cleanly, it buys ~6× compression at 95%
+  recall (vs PQ's ~41%) with zero codebook training — good for incremental
+  indexing. **Fallback**: if the custom scoring integration is too rough,
+  drop back to LanceDB's default IVF-PQ index, which is fast enough at
+  repo scale and requires no extra work.
+- **Prefer Matryoshka-trained embedding models**: Models trained with
+  Matryoshka representation learning (e.g., `nomic-embed-code`,
+  `jina-embeddings-v3`) allow truncating embedding dimensions at query time
+  (e.g., 256 of 768 dims) for faster ANN with minimal recall loss. Use
+  full dimensions only for the reranking pass.
 - **Secondary recall only**: Semantic search expands recall for fuzzy
   queries. Exact/lexical search remains the primary path.
 
 ### Dependencies
 
-- Already available: `scipy`. Add: `sentence-transformers`, `faiss-cpu`.
+- Add: `sentence-transformers`, `lancedb` (Apache 2.0, embedded, no server).
 
 ### Compute note
 
@@ -377,6 +416,8 @@ Embedding generation is CPU/GPU-intensive and batch-friendly.
 
 - `semantic_search(index, "user authentication flow")` returns relevant
   auth-related functions even if they don't contain the word "authentication".
+- Adding new chunks after a partial repo update (Slice 10) requires no
+  index retraining — LanceDB supports online inserts and deletes natively.
 
 ---
 
@@ -389,10 +430,13 @@ plans execution, merges results, and re-ranks.
 
 | # | Item | Detail |
 |---|------|--------|
-| 1 | `plan_query(query, scope) → QueryPlan` | Parse a natural-language or structured query into an execution plan (which indexes to hit, which filters to apply). |
-| 2 | `execute_plan(plan) → list[FusedResult]` | Run retrieval across lexical, AST, semantic, and graph indexes. Merge via Reciprocal Rank Fusion (RRF). |
-| 3 | Reranking | Optional LLM-based or cross-encoder reranking pass on top-k candidates. |
-| 4 | Scope & filter rewriting | Auto-narrow by repo, path, language, symbol kind based on query context. |
+| 1 | `plan_query(query, scope, intent=None) → QueryPlan` | Classify query type (`exact` / `fuzzy` / `hybrid`), then build an execution plan (which indexes to hit, which filters to apply, which query variants to generate). Exact queries route to lexical only; fuzzy to semantic only; hybrid to both + RRF. `intent` can override routing (e.g., `"snippet"` forces lexical even on fuzzy queries). |
+| 2 | `execute_plan(plan) → list[FusedResult]` | Run retrieval across selected indexes. Merge via Reciprocal Rank Fusion (RRF) — first sub-query result carries 2× weight. Each result tagged with which index contributed it. |
+| 3 | BM25 confidence gate | After lexical retrieval, if results ≥ k and top BM25 score ≥ threshold *and* no `intent` override is set, skip the semantic leg entirely. Saves embedding inference on the majority of exact-match queries. |
+| 4 | HyDE query variant | For `fuzzy` queries: generate a hypothetical code snippet matching the query (using the agent LLM with a prompt template), embed the snippet rather than the raw query text. Closes the vocabulary gap between natural-language queries and code tokens. Cache the generated snippet in `llm_cache`. |
+| 5 | `llm_cache` table | SQLite table in `.codesearch.db` (alongside FTS5). Key = `sha256(query_text + operation_type)`. Caches HyDE snippets and reranker LLM calls — repeated queries in agentic loops pay the LLM cost once. |
+| 6 | Reranking | Optional LLM-based or cross-encoder reranking pass on top-k candidates. Position-aware blending: `final_score = blend(rrf_rank, reranker_score)` with position-dependent weights. |
+| 7 | Scope & filter rewriting | Auto-narrow by repo, path, language, symbol kind based on query context. |
 
 ### File layout
 
@@ -445,44 +489,63 @@ app/services/codesearch/
 
 ---
 
-## Slice 9 — Agent API
+## Slice 9 — LangChain Tool Surface
 
-**Goal**: Expose the GitNexus-aligned tool surface as LangGraph wrappers,
-HTTP routes, and MCP tools so agents can use the same graph primitives from
-CLI, bridge, and server contexts.
+**Goal**: Expose the codesearch service as conventional LangChain `@tool`
+functions the Researcher agent can call directly. No separate server, no
+MCP, no CLI — those come later if and when the service needs to be shared
+with other agents outside this process.
 
 ### Deliverables
 
 | # | Item | Detail |
 |---|------|--------|
-| 1 | LangGraph tool wrappers | `@tool` functions that mirror GitNexus concepts: `query`, `context`, `impact`, `detect_changes`, `rename`, `cypher`, `list_repos`, plus lower-level search and snapshot helpers. |
-| 2 | FastAPI endpoints | REST API mirror of the tool functions for external consumers and bridge mode. |
-| 3 | MCP server | Expose tools via MCP for use by other agents (Claude, Cursor, etc.) with the same semantics as the CLI. |
+| 1 | LangGraph `@tool` wrappers | `search_code`, `search_symbols`, `get_context`, `find_references`, `find_dependents`, `analyze_impact`, `cypher`, `list_snapshots`. Each is a thin wrapper over the service layer with no LangChain imports in the service itself. |
+| 2 | Lazy indexing | Tools auto-build missing indexes (snapshot, FTS5, KuzuDB graph, LanceDB embeddings) on first call. No separate indexing step required by the agent. |
 
 ### File layout
 
 ```
-app/engine/tools/codesearch.py   # LangGraph @tool wrappers
-app/api/codesearch.py            # FastAPI routes
+app/engine/tools/codesearch.py   # LangGraph @tool wrappers only
+app/services/codesearch/         # Pure service layer — no LangChain imports
 ```
 
 ### Key decisions
 
+- **Thin wrappers, pure service layer**: `@tool` functions call service
+  functions directly. The service layer has no LangChain dependency. This
+  is the seam that makes CLI/MCP extraction straightforward later — the
+  tools just become a different calling convention over the same functions.
 - **Compact, structured output**: Every tool returns Pydantic models with
   `file`, `line`, `preview`, `confidence`, and `citations`. Designed for
   token-efficient agent consumption.
-- **Lazy indexing**: Tools auto-build missing indexes on first query. No
-  separate "indexing" step required by the agent.
+
+### Future: CLI / MCP extraction
+
+When the service needs to be shared across agents or processes, the
+extraction path is: wrap the same service functions in a CLI entry point
+(`typer` / `click`) and an MCP server. The service layer stays unchanged.
+FastAPI endpoints and multi-repo bridge mode follow the same pattern.
 
 ### Done when
 
 - The Researcher agent can call `search_code("authenticate", repo="org/app")`
   and receive structured, citation-rich results without any REST API calls
   to GitHub.
+- All tools are callable from a LangGraph node with no additional setup.
 
 ---
 
-## Slice 10 — Workspace Sync & Incremental Updates
+---
+
+> **Slices 10–12 are deferred.** The service is useful without them.
+> Revisit when the agent is running against large repos in production and
+> re-indexing cost becomes observable. The CLI/MCP extraction path (noted
+> in Slice 9) is the natural trigger for Slices 10–11.
+
+---
+
+## Slice 10 — Workspace Sync & Incremental Updates *(deferred)*
 
 **Goal**: Avoid re-downloading and re-indexing entire repos when only a few
 files changed. Merkle-tree-based diffing to detect changes and update indexes
@@ -508,10 +571,13 @@ incrementally.
 
 - Updating a 10k-file snapshot where 5 files changed takes <5 seconds
   (not minutes for a full re-index).
+- Embedding index handles incremental deletes: when a file is removed or
+  changed, its chunk rows are deleted from the LanceDB table by `chunk_id`,
+  then new chunks are inserted — no retraining, no full re-index.
 
 ---
 
-## Slice 11 — Secure Sharing & Reuse
+## Slice 11 — Secure Sharing & Reuse *(deferred)*
 
 **Goal**: Allow index reuse across branches, forks, and clones without
 leaking unrelated data. Privacy-safe multi-tenant index sharing.
@@ -538,7 +604,7 @@ leaking unrelated data. Privacy-safe multi-tenant index sharing.
 
 ---
 
-## Slice 12 — Agent UX & Telemetry
+## Slice 12 — Agent UX & Telemetry *(deferred)*
 
 **Goal**: Make the system trustworthy and self-improving. Agents need
 confidence scores, provenance, and explanations to rely on results deeply.
@@ -550,14 +616,40 @@ confidence scores, provenance, and explanations to rely on results deeply.
 | 1 | Confidence scores | Per-result confidence based on match quality, index coverage, and retrieval path. |
 | 2 | Provenance & citations | Every result tagged with which index contributed it and a line-level source link. |
 | 3 | Query trace | Visualization of how a query was planned and executed (for debugging). |
-| 4 | Eval harness | Precision/recall benchmarks on known-good query sets. |
+| 4 | Eval harness | See eval design below. Runs nightly, tracks all four metrics over time. |
 | 5 | Telemetry | Log missed queries, low-confidence results, and agent feedback. |
+
+### Eval design
+
+Evaluate retrieval quality on four independent axes (based on Exa's WebCode
+eval framework):
+
+| Metric | What it tests | How to measure |
+|---|---|---|
+| **Groundedness** | Does retrieved context *contain* the correct answer? | Discriminative LLM judge — given context + gold answer, asks "is the answer present?" Never sees the synthesized response. |
+| **Correctness** | Does the agent produce the right answer from context? | Generative judge — given synthesized response + gold answer. Never sees the retrieved context. |
+| **Citation precision** | What fraction of returned results actually contain the answer? | Direct check over result set. |
+| **E2E task pass rate** | Does an agent using this index pass unit tests in a sandbox? | Generate coding tasks requiring specific symbols from indexed repos. Run agent output in a Modal/subprocess sandbox. Check test pass rate. |
+
+**Key principle**: measure groundedness and correctness *independently*.
+Correctness scores cluster high across all retrieval qualities because the
+synthesis LLM fills gaps from parametric memory — it gives no signal about
+retrieval. Groundedness isolates the index. (Exa found correctness ~86%
+across all providers; groundedness showed high variance and actually
+differentiated them.)
+
+**Open evals, not static fixtures**: Generate eval queries from repo
+snapshots that postdate the embedding model's training cutoff. This forces
+the index to actually retrieve rather than the LLM to recall from training.
+Regenerate the eval set periodically rather than using a fixed benchmark
+that models will eventually saturate.
 
 ### Done when
 
 - Agents can inspect *why* a result was returned (provenance) and *how
   confident* the system is.
-- An eval harness runs nightly and tracks precision/recall over time.
+- Eval harness runs nightly, reporting groundedness, correctness, citation
+  precision, and E2E pass rate as separate tracked metrics.
 
 ---
 
@@ -568,9 +660,9 @@ confidence scores, provenance, and explanations to rely on results deeply.
 | Repo access | PyGithub (existing) | App-installation auth already wired |
 | Parsing | tree-sitter + tree-sitter-language-pack | Multi-language AST, grep-ast-proven |
 | Lexical index | SQLite FTS5 + trigram table | Zero-infra, co-located with snapshot |
-| Symbol graph | networkx | Simple prototyping, swap later if needed |
-| Semantic index | sentence-transformers + FAISS | Existing ecosystem compatibility |
-| Query fusion | Reciprocal Rank Fusion | Proven merge strategy, no training needed |
+| Symbol graph | KuzuDB | Embedded graph DB (MIT, no server), persistent Cypher queries, typed node/edge schema; enables Slice 9 `cypher` tool without extra work |
+| Semantic index | sentence-transformers + LanceDB (+ TurboQuant experiment) | LanceDB for table/filter/persistence layer; TurboQuant compression as experimental index backend (fallback: LanceDB default IVF-PQ) |
+| Query fusion | Reciprocal Rank Fusion + query-type routing | Proven merge strategy; exact/fuzzy/hybrid routing avoids unnecessary index fan-out |
 | API | FastAPI (existing) + LangGraph `@tool` | Matches existing app architecture |
 | Background jobs | asyncio / Modal / Cloud Run | Local-first, offload when needed |
 | Storage | Filesystem paths | Mounted volumes in prod, no abstraction |
@@ -594,6 +686,30 @@ confidence scores, provenance, and explanations to rely on results deeply.
 ### MCP
 - [MCP servers](https://github.com/modelcontextprotocol/servers)
 
+### Exa / Search Architecture
+- [How we built a web-scale vector database](https://exa.ai/blog/building-web-scale-vector-db) — clustering-based ANN + inverted filter indexes; why IVF beats HNSW for filtered search (Slice 6)
+- [Serving BM25 with 50% memory reduction](https://exa.ai/blog/bm25-optimization) — WAND dynamic pruning, frequency-grouped postings, delta encoding (Slice 4 production path)
+- [exa-code: web context for coding agents](https://exa.ai/blog/exa-code) — code-specific retrieval model design; dense context philosophy
+- [WebCode: Search Evals for Coding Agents](https://exa.ai/blog/webcode) — groundedness vs correctness, open evals, sandbox E2E eval design (Slice 12)
+
+### Embedding Store
+- [LanceDB](https://github.com/lancedb/lancedb) — embedded file-based vector DB, Apache 2.0; vectors + metadata in one Lance/Arrow table, native SQL filters, online inserts/deletes, S3/GCS upgrade path (Slice 6)
+- [Continue IDE × LanceDB](https://www.lancedb.com/blog/ai-native-development-local-continue-lancedb) — case study validating LanceDB for local-first code semantic search (same use case)
+
+### Graph Store
+- [KuzuDB](https://github.com/kuzudb/kuzu) — embedded property graph DB, MIT; Cypher queries, typed schema, persistent, Python bindings (Slice 5, enables Slice 9 `cypher` tool)
+- [GitNexus](https://github.com/abhigyanpatwari/GitNexus) — reference implementation using the same KuzuDB→graph pipeline for code intelligence
+
+### Query Pipeline
+
+- [tobi/qmd](https://github.com/tobi/qmd) — on-device hybrid search engine; BM25 probe short-circuit, HyDE query expansion, llm_cache, 900-token AST-aware chunking with tree-sitter (Slices 6–7)
+
+### TurboQuant / Vector Quantization
+- [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874) — ICLR 2026; zero-training compression, ~6× at 95% recall; target for the LanceDB+TurboQuant experiment in Slice 6
+- [PolarQuant: Vector Quantization with Polar Transformation](https://openreview.net/forum?id=Igzjw1Pkds) — AISTATS 2026; Stage 1 of TurboQuant (random rotation + scalar quantization)
+- [TurboQuant Google Research blog](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/) — accessible overview of the two-stage design
+- [RyanCodrai/turbovec](https://github.com/RyanCodrai/turbovec) — Rust/SIMD TurboQuant index; reference implementation for the scoring kernel to adapt into the LanceDB experiment
+
 ---
 
 ## Suggested build order
@@ -604,13 +720,16 @@ Slice 2: Code IR              ← tree-sitter parse, core data model
 Slice 3: AST-Aware Search     ← first usable search for agents
   ─── MVP: agents can snapshot a repo and search it ───
 Slice 4: Lexical Index        ← performance upgrade (scan → index)
-Slice 5: Symbol Graph         ← cross-file navigation
-Slice 6: Semantic Retrieval   ← fuzzy/conceptual search
+Slice 5: Symbol Graph         ← cross-file navigation (KuzuDB)
+Slice 6: Semantic Retrieval   ← fuzzy/conceptual search (LanceDB)
 Slice 7: Query Planner        ← unified interface
-  ─── Full code intelligence ───
 Slice 8: Impact Analysis      ← change reasoning
-Slice 9: Agent API            ← tool endpoints for LangGraph/MCP parity
-Slice 10: Workspace Sync      ← incremental updates
+Slice 9: LangChain Tools      ← wire everything as @tool functions
+  ─── Shipped: integrated codesearch service ───
+
+  [ later, when needed ]
+Slice 10: Workspace Sync      ← incremental re-indexing
 Slice 11: Secure Sharing      ← multi-tenant index reuse
-Slice 12: Agent UX            ← trust, telemetry, eval
+  ─── CLI / MCP extraction ← natural trigger for 10-11 ───
+Slice 12: Agent UX & Eval     ← trust, telemetry, eval harness
 ```
