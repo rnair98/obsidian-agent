@@ -1,0 +1,31 @@
+app/services/gh_client/repo.py
+  804c689fea062462 40,96,100-107,118
+app/services/gh_client/steps.md
+  804c689fea062462 52-54,572
+tests/test_gh_client_repo.py
+  804c689fea062462 7,38-47,131-154
+app/services/codesearch/parser.py
+  804c689fea062462 3,5,51-52,60-64,110,119-128,281-284,291,300-303,311-319,324,329
+tests/services/test_codesearch_parser.py
+  804c689fea062462 5,63-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "9e41d8f2ccba56a98e548e02715272ae3be964ad",
+  "prompts": {
+    "804c689fea062462": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019de5c8-8bb8-7753-a773-3ecda7fa2137",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair",
+      "messages": [],
+      "total_additions": 167,
+      "total_deletions": 27,
+      "accepted_lines": 164,
+      "overriden_lines": 0
+    }
+  }
+}
