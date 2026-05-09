@@ -178,8 +178,8 @@ app/
 ├── engine/
 │   ├── executor.py               # async execute(workflow_name, request) — the only run entrypoint
 │   ├── registry.py               # @workflow(name) decorator + get_workflow/list_workflows
-│   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest, SearchQuery
-│   ├── outputs.py                # Re-export façade for ResearcherOutput / SummarizerOutput / ZettelkastenOutput / Source (sourced from agents/)
+│   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest, SearchQuery (BaseModel)
+│   ├── persistence.py            # load_memories / persist_memories / write_sources (node-side IO helpers)
 │   ├── parsing.py                # parse_structured() — layered SAP-lite recovery (strict → fence-strip → yapping → json-repair)
 │   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
 │   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
@@ -199,23 +199,20 @@ app/
 │   ├── graphs/                   # StateGraph builders — decorator-registered
 │   │   ├── research.py           # Full 4-node research pipeline
 │   │   └── agents.py             # Single-node standalone workflows (researcher/summarizer/zettelkasten)
-│   ├── nodes/                    # Per-node logic (agent factories + persist)
-│   │   ├── researcher.py         # create_researcher_agent()
-│   │   ├── summarizer.py         # create_summarizer_agent()
-│   │   ├── zettelkasten.py       # create_zettelkasten_agent()
-│   │   ├── persist.py            # persist_artifacts(state) — plain function node
-│   │   ├── types.py              # Workflow/NodeName StrEnum (node + workflow identifiers)
+│   ├── nodes/                    # Per-node logic (agent factory + persist)
+│   │   ├── agent.py              # make_agent_node(spec) — single factory replacing per-agent node modules
+│   │   ├── persist.py            # persist_artifacts(state) — side-effect node returning {} delta
+│   │   ├── types.py              # NodeName + WorkflowName StrEnums (split for FastAPI validation)
 │   │   └── builders/
 │   │       └── agent.py          # build_agent_executor_from_spec(AgentSpec) + run_agent_executor (invoke vs. stream)
-│   ├── tools/                    # LangChain @tool functions given to agents
-│   │   ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
-│   │   ├── io.py                 # save_note, write_report, write_zettelkasten_notes + persist helpers
-│   │   ├── search.py             # call_brave_search, call_exa_search, call_exa_context + query builders
-│   │   ├── web.py                # fetch_url (Jina Reader → markdown)
-│   │   ├── sandbox.py            # run_python_experiment (wraps LocalSubprocessSandboxBackend)
-│   │   ├── github.py             # get_repo_tree (wraps GitHubRepositoryService)
-│   │   └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
-│   └── middleware/               # reserved for future LangChain middleware (empty placeholder)
+│   └── tools/                    # LangChain @tool functions given to agents
+│       ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
+│       ├── io.py                 # save_note, write_report, write_zettelkasten_notes (only @tool functions)
+│       ├── search.py             # async call_brave_search / call_exa_search / call_exa_context + query builders
+│       ├── web.py                # async fetch_url (Jina Reader → markdown)
+│       ├── sandbox.py            # async run_python_experiment (asyncio.to_thread → LocalSubprocessSandboxBackend)
+│       ├── github.py             # async get_repo_tree (asyncio.to_thread → GitHubRepositoryService)
+│       └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
 └── services/
     ├── codesearch/
     │   ├── __init__.py           # public exports for parsing helpers and IR models
@@ -223,7 +220,7 @@ app/
     │   ├── models.py             # FileIR / Symbol / Scope / Import Pydantic models
     │   └── parser.py             # parse_file / parse_snapshot with skip heuristics
     └── gh_client/
-        ├── auth.py               # get_github_client — lru_cached PyGithub app-installation client
+        ├── auth.py               # GitHubHandle (client + auth) cached factory; get_github_handle / get_github_client
         ├── repo.py               # GitHubRepositoryService.get_tree / .shallow_clone (tarball → backend)
         └── types.py              # SnapshotResult Pydantic model
 ```
@@ -379,6 +376,9 @@ Settings resolve in this priority order
 - **Paths** — `MEMORIES_DIR`, `VAULT_DIR`, `OUTPUT_DIR`, `LOGS_DIR`.
 - **`DATABASE_URL`** — Postgres connection string for the LangGraph
   `AsyncPostgresSaver` checkpointer. Empty string disables checkpointing.
+- **`PHOENIX_ENABLED`** — when false, the FastAPI lifespan skips the
+  Arize Phoenix `register()` call. Default `true`. Useful for tests and
+  air-gapped runs.
 - **API keys** — `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `JINA_API_KEY`.
 
 Anything else in `.env` is silently ignored (`extra="ignore"`).
@@ -434,28 +434,26 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
    - A `SPEC: AgentSpec[OutputModel] = AgentSpec(name=..., output_schema=...,
      default_system_prompt=DEFAULT_PROMPT, tools=(...,))`.
    - Add `# ruff: noqa: E501` if the prompt prose exceeds 88 chars.
-2. Create `app/engine/nodes/<agent>.py` exporting `create_<agent>_agent()`
-   that imports `SPEC` and wires `build_agent_executor_from_spec(SPEC)` +
-   `run_agent_executor(...)`. Keep this file thin — no schema, no prompt.
-3. Add a `Workflow`/`NodeName` enum entry in `app/engine/nodes/types.py`.
-4. Add an `AgentPromptConfig` field in `AgentsConfig` (defaults to empty
+2. Add a `NodeName` (and, if invocable as a workflow, `WorkflowName`) entry
+   in `app/engine/nodes/types.py`.
+3. Add an `AgentPromptConfig` field in `AgentsConfig` (defaults to empty
    string — the YAML key is just an override hook).
-5. Wire it into a graph in `app/engine/graphs/research.py` (or create a new
-   graph module).
-6. If you added a new graph module, import it from
+4. Wire it into a graph in `app/engine/graphs/research.py` (or create a new
+   graph module) using `make_agent_node(SPEC, log_streams=...)` from
+   `app.engine.nodes.agent`. **There is no per-agent node module** —
+   `make_agent_node` is the single factory for all agents.
+5. If you added a new graph module, import it from
    `app/engine/graphs/__init__.py` so its `@workflow` decorator runs.
-7. (Optional) Re-export the schema from `app/engine/outputs.py` if external
-   callers need it under the legacy import path.
 
 ### Add a new tool
 
-1. Add a `@tool` function under `app/engine/tools/`.
-2. If it writes to disk, resolve the backend via
-   `get_filesystem_backend(backend_type=settings.filesystem.backend_type, base_path=settings.filesystem.base_path)`
-   — do **not** open paths directly and do **not** expect the backend in
-   `runtime.state`.
-3. Import and append it to the relevant agent's `TOOLS` list in
-   `app/engine/nodes/<agent>.py`.
+1. Add a `@tool` function under `app/engine/tools/`. Prefer `async def`;
+   wrap blocking third-party calls in `asyncio.to_thread`.
+2. If it writes to disk, resolve the backend via `artifacts_backend()`
+   from `app.engine.backends` — do **not** open paths directly and do
+   **not** expect the backend in `runtime.state`.
+3. Import and append it to the relevant agent's `tools` tuple on the
+   `SPEC` in `app/engine/agents/<agent>.py`.
 
 ### Add a new filesystem backend (e.g. S3, Modal volume)
 
@@ -509,17 +507,23 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
   external Phoenix project dashboards.
 - **Two filesystem backends coexist at runtime.** `settings.filesystem`
   routes agent artifacts (`.memories`, `.vault`, `outputs`) to repo root
-  (`base_path=Path(".")`). `GitHubRepositoryService` instantiates its own
+  (`base_path=Path(".")`). `GitHubRepositoryService` resolves its own
   backend rooted at `DEFAULT_ASSETS_DIR` so snapshots stay under
-  `.assets/{owner}/{repo}@{sha}`. Do not collapse them into one backend
-  unless you also update every caller — this separation is load-bearing.
-- **`SearchQuery` typed dict is used both by the HTTP request and the
-  search-tool query builder.** Changing its shape is a three-way break
-  (API, state, tools).
+  `.assets/{owner}/{repo}@{sha}`. Use the named accessors
+  `artifacts_backend()` and `assets_backend()` (in
+  `app.engine.backends`) instead of passing `base_path` strings around —
+  the separation is load-bearing.
+- **`SearchQuery` is a Pydantic ``BaseModel`` with all-optional fields.**
+  Used by both the HTTP request body and the search-tool query builder.
+  Partial requests like ``{"raw": "x"}`` are accepted because every field
+  defaults to an empty string / list. Changing required fields is still
+  a three-way break (API, state, tools).
 - **An agent's schema, prompt, tools, and per-agent LLM overrides live
   in the same file** under `app/engine/agents/<name>.py` as a single
-  `SPEC: AgentSpec[...]`. Never split them. Node modules in
-  `app/engine/nodes/<name>.py` only wire the spec into an executor.
+  `SPEC: AgentSpec[...]`. Never split them. Graphs wire the spec into
+  an executor via `make_agent_node(SPEC, log_streams=...)` (see
+  `app/engine/nodes/agent.py`) — the executor is built once per
+  factory call and reused across invocations.
 - **Prompts use `$output_format` for schema injection.** Do not paste
   hand-written schema descriptions into prompts — they will silently
   drift from the Pydantic model. `AgentSpec.system_prompt()` interpolates
@@ -555,22 +559,21 @@ As of this document's writing, the following reorganizations are in progress.
 If you see contradictions between filesystem state and this section, prefer
 the filesystem and update this file.
 
-- **Hexagonal split.** `backends/` and `sandbox/` are new packages that
-  replaced ad-hoc disk/subprocess code. New code must go through the
-  `Protocol` ports.
-- **Nodes/builders split.** `nodes/builders/agent.py` centralizes
-  agent-executor construction. Avoid duplicating `create_agent` wiring in
-  new node modules.
-- **`app/services/gh_client/`** replaced an older `app/services/github/`
-  module (deleted in the current branch). Always import from `gh_client`.
-- **Config relocated.** `agent_config.yaml` lives under
-  `app/core/resources/` (previously `app/resources/`). `core/settings.py`
-  references it with a `Path(__file__).parent / "resources" / ...`.
 - **Modal sandbox is planned, not implemented.** `scripts/explore_modal.py`
   is an exploratory harness. Do not import from it.
-- **`AgentSpec` migration complete.** `outputs.py` is now a re-export
-  façade; the canonical home for each schema is `app/engine/agents/<name>.py`.
-  Newly introduced agents must follow the cookbook in §9.
+- **Node consolidation.** The per-agent node modules
+  (`nodes/researcher.py`, `nodes/summarizer.py`, `nodes/zettelkasten.py`)
+  were collapsed into a single factory `make_agent_node(spec)` in
+  `app/engine/nodes/agent.py`. New agents do **not** add a node module;
+  they add an `AgentSpec` under `app/engine/agents/<name>.py` and the
+  graph wires it via `make_agent_node(SPEC)`.
+- **Tools split.** `app/engine/tools/io.py` now contains only `@tool`
+  functions. Persistence helpers (`load_memories`, `persist_memories`,
+  `write_sources`) live in `app/engine/persistence.py`.
+- **Async tool surface.** `tools/web.py`, `tools/search.py`,
+  `tools/sandbox.py`, and `tools/github.py` are async-first; sync
+  third-party calls (PyGithub, `subprocess.run`) are wrapped in
+  `asyncio.to_thread` so the LangGraph event loop is not blocked.
 
 ---
 
