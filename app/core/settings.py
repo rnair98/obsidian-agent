@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import (
@@ -31,14 +31,14 @@ class LLMConfig(BaseModel):
 
     model: str
     use_responses_api: bool = True
-    reasoning_effort: Optional[Literal["low", "medium", "high", "xhigh"]] = None
-    verbosity: Optional[Literal["low", "medium", "high"]] = None
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] | None = None
+    verbosity: Literal["low", "medium", "high"] | None = None
     streaming: bool = False
     stream_usage: bool = False
-    timeout: Optional[int] = None
+    timeout: int | None = None
     temperature: float = 1.0
     model_kwargs: dict = Field(default_factory=dict)
-    api_key: Optional[str] = None
+    api_key: str | None = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -93,6 +93,9 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Telemetry
+    PHOENIX_ENABLED: bool = True
 
     # Checkpointer (LangGraph AsyncPostgresSaver connection string)
     DATABASE_URL: str = ""
