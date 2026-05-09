@@ -10,8 +10,8 @@ import httpx
 from github import GithubException
 
 from app.core.logger import logger
-from app.core.paths import DEFAULT_ASSETS_DIR
-from app.engine.backends import get_filesystem_backend
+from app.engine.backends import assets_backend, get_filesystem_backend
+from app.services.gh_client.auth import GitHubHandle
 from app.services.gh_client.types import SnapshotResult
 
 GITHUB_ARCHIVE_FORMAT = "tarball"
@@ -28,15 +28,23 @@ class GitHubRepositoryService:
 
     def __init__(
         self,
-        client: "Github",
+        client: "Github | GitHubHandle",
         base_path: Path | None = None,
         repo_name: str | None = None,
         filesystem_backend: "FilesystemBackend | None" = None,
     ) -> None:
-        self.client = client
-        self.filesystem_backend = filesystem_backend or get_filesystem_backend(
-            base_path=base_path or DEFAULT_ASSETS_DIR
-        )
+        if isinstance(client, GitHubHandle):
+            self._handle: GitHubHandle | None = client
+            self.client = client.client
+        else:
+            self._handle = None
+            self.client = client
+        if filesystem_backend is not None:
+            self.filesystem_backend = filesystem_backend
+        elif base_path is not None:
+            self.filesystem_backend = get_filesystem_backend(base_path=base_path)
+        else:
+            self.filesystem_backend = assets_backend()
         self.repo_name = repo_name
         self.repo = self._get_repo(repo_name)
         # Per-instance tree cache keyed by commit sha; avoids the
@@ -51,14 +59,7 @@ class GitHubRepositoryService:
         try:
             return self.client.get_repo(full_name_or_id=repo_name, lazy=True)
         except GithubException as exc:
-            logger.warning("GitHub repo access failed for '%s': %s", repo_name, exc)
-            return None
-        except Exception as exc:
-            logger.exception(
-                "Unexpected error fetching GitHub repo %s: %s",
-                repo_name,
-                exc,
-            )
+            logger.warning("GitHub repo access failed for '{}': {}", repo_name, exc)
             return None
 
     def get_tree(self):
@@ -72,12 +73,7 @@ class GitHubRepositoryService:
             return self._get_tree_for_commit_sha(commit.sha)
         except GithubException as exc:
             logger.warning(
-                "GitHub repo tree access failed for '%s': %s", self.repo.full_name, exc
-            )
-            return None
-        except Exception as exc:
-            logger.exception(
-                "Unexpected error fetching GitHub repo tree for '%s': %s",
+                "GitHub repo tree access failed for '{}': {}",
                 self.repo.full_name,
                 exc,
             )
@@ -96,28 +92,29 @@ class GitHubRepositoryService:
         if self.repo_name is None:
             return []
 
-        snapshots: list[SnapshotResult] = []
         # Prefer the canonical full name from the GitHub API so we read from
         # the same directory ``shallow_clone()`` writes to (it uses
         # ``self.repo.full_name``). Falling back to the raw constructor arg
         # only when the repo handle is unavailable keeps offline/list-only
         # callers working.
-        canonical_name = self.repo.full_name if self.repo is not None else self.repo_name
+        canonical_name = (
+            self.repo.full_name if self.repo is not None else self.repo_name
+        )
         try:
             owner, repo_name = canonical_name.split("/", maxsplit=1)
         except ValueError:
             logger.warning(
-                "Invalid GitHub repo name for snapshot listing: %s",
+                "Invalid GitHub repo name for snapshot listing: {}",
                 canonical_name,
             )
             return []
         snapshot_root = Path(owner)
         snapshot_prefix = f"{repo_name}@"
 
+        snapshots: list[SnapshotResult] = []
         for path in self.filesystem_backend.list_dir(snapshot_root):
             if not path.is_dir() or not path.name.startswith(snapshot_prefix):
                 continue
-
             commit_sha = path.name[len(snapshot_prefix) :]
             snapshots.append(
                 SnapshotResult(
@@ -136,15 +133,14 @@ class GitHubRepositoryService:
 
     def delete_snapshot(self, snapshot: SnapshotResult) -> bool:
         """Delete a snapshot directory from the local filesystem backend."""
+        if not self.filesystem_backend.exists(snapshot.path):
+            return False
         try:
-            if not self.filesystem_backend.exists(snapshot.path):
-                return False
-
             self.filesystem_backend.delete_dir(snapshot.path, missing_ok=True)
             return True
-        except Exception as exc:
-            logger.exception(
-                "Failed to delete snapshot '%s' for '%s': %s",
+        except OSError as exc:
+            logger.warning(
+                "Failed to delete snapshot '{}' for '{}': {}",
                 snapshot.commit_sha,
                 snapshot.repo_name,
                 exc,
@@ -171,15 +167,7 @@ class GitHubRepositoryService:
             commit_sha = self.repo.get_commit(requested_ref).sha
         except GithubException as exc:
             logger.warning(
-                "Unable to resolve ref '%s' for '%s': %s",
-                requested_ref,
-                self.repo.full_name,
-                exc,
-            )
-            return None
-        except Exception as exc:
-            logger.exception(
-                "Unexpected error resolving ref '%s' for '%s': %s",
+                "Unable to resolve ref '{}' for '{}': {}",
                 requested_ref,
                 self.repo.full_name,
                 exc,
@@ -219,18 +207,9 @@ class GitHubRepositoryService:
                     destination=snapshot_relative_dir,
                     strip_components=1,
                 )
-
-            return SnapshotResult(
-                repo_name=self.repo.full_name,
-                commit_sha=commit_sha,
-                requested_ref=requested_ref,
-                path=snapshot_dir,
-                created_at=datetime.now(timezone.utc),
-                skipped=False,
-            )
-        except Exception as exc:
-            logger.exception(
-                "Failed to snapshot '%s' at '%s' from tarball: %s",
+        except (httpx.HTTPError, OSError) as exc:
+            logger.warning(
+                "Failed to snapshot '{}' at '{}' from tarball: {}",
                 self.repo.full_name,
                 commit_sha,
                 exc,
@@ -240,17 +219,23 @@ class GitHubRepositoryService:
                 self.filesystem_backend.delete_dir(
                     snapshot_relative_dir, missing_ok=True
                 )
-            except Exception:
+            except OSError:
                 logger.debug(
-                    "Failed to clean up partial snapshot at '%s'",
+                    "Failed to clean up partial snapshot at '{}'",
                     snapshot_relative_dir,
                 )
             return None
 
+        return SnapshotResult(
+            repo_name=self.repo.full_name,
+            commit_sha=commit_sha,
+            requested_ref=requested_ref,
+            path=snapshot_dir,
+            created_at=datetime.now(timezone.utc),
+            skipped=False,
+        )
+
     def _installation_token(self) -> str | None:
-        try:
-            token = self.client._Github__requester.auth.token
-            token = token() if callable(token) else token
-            return token if isinstance(token, str) and token else None
-        except AttributeError:
-            return None
+        if self._handle is not None:
+            return self._handle.installation_token
+        return None
