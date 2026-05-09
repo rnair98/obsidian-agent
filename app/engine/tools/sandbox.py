@@ -1,3 +1,5 @@
+import asyncio
+
 from langchain_core.tools import tool
 
 from app.engine.sandbox import ExecutionResult, LocalSubprocessSandboxBackend
@@ -13,7 +15,7 @@ def format_execution_result(result: ExecutionResult) -> str:
 
 
 @tool(parse_docstring=True)
-def run_python_experiment(code: str) -> str:
+async def run_python_experiment(code: str) -> str:
     """Run a snippet of Python code in a sandboxed subprocess.
 
     Args:
@@ -24,5 +26,8 @@ def run_python_experiment(code: str) -> str:
         ``Experiment error:`` on failure, or a placeholder when stdout is
         empty.
     """
-    result = LocalSubprocessSandboxBackend().run_python(code, timeout_s=10)
+    backend = LocalSubprocessSandboxBackend()
+    # Backend uses blocking ``subprocess.run`` — push it to a worker
+    # thread so the event loop stays free for concurrent tool calls.
+    result = await asyncio.to_thread(backend.run_python, code, 10)
     return format_execution_result(result)

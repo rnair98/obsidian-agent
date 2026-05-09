@@ -8,16 +8,23 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class SearchQuery(TypedDict):
-    raw: str
-    all_terms: list[str]
-    any_terms: list[str]
-    phrases: list[str]
-    excluded: list[str]
-    sites: list[str]
-    filetypes: list[str]
-    intitle: list[str]
-    inurl: list[str]
+class SearchQuery(BaseModel):
+    """Structured boolean / semantic search query.
+
+    All fields default to empty so partial requests (``{"raw": "x"}``) are
+    accepted by the HTTP layer; the full structure is only used by the
+    boolean-query builders.
+    """
+
+    raw: str = ""
+    all_terms: list[str] = Field(default_factory=list)
+    any_terms: list[str] = Field(default_factory=list)
+    phrases: list[str] = Field(default_factory=list)
+    excluded: list[str] = Field(default_factory=list)
+    sites: list[str] = Field(default_factory=list)
+    filetypes: list[str] = Field(default_factory=list)
+    intitle: list[str] = Field(default_factory=list)
+    inurl: list[str] = Field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

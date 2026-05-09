@@ -5,7 +5,7 @@ from app.core.settings import settings
 
 
 @tool(parse_docstring=True)
-def fetch_url(url: str) -> str:
+async def fetch_url(url: str) -> str:
     """Fetch a URL via Jina Reader and return its Markdown rendering.
 
     Args:
@@ -23,9 +23,9 @@ def fetch_url(url: str) -> str:
         headers["Authorization"] = f"Bearer {settings.JINA_API_KEY}"
 
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.get(jina_url, headers=headers)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(jina_url, headers=headers)
             response.raise_for_status()
             return response.text
     except httpx.HTTPError as exc:
-        return f"Error fetching URL {url} via Jina: {str(exc)}"
+        return f"Error fetching URL {url} via Jina: {exc}"
