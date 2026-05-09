@@ -179,7 +179,14 @@ app/
 │   ├── executor.py               # async execute(workflow_name, request) — the only run entrypoint
 │   ├── registry.py               # @workflow(name) decorator + get_workflow/list_workflows
 │   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest, SearchQuery
-│   ├── outputs.py                # Pydantic response schemas (ResearcherOutput, SummarizerOutput, ZettelkastenOutput)
+│   ├── outputs.py                # Re-export façade for ResearcherOutput / SummarizerOutput / ZettelkastenOutput / Source (sourced from agents/)
+│   ├── parsing.py                # parse_structured() — layered SAP-lite recovery (strict → fence-strip → yapping → json-repair)
+│   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
+│   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
+│   │   ├── output_format.py      # render_output_format() — TypeScript-flavored compact schema descriptor
+│   │   ├── researcher.py         # ResearcherOutput + Source + DEFAULT_PROMPT + SPEC
+│   │   ├── summarizer.py         # SummarizerOutput + DEFAULT_PROMPT + SPEC
+│   │   └── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + DEFAULT_PROMPT + SPEC
 │   ├── backends/                 # Filesystem hexagon (Protocol + adapter + factory + errors)
 │   │   ├── protocol.py           # FilesystemBackend Protocol — the contract
 │   │   ├── inprocess.py          # InProcessFilesystemBackend (sandboxed local fs)
@@ -199,7 +206,7 @@ app/
 │   │   ├── persist.py            # persist_artifacts(state) — plain function node
 │   │   ├── types.py              # Workflow/NodeName StrEnum (node + workflow identifiers)
 │   │   └── builders/
-│   │       └── agent.py          # build_agent_executor + run_agent_executor (invoke vs. stream)
+│   │       └── agent.py          # build_agent_executor_from_spec(AgentSpec) + run_agent_executor (invoke vs. stream)
 │   ├── tools/                    # LangChain @tool functions given to agents
 │   │   ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
 │   │   ├── io.py                 # save_note, write_report, write_zettelkasten_notes + persist helpers
@@ -306,12 +313,42 @@ validates every member and supports `strip_components` like `tar --strip`.
 Code-execution port. Today: `LocalSubprocessSandboxBackend` shells out to
 `python -c`. A Modal-backed implementation is in scope (see `test_modal.py`).
 
-### Output schemas (`app/engine/outputs.py`)
+### `AgentSpec` (`app/engine/agents/spec.py`)
 
-`ResearcherOutput`, `SummarizerOutput`, `ZettelkastenOutput` — bound to the
-agents via `ProviderStrategy(...)` so OpenAI returns structured JSON matching
-these Pydantic models. Changing a field here is a breaking change for the
-corresponding system prompt.
+A frozen dataclass that bundles **schema + prompt + tools + per-agent LLM
+overrides** for a single agent. One `SPEC` per agent module under
+`app/engine/agents/`. The node modules in `app/engine/nodes/<name>.py`
+do nothing more than wire `SPEC` into `build_agent_executor_from_spec()`.
+
+`spec.system_prompt()` resolves YAML overrides
+(`settings.agents.<name>.system_prompt`) before falling back to
+`default_system_prompt`, then interpolates a `$output_format` placeholder
+with `render_output_format(spec.output_schema)` so the prompt-side schema
+description is always in lockstep with the Pydantic model.
+
+`spec.parse(raw)` delegates to `parse_structured()` for seams that
+receive a free-form string (tool args, persisted artifacts, future
+non-OpenAI providers) — the primary structured-output mechanism remains
+`ProviderStrategy(spec.output_schema)` inside `create_agent`.
+
+### Output schemas (`app/engine/agents/<name>.py` + `app/engine/outputs.py`)
+
+`ResearcherOutput`, `SummarizerOutput`, `ZettelkastenOutput`, `Source`,
+`ZettelkastenNote` — defined alongside their prompts in `agents/<name>.py`
+and bound to the agents via `ProviderStrategy(...)` so OpenAI returns
+structured JSON matching these Pydantic models. `outputs.py` is a pure
+re-export façade for backward compatibility; new code should import from
+`app.engine.agents.<name>` directly. Changing a field is still a breaking
+change, but the prompt that describes it is rendered automatically — no
+hand-maintained schema text to keep in sync.
+
+### `parse_structured` (`app/engine/parsing.py`)
+
+Layered structured-output recovery, used as a fallback at seams where
+`ProviderStrategy` isn't in play. Stages: strict → strip code fences →
+extract largest balanced `{...}`/`[...]` block (yapping prefix/suffix
+removal) → `json_repair`. Each attempt tags an OTel span attribute
+`parse.stage` so Phoenix shows which recovery path won.
 
 ---
 
@@ -333,7 +370,9 @@ Settings resolve in this priority order
 - `llm: LLMConfig | None` — `model` (required), reasoning knobs,
   `use_responses_api`, streaming flags, passthrough `model_kwargs`. `extra="allow"`.
 - `agents: AgentsConfig | None` — nested `researcher`/`summarizer`/`zettelkasten`
-  prompt blocks. Loaded from YAML.
+  prompt **override** blocks. Each `system_prompt` defaults to `""`; an
+  empty string falls through to the `default_system_prompt` defined on
+  the corresponding `AgentSpec` in `app/engine/agents/<name>.py`.
 - `workflow: WorkflowConfig` — `search_limit`, `exa_search_type`,
   `fetch_code_context`.
 - `filesystem: FilesystemConfig` — `backend_type`, `base_path`.
@@ -376,6 +415,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | GitHub | PyGithub (App-installation auth) | `services/gh_client/` |
 | Code IR parsing | tree-sitter + tree-sitter-language-pack | `services/codesearch/` |
 | Tabular sources | Polars | `tools/io.py: write_sources` |
+| Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
 | Config | pydantic-settings (YAML + dotenv) | `core/settings.py` |
@@ -386,17 +426,26 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 
 ### Add a new agent node
 
-1. Define a structured-output schema in `app/engine/outputs.py`.
+1. Create `app/engine/agents/<agent>.py` containing **everything for the
+   agent in one file**:
+   - The Pydantic output schema(s).
+   - A `DEFAULT_PROMPT` string. Embed `$output_format` where you want the
+     compact schema description injected.
+   - A `SPEC: AgentSpec[OutputModel] = AgentSpec(name=..., output_schema=...,
+     default_system_prompt=DEFAULT_PROMPT, tools=(...,))`.
+   - Add `# ruff: noqa: E501` if the prompt prose exceeds 88 chars.
 2. Create `app/engine/nodes/<agent>.py` exporting `create_<agent>_agent()`
-   that returns a node callable. Mirror the existing pattern:
-   `build_agent_executor(...)` + `run_agent_executor(...)`.
+   that imports `SPEC` and wires `build_agent_executor_from_spec(SPEC)` +
+   `run_agent_executor(...)`. Keep this file thin — no schema, no prompt.
 3. Add a `Workflow`/`NodeName` enum entry in `app/engine/nodes/types.py`.
-4. Wire it into a graph in `app/engine/graphs/research.py` (or create a new
+4. Add an `AgentPromptConfig` field in `AgentsConfig` (defaults to empty
+   string — the YAML key is just an override hook).
+5. Wire it into a graph in `app/engine/graphs/research.py` (or create a new
    graph module).
-5. If you added a new graph module, import it from
+6. If you added a new graph module, import it from
    `app/engine/graphs/__init__.py` so its `@workflow` decorator runs.
-6. Update the system prompt in `app/core/resources/agent_config.yaml` and the
-   corresponding `AgentsConfig` field in `app/core/settings.py`.
+7. (Optional) Re-export the schema from `app/engine/outputs.py` if external
+   callers need it under the legacy import path.
 
 ### Add a new tool
 
@@ -467,6 +516,19 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 - **`SearchQuery` typed dict is used both by the HTTP request and the
   search-tool query builder.** Changing its shape is a three-way break
   (API, state, tools).
+- **An agent's schema, prompt, tools, and per-agent LLM overrides live
+  in the same file** under `app/engine/agents/<name>.py` as a single
+  `SPEC: AgentSpec[...]`. Never split them. Node modules in
+  `app/engine/nodes/<name>.py` only wire the spec into an executor.
+- **Prompts use `$output_format` for schema injection.** Do not paste
+  hand-written schema descriptions into prompts — they will silently
+  drift from the Pydantic model. `AgentSpec.system_prompt()` interpolates
+  the placeholder via `render_output_format()`.
+- **`ProviderStrategy(...)` is the primary structured-output mechanism.**
+  `parse_structured()` exists as a fallback for seams that receive a raw
+  string (tool args, persisted artifacts, non-OpenAI providers). Do not
+  route the agent's primary output through `parse_structured` — you would
+  lose Phoenix's structured-output trace attributes.
 
 ---
 
@@ -506,6 +568,9 @@ the filesystem and update this file.
   references it with a `Path(__file__).parent / "resources" / ...`.
 - **Modal sandbox is planned, not implemented.** `scripts/explore_modal.py`
   is an exploratory harness. Do not import from it.
+- **`AgentSpec` migration complete.** `outputs.py` is now a re-export
+  façade; the canonical home for each schema is `app/engine/agents/<name>.py`.
+  Newly introduced agents must follow the cookbook in §9.
 
 ---
 
