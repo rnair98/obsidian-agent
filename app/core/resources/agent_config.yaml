@@ -15,16 +15,10 @@ llm:
 
 agents:
   researcher:
-    # Override hook for the prompt defined in app/engine/agents/researcher.py.
-    # Leave empty to use the default; set a string to override at runtime.
     system_prompt: ""
 
   summarizer:
-    # Override hook for the prompt defined in app/engine/agents/summarizer.py.
-    # Leave empty to use the default; set a string to override at runtime.
     system_prompt: ""
 
   zettelkasten:
-    # Override hook for the prompt defined in app/engine/agents/zettelkasten.py.
-    # Leave empty to use the default; set a string to override at runtime.
     system_prompt: ""
