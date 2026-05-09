@@ -97,12 +97,18 @@ class GitHubRepositoryService:
             return []
 
         snapshots: list[SnapshotResult] = []
+        # Prefer the canonical full name from the GitHub API so we read from
+        # the same directory ``shallow_clone()`` writes to (it uses
+        # ``self.repo.full_name``). Falling back to the raw constructor arg
+        # only when the repo handle is unavailable keeps offline/list-only
+        # callers working.
+        canonical_name = self.repo.full_name if self.repo is not None else self.repo_name
         try:
-            owner, repo_name = self.repo_name.split("/", maxsplit=1)
+            owner, repo_name = canonical_name.split("/", maxsplit=1)
         except ValueError:
             logger.warning(
                 "Invalid GitHub repo name for snapshot listing: %s",
-                self.repo_name,
+                canonical_name,
             )
             return []
         snapshot_root = Path(owner)
@@ -115,7 +121,7 @@ class GitHubRepositoryService:
             commit_sha = path.name[len(snapshot_prefix) :]
             snapshots.append(
                 SnapshotResult(
-                    repo_name=self.repo_name,
+                    repo_name=canonical_name,
                     commit_sha=commit_sha,
                     requested_ref=commit_sha,
                     path=path,
