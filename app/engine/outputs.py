@@ -1,4 +1,14 @@
+"""Backwards-compatible re-exports.
+
+Schema definitions live next to their prompts under
+``app/engine/agents/<name>.py``. This module re-exports them so older
+imports continue to work; new code should import from
+``app.engine.agents.<name>`` directly.
+"""
+
 from pydantic import BaseModel, Field
+
+from app.engine.agents.zettelkasten import ZettelkastenNote, ZettelkastenOutput
 
 
 class Source(BaseModel):
@@ -23,14 +33,10 @@ class SummarizerOutput(BaseModel):
     )
 
 
-class ZettelkastenNote(BaseModel):
-    id: str = Field(..., description="Unique slug/ID for the note")
-    title: str = Field(..., description="Title of the atomic note")
-    content: str = Field(..., description="Markdown content of the note")
-    tags: list[str] = Field(..., description="List of tags")
-
-
-class ZettelkastenOutput(BaseModel):
-    notes: list[ZettelkastenNote] = Field(
-        ..., description="List of generated atomic notes"
-    )
+__all__ = [
+    "Source",
+    "ResearcherOutput",
+    "SummarizerOutput",
+    "ZettelkastenNote",
+    "ZettelkastenOutput",
+]

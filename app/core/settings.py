@@ -43,7 +43,13 @@ class LLMConfig(BaseModel):
 
 
 class AgentPromptConfig(BaseModel):
-    system_prompt: str
+    """Per-agent runtime override for the system prompt.
+
+    Empty string (or omission) falls through to the default defined on
+    the corresponding ``AgentSpec`` in ``app/engine/agents/<name>.py``.
+    """
+
+    system_prompt: str = ""
 
 
 class AgentsConfig(BaseModel):
