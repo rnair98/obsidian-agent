@@ -1,23 +1,4 @@
-"""``AgentSpec`` — co-located agent definition.
-
-A single ``AgentSpec`` instance bundles everything that defines an
-agent's contract with the LLM:
-
-* ``output_schema``     — the Pydantic model the agent must produce
-* ``default_system_prompt`` — the prompt body shipped with the code
-* ``tools``             — LangChain tool callables / built-in tools
-* ``llm_overrides``     — optional per-agent overrides on top of
-                          ``settings.llm`` (e.g. lower temperature)
-
-The ``settings.agents.<name>.system_prompt`` YAML value (when set)
-takes precedence over the default prompt, preserving the layered
-settings precedence documented in ARCHITECTURE.md \u00a76.
-
-Prompts may reference ``$output_format`` (or ``${output_format}``);
-when present it is interpolated with a token-efficient TypeScript-
-flavored description of ``output_schema`` so the prompt and the
-schema can never drift apart.
-"""
+"""``AgentSpec`` — co-located agent definition."""
 
 from __future__ import annotations
 
@@ -49,15 +30,9 @@ class AgentSpec(Generic[T]):
     llm_overrides: Mapping[str, Any] = field(default_factory=lambda: _EMPTY_OVERRIDES)
 
     def output_format(self) -> str:
-        """Return the schema rendered for prompt injection."""
         return render_output_format(self.output_schema)
 
     def system_prompt(self) -> str:
-        """Return the effective system prompt with placeholders interpolated.
-
-        YAML override (``settings.agents.<name>.system_prompt``) wins over
-        ``default_system_prompt``. ``$output_format`` is then substituted.
-        """
         cfg = (
             getattr(settings.agents, self.name, None)
             if settings.agents is not None
@@ -73,11 +48,9 @@ class AgentSpec(Generic[T]):
         return raw
 
     def llm_kwargs(self) -> dict[str, Any]:
-        """Return the LLM kwargs with per-spec overrides applied last."""
         base = settings.llm.model_dump(mode="python") if settings.llm else {}
         base.update(self.llm_overrides)
         return base
 
     def parse(self, raw: str) -> T:
-        """Recover an instance of ``output_schema`` from a free-form string."""
         return parse_structured(raw, self.output_schema)

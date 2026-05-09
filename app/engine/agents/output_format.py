@@ -1,18 +1,4 @@
-"""Render Pydantic schemas as token-efficient TypeScript-flavored signatures.
-
-Produces a compact schema description suitable for prompt injection
-(roughly 3-4x fewer tokens than ``model_json_schema()``). Field
-``description`` annotations appear as inline ``// ...`` comments so the
-model still gets semantic guidance.
-
-Example output for a class with ``name: str`` and ``tags: list[str]``::
-
-    Answer in JSON matching this schema:
-    {
-      name: string,
-      tags: string[],
-    }
-"""
+"""Render Pydantic schemas as token-efficient TypeScript-flavored signatures."""
 
 from __future__ import annotations
 
@@ -32,15 +18,7 @@ _PRIMITIVES: dict[type, str] = {
 
 
 def render_output_format(model: type[BaseModel], *, indent: int = 2) -> str:
-    """Render ``model`` as a TypeScript-flavored schema descriptor.
-
-    Args:
-        model: The Pydantic model whose shape should be described.
-        indent: Spaces per nesting level. Defaults to 2.
-
-    Returns:
-        A multi-line string ready to splice into a prompt.
-    """
+    """Render ``model`` as a TypeScript-flavored schema descriptor."""
     seen: frozenset[type] = frozenset()
     body = _render_object(model, indent_size=indent, prefix=" " * indent, seen=seen)
     return f"Answer in JSON matching this schema:\n{{\n{body}\n}}"
