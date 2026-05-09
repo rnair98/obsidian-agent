@@ -1,15 +1,17 @@
 from app.core.paths import DEFAULT_REPORT_PATH
 from app.core.settings import settings
-from app.engine.backends import get_filesystem_backend
+from app.engine.backends import artifacts_backend
+from app.engine.persistence import persist_memories, write_sources
 from app.engine.schema import ResearchState
-from app.engine.tools.io import persist_memories, write_sources
 
 
-def persist_artifacts(state: ResearchState) -> ResearchState:
-    backend = get_filesystem_backend(
-        backend_type=settings.filesystem.backend_type,
-        base_path=settings.filesystem.base_path,
-    )
+def persist_artifacts(state: ResearchState) -> dict:
+    """Side-effect node: write sources.csv and memory markdown.
+
+    Returns an empty delta — LangGraph merges this with the existing state,
+    so there's no need to echo every field back through the checkpointer.
+    """
+    backend = artifacts_backend()
     sources_dir = settings.OUTPUT_DIR
     write_sources(
         sources_dir / "sources.csv",
@@ -26,4 +28,4 @@ def persist_artifacts(state: ResearchState) -> ResearchState:
         DEFAULT_REPORT_PATH,
         backend=backend,
     )
-    return state
+    return {}

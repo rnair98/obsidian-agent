@@ -20,10 +20,7 @@ from app.engine.schema import ResearchState
 def tmp_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     backend = InProcessFilesystemBackend(base_path=tmp_path)
 
-    def fake_factory(**_kwargs):
-        return backend
-
-    monkeypatch.setattr("app.engine.nodes.persist.get_filesystem_backend", fake_factory)
+    monkeypatch.setattr("app.engine.nodes.persist.artifacts_backend", lambda: backend)
     monkeypatch.setattr("app.core.settings.settings.MEMORIES_DIR", Path("memories"))
     monkeypatch.setattr("app.core.settings.settings.OUTPUT_DIR", Path("outputs"))
     return backend
@@ -49,7 +46,9 @@ def _state() -> ResearchState:
 def test_persist_writes_sources_and_memory(tmp_backend) -> None:
     result = persist_artifacts(_state())
 
-    assert result["topic"] == "langgraph persistence"
+    # persist_artifacts is a side-effect node — it returns an empty delta
+    # so LangGraph doesn't re-checkpoint the entire state every run.
+    assert result == {}
     assert tmp_backend.is_file("outputs/sources.csv")
 
     frame = pl.read_csv(tmp_backend.resolve("outputs/sources.csv"))
