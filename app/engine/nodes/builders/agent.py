@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import TypeAlias, TypedDict
 
 from langchain.agents import create_agent
+from langchain.agents.structured_output import ProviderStrategy
 from langchain_core.messages import AnyMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
@@ -11,6 +12,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.core.logger import logger
 from app.core.settings import settings
+from app.engine.agents.spec import AgentSpec
 from app.engine.schema import ResearchContext, ResearchState
 from app.engine.tools.middleware import context_editing, tool_retry
 
@@ -51,6 +53,22 @@ def build_agent_executor(
         tools=tools,
         system_prompt=system_prompt,
         response_format=response_format,
+        middleware=[tool_retry, context_editing],
+    )
+
+
+def build_agent_executor_from_spec(spec: AgentSpec) -> CompiledStateGraph:
+    """Build an executor straight from an :class:`AgentSpec`.
+
+    Pulls schema, prompt (with placeholder interpolation), tools, and
+    per-agent LLM overrides out of the spec — the single source of
+    truth for an agent's contract with the model.
+    """
+    return create_agent(
+        model=ChatOpenAI(**spec.llm_kwargs()),
+        tools=list(spec.tools),
+        system_prompt=spec.system_prompt(),
+        response_format=ProviderStrategy(spec.output_schema),
         middleware=[tool_retry, context_editing],
     )
 
