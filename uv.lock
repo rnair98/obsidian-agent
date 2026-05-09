@@ -9,7 +9,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-25T17:34:48.078340153Z"
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -384,6 +384,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/6b/d52e42361e1aa00709585ecc30b3f9684b3ab62530771402248b1b1d6240/babel-2.17.0.tar.gz", hash = "sha256:0c54cffb19f690cdcc52a3b50bcbf71e07a808d1c80d549f2459b9d2cf0afb9d", size = 9951852, upload-time = "2025-02-01T15:17:41.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/b8/3fe70c75fe32afc4bb507f75563d39bc5642255d1d94f1f23604725780bf/babel-2.17.0-py3-none-any.whl", hash = "sha256:4d0b53093fdfb4b21c92b5213dba5a1b23885afa8383709427046b21c366e5f2", size = 10182537, upload-time = "2025-02-01T15:17:37.39Z" },
+]
+
+[[package]]
+name = "baml-py"
+version = "0.222.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/ec/9c8958b0e1a661c60900a94e2b8d13e7b4b6d09511837dfa3d59732d4e02/baml_py-0.222.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:1270fa6ceaa2093bec7d4bf7f857d33ce4547849eaca8aa21c5518b498832e25", size = 21808749, upload-time = "2026-04-27T23:29:18.126Z" },
+    { url = "https://files.pythonhosted.org/packages/30/b8/73f2d43dcf1fab0d79fbb91132f3ca184b44891ebb98bd0def431999dbb1/baml_py-0.222.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:bfd00afed25f939d10f99d555de2900930fc462ebb20b8d46e99c1aabadba7e9", size = 20668661, upload-time = "2026-04-27T23:29:20.87Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/79/f452e52abdea0f971e835c9ca6e95833f8ea1bcbbd9ae65089e32200151c/baml_py-0.222.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:174ef4e713da23d6a9d6dc2d55b6a28a88c5030edf55060dfc42f1c7eccfc7db", size = 24360345, upload-time = "2026-04-27T23:29:23.5Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/b2/f5b9437e236c418b22de3e1fc247d72109843391cb52186f7170cbde51c6/baml_py-0.222.0-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:a4a3c0f249e398be48eefc8f4f8dd78a54b0ec73f1e44c23062f549884e921a3", size = 23738386, upload-time = "2026-04-27T23:29:25.822Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/08/9696bf70bec78b7a158b1d0dbdc043581170c4d8988aaf9ed7966aae4527/baml_py-0.222.0-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:5e3ac35992dbb7ef8fe60e4f7ad15623fac9fb008255394c436b9514c2fd0287", size = 24109751, upload-time = "2026-04-27T23:29:27.999Z" },
+    { url = "https://files.pythonhosted.org/packages/46/05/32053db7478b94d3e98295bcceae5e043d54e7d32eaa3decd6318fbcf7ce/baml_py-0.222.0-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:84a2af099a78d337bb053fd84fd126bfffc96d0338a356627d63ff4d7a85972b", size = 24614675, upload-time = "2026-04-27T23:29:30.507Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/89/ac76b9f6fe2d663b91f05c08bbdb47bbed0c5211d1ed3f188ee4483556e4/baml_py-0.222.0-cp38-abi3-win_amd64.whl", hash = "sha256:d4d769f4c6cd8a4605f549aa519b3d68aa93e0f6d5b7f42172ac16bae95ad820", size = 22008363, upload-time = "2026-04-27T23:29:33.451Z" },
+    { url = "https://files.pythonhosted.org/packages/05/62/9cfa9c35e9544ce56a41ca63b5d0cd35d655cb60a8f6ddead408b8c25fc9/baml_py-0.222.0-cp38-abi3-win_arm64.whl", hash = "sha256:c26a7c71268fb18ea5d3f56b2693c55aca18cc422bce630486c3ef20b409daf3", size = 20417604, upload-time = "2026-04-27T23:29:35.704Z" },
 ]
 
 [[package]]
@@ -1273,6 +1288,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/41/f2/d34e8b3a08a9cc79a50b2208a93dce981fe615b64d5a4d4abee421d898df/joblib-1.5.3.tar.gz", hash = "sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3", size = 331603, upload-time = "2025-12-15T08:41:46.427Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/91/984aca2ec129e2757d1e4e3c81c3fcda9d0f85b74670a094cc443d9ee949/joblib-1.5.3-py3-none-any.whl", hash = "sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713", size = 309071, upload-time = "2025-12-15T08:41:44.973Z" },
+]
+
+[[package]]
+name = "json-repair"
+version = "0.59.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/67/eba7fad54ff6f5cce6db4e01f596fc68156b5c7e864af0aa07ad48e880a1/json_repair-0.59.5.tar.gz", hash = "sha256:bb886ee054e99066be8a337b67a986b6a50d79be9a5ad37ae81966e698990784", size = 48632, upload-time = "2026-04-24T11:41:38.133Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/aa/0529dee460b745b93f6abc97b56b7527314c5167ba29ab7a5bd5c08de01f/json_repair-0.59.5-py3-none-any.whl", hash = "sha256:6869965bd1cc1aaaa04dc85865c26fbb76d9a2d83a20010f5eae2563b1567827", size = 47282, upload-time = "2026-04-24T11:41:36.653Z" },
 ]
 
 [[package]]
@@ -2201,8 +2225,10 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "arize-phoenix" },
+    { name = "baml-py" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "json-repair" },
     { name = "langchain" },
     { name = "langchain-openai" },
     { name = "langgraph" },
@@ -2239,8 +2265,10 @@ observability = [
 [package.metadata]
 requires-dist = [
     { name = "arize-phoenix", specifier = ">=12.28.1" },
+    { name = "baml-py", specifier = ">=0.222.0" },
     { name = "fastapi", specifier = ">=0.110.0" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "json-repair", specifier = ">=0.30" },
     { name = "langchain", specifier = ">=1.2.7" },
     { name = "langchain-openai", specifier = ">=1.1.7" },
     { name = "langgraph", specifier = ">=1.0.5" },
