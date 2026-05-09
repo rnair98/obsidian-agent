@@ -1,9 +1,10 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TypedDict
+
+from pydantic import BaseModel
 
 
-class SnapshotResult(TypedDict):
+class SnapshotResult(BaseModel):
     repo_name: str
     commit_sha: str
     requested_ref: str
