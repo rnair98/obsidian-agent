@@ -8,6 +8,7 @@ imports continue to work; new code should import from
 
 from pydantic import BaseModel, Field
 
+from app.engine.agents.summarizer import SummarizerOutput
 from app.engine.agents.zettelkasten import ZettelkastenNote, ZettelkastenOutput
 
 
@@ -23,14 +24,6 @@ class ResearcherOutput(BaseModel):
     key_insights: list[str] = Field(..., description="List of atomic insights")
     sources: list[Source] = Field(..., description="List of sources used")
     reasoning: list[str] = Field(..., description="Chain of thought reasoning")
-
-
-class SummarizerOutput(BaseModel):
-    report_content: str = Field(..., description="Full markdown content of the report")
-    executive_summary: str = Field(..., description="Brief executive summary")
-    sources_used: list[str] = Field(
-        ..., description="List of source URLs referenced in the report"
-    )
 
 
 __all__ = [

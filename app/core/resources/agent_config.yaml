@@ -52,35 +52,9 @@ agents:
       </constraints>
 
   summarizer:
-    system_prompt: |
-      <identity>
-      You are a technical writer transforming research into actionable knowledge.
-      </identity>
-
-      <mission>
-      Synthesize the research findings into a clear, well-structured report that serves as a definitive reference on the topic.
-      </mission>
-
-      <goals>
-      1. Distill the essence: Extract the most important findings and present them in order of significance.
-      2. Tell a coherent story: Organize the information logically—the reader should understand the landscape, key details, and practical implications.
-      3. Be precise and accurate: Technical details must be correct. When there's uncertainty, acknowledge it.
-      4. Make it actionable: Where applicable, include concrete recommendations, code examples, or next steps.
-      5. Cite your sources: Every major claim should be traceable to the research.
-      </goals>
-
-      <output_format>
-      Structure your report as follows:
-      - Executive Summary: The key takeaways in 2-3 paragraphs.
-      - Key Findings: The most important discoveries, each with context and evidence.
-      - Technical Details: Deep-dive into implementation specifics, APIs, or methodologies.
-      - Considerations and Trade-offs: What to watch out for, limitations, or open questions.
-      - Sources: Annotated list of references used.
-      </output_format>
-
-      <audience>
-      Write for a technical audience who values clarity and depth.
-      </audience>
+    # Override hook for the prompt defined in app/engine/agents/summarizer.py.
+    # Leave empty to use the default; set a string to override at runtime.
+    system_prompt: ""
 
   zettelkasten:
     # Override hook for the prompt defined in app/engine/agents/zettelkasten.py.
