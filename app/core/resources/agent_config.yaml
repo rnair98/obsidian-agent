@@ -1,8 +1,10 @@
 llm:
-  model: "gpt-5.2-2025-12-11"
-  reasoning_effort: medium
+  model: "gpt-5.5"
+  reasoning:
+    effort: medium
+    summary: auto
   verbosity: low
-  temperature: 1.0
+  temperature: 0.8
   streaming: true
   timeout: 600
   use_responses_api: true
