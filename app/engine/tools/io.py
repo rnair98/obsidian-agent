@@ -122,9 +122,15 @@ def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
     seen_ids: set[str] = set()
     written = 0
     for note in notes:
-        safe_id = _safe_note_id(note.id)
-        if safe_id in seen_ids:
-            continue
+        base_id = _safe_note_id(note.id)
+        safe_id = base_id
+        suffix = 2
+        # Disambiguate collisions instead of dropping notes silently.
+        # Two notes with the same sanitized id (e.g. "Foo" / "foo/" both
+        # collapse to "foo") now persist as ``foo.md`` and ``foo-2.md``.
+        while safe_id in seen_ids:
+            safe_id = f"{base_id}-{suffix}"
+            suffix += 1
         seen_ids.add(safe_id)
         backend.write_text(
             vault_dir / f"{safe_id}.md",

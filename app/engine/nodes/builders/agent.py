@@ -116,12 +116,19 @@ async def run_agent_executor(
         config=config,
         stream_mode=modes,
     ):
-        # LangGraph yields ``(mode, data)`` tuples for multi-mode streams
-        # but bare ``data`` when a single mode is requested as a list.
-        if isinstance(chunk, tuple) and len(chunk) == 2:
-            mode, data = chunk
-        elif len(modes) == 1:
+        # LangGraph yields ``(mode, data)`` tuples only when multiple
+        # stream modes are requested. With a single mode the chunk is the
+        # bare payload — and that payload is itself often a 2-tuple
+        # (``messages`` mode emits ``(AIMessageChunk, metadata)``), so we
+        # cannot use ``isinstance(chunk, tuple)`` alone to detect framing.
+        if len(modes) == 1:
             mode, data = modes[0], chunk
+        elif (
+            isinstance(chunk, tuple)
+            and len(chunk) == 2
+            and isinstance(chunk[0], str)
+        ):
+            mode, data = chunk
         else:
             continue
 

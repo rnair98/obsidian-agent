@@ -12,10 +12,18 @@ from app.engine.tools.web import fetch_url
 
 
 class Source(BaseModel):
+    """A single source surfaced during research.
+
+    Field names intentionally mirror the keys consumed by
+    :func:`app.engine.persistence.write_sources` and produced by the
+    search tools in :mod:`app.engine.tools.search` so structured-output
+    sources round-trip to ``sources.csv`` without key translation.
+    """
+
     title: str = Field(..., description="Title of the source")
     url: str = Field(..., description="URL of the source")
-    summary: str = Field(..., description="Brief summary of the content")
-    relevance_score: int = Field(..., ge=1, le=10, description="Relevance score (1-10)")
+    notes: str = Field(..., description="Brief summary / notes about the content")
+    score: int = Field(..., ge=1, le=10, description="Relevance score (1-10)")
 
 
 class ResearcherOutput(BaseModel):
