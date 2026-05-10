@@ -20,8 +20,9 @@
 over FastAPI. A client POSTs a research topic; a sequence of LLM agents
 (Researcher → Summarizer → Zettelkasten → Persist) produces a markdown report,
 atomic Zettel notes, a Polars CSV of sources, and durable memory files that
-seed future runs. Postgres checkpoints the graph. Arize Phoenix captures OTEL
-traces.
+seed future runs. Each run also installs a typed agent workspace harness that
+surfaces a constrained shell-like tool backed by virtual workspace mounts.
+Postgres checkpoints the graph. Arize Phoenix captures OTEL traces.
 
 **Primary request path:**
 
@@ -70,12 +71,14 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
 │   ┌────────── Ports (Protocols) ──────────┐                      │
 │   │  backends.FilesystemBackend           │                      │
 │   │  sandbox.ExecutionSandboxBackend      │                      │
+│   │  harness.WorkspaceBackend             │                      │
 │   └──────────────────────────────────────┘                       │
 │   ┌────────── Adapters ───────────────────┐                      │
 │   │  backends.InProcessFilesystemBackend  │                      │
 │   │  sandbox.LocalSubprocessSandboxBackend│                      │
 │   └──────────────────────────────────────┘                       │
 │   tools/    ← agent-facing LangChain @tool functions             │
+│   harness/  ← typed virtual workspace + fake shell core          │
 ├──────────────────────────────────────────────────────────────────┤
 │                     services/ (external integrations)            │
 │   gh_client (PyGithub app-installation auth) ·                   │
@@ -101,14 +104,19 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
    `code_interpreter` server-side tools plus MCP endpoints (`deepwiki`,
    `exa`) are the primary research capability. Custom `@tool` functions
    (`fetch_url`, `save_note`, `write_report`, `write_zettelkasten_notes`,
-   `run_python_experiment`, `get_repo_tree`) layer app-specific behavior on
-   top.
+   `run_python_experiment`, `get_repo_tree`, `shell`) layer app-specific
+   behavior on top.
 5. **Filesystem writes go through `FilesystemBackend`.** Never call
    `Path.write_text` directly from node/tool code. The backend enforces a
    sandboxed `base_path` and rejects path-escape attempts
    (`PathEscapeError`). Tar extraction uses the `strip_components` pattern
    and validates every member.
-6. **Settings are layered.** Order of precedence (highest first): init
+6. **Workspace commands go through the harness.** The `shell` tool does not
+   execute host commands. It parses a deliberately small command subset and
+   dispatches to `WorkspaceSession` / `WorkspaceBackend` implementations.
+   Mutable workspace objects live in a context variable installed by the
+   executor, not in `ResearchState`.
+7. **Settings are layered.** Order of precedence (highest first): init
    args → env vars → `.env` → YAML (`app/core/resources/agent_config.yaml`)
    → file secrets. Nested fields use the `__` delimiter
    (e.g. `GITHUB__APP_ID`).
@@ -208,11 +216,21 @@ app/
 │   └── tools/                    # LangChain @tool functions given to agents
 │       ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
 │       ├── io.py                 # save_note, write_report, write_zettelkasten_notes (only @tool functions)
+│       ├── shell.py              # shell tool adapter over app.harness runtime
 │       ├── search.py             # async call_brave_search / call_exa_search / call_exa_context + query builders
 │       ├── web.py                # async fetch_url (Jina Reader → markdown)
 │       ├── sandbox.py            # async run_python_experiment (asyncio.to_thread → LocalSubprocessSandboxBackend)
 │       ├── github.py             # async get_repo_tree (asyncio.to_thread → GitHubRepositoryService)
 │       └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
+├── harness/
+│   ├── __init__.py               # public harness exports
+│   ├── fs.py                     # WorkspaceBackend Protocol + in-memory backend
+│   ├── mounts.py                 # CompositeWorkspaceBackend path-prefix router
+│   ├── paths.py                  # virtual POSIX path normalization
+│   ├── policy.py                 # first-match permission policy
+│   ├── results.py                # typed command/audit result models
+│   ├── runtime.py                # current workspace contextvar + scope helper
+│   └── session.py                # WorkspaceSession + constrained shell dispatcher
 └── services/
     ├── codesearch/
     │   ├── __init__.py           # public exports for parsing helpers and IR models
@@ -231,7 +249,6 @@ app/
 .
 ├── ARCHITECTURE.md               # this file
 ├── AGENTS.md                     # agent operating contract (delegates to this doc)
-├── PLAN.md                       # product spec (PRD-lite)
 ├── TASKS.md                      # one-off setup task for agent tooling
 ├── README.md                     # minimal local-run instructions
 ├── pyproject.toml                # uv / ruff / deps (py>=3.13, langgraph, langchain-openai, polars, modal, …)
@@ -309,6 +326,19 @@ validates every member and supports `strip_components` like `tar --strip`.
 
 Code-execution port. Today: `LocalSubprocessSandboxBackend` shells out to
 `python -c`. A Modal-backed implementation is in scope (see `test_modal.py`).
+
+### `WorkspaceBackend` / `WorkspaceSession` (`app/harness/`)
+
+The typed virtual workspace harness. `WorkspaceBackend` exposes POSIX-like
+file operations over virtual paths and returns typed entries/errors instead of
+host `Path` handles. `CompositeWorkspaceBackend` routes paths by longest mount
+prefix, so `/workspace`, `/memory`, `/vault`, and `/repos` can use different
+storage strategies while the agent sees one tree.
+
+`WorkspaceSession` owns the current working directory, permission policy, and
+command dispatch for the `shell` tool. The session is installed per workflow
+run via `workspace_scope(...)` in `executor.execute`; it is deliberately not
+stored in `ResearchState`.
 
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
@@ -406,8 +436,10 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | LLM | OpenAI (Chat completions + Responses API) | `langchain-openai.ChatOpenAI` in `builders/agent.py` |
 | Orchestration | `langgraph` + `langchain` | everywhere in `engine/` |
 | Checkpointing | `langgraph-checkpoint-postgres` | `executor.execute` |
+| Postgres driver | `psycopg[binary]` | required by checkpoint postgres imports |
 | Built-in tools | OpenAI `web_search`, `code_interpreter` | `tools/constants.py: OPENAI_TOOLS` |
 | MCP tools | `deepwiki`, `exa` | `tools/constants.py: MCP_TOOLS` |
+| Agent workspace | Typed virtual shell harness | `app/harness/`, `tools/shell.py` |
 | Web search | Brave, Exa | `tools/search.py` |
 | URL → Markdown | Jina Reader (`r.jina.ai`) | `tools/web.py` |
 | Sandboxed code exec | subprocess (local), Modal (planned) | `sandbox/local.py`, `test_modal.py` |
@@ -546,6 +578,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/test_settings.py` | `FilesystemConfig.backend_type` defaults to a supported enum value |
 | `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
 | `tests/nodes/test_persist.py` | `persist_artifacts` writes `sources.csv` and memory markdown end-to-end against a tmp filesystem |
+| `tests/harness/` | Typed workspace core, shell tool adapter, and executor/agent wiring |
 
 LangGraph executor end-to-end behavior (requires a fake LLM and
 checkpointer) is still uncovered — next high-priority gap.

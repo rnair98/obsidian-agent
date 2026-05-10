@@ -23,6 +23,8 @@ from app.engine.nodes.types import WorkflowName
 from app.engine.persistence import load_memories
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
+from app.harness.runtime import workspace_scope
+from app.harness.session import WorkspaceSession
 
 
 def _initial_context(request: ResearchRequest) -> ResearchContext:
@@ -83,4 +85,5 @@ async def execute(
 
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer)
-        return await graph.ainvoke(input=state, config=config, context=context)
+        with workspace_scope(WorkspaceSession.default()):
+            return await graph.ainvoke(input=state, config=config, context=context)

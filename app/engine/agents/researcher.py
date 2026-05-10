@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from app.engine.agents.spec import AgentSpec
 from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
 from app.engine.tools.io import save_note
+from app.engine.tools.shell import shell
 from app.engine.tools.web import fetch_url
 
 
@@ -77,5 +78,5 @@ SPEC: AgentSpec[ResearcherOutput] = AgentSpec(
     name="researcher",
     output_schema=ResearcherOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, save_note),
+    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, save_note, shell),
 )
