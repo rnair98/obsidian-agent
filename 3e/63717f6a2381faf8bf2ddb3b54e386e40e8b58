@@ -1,0 +1,40 @@
+app/engine/nodes/builders/agent.py
+  s_ba58b2449595c8::t_399e068a7ff811 113,119-127
+app/services/gh_client/repo.py
+  s_ba58b2449595c8::t_93f97439af87e0 211
+  s_ba58b2449595c8::t_7469fefd2804c4 14
+app/engine/tools/io.py
+  s_ba58b2449595c8::t_c60c74cb44461e 70-91,98,100
+  s_ba58b2449595c8::t_eba4906fbff043 10-11,18
+  s_ba58b2449595c8::t_29c330e22a9274 122-123,125-128,130,134-135
+app/engine/persistence.py
+  s_ba58b2449595c8::t_cda18477095e37 72,78
+  s_ba58b2449595c8::t_b55f6ad282475b 74,85
+  s_ba58b2449595c8::t_3b6e9ca73d2cdd 26-37
+app/engine/agents/output_format.py
+  s_ba58b2449595c8::t_1e9f7de7ef9ea9 74-75
+tests/nodes/test_persist.py
+  s_ba58b2449595c8::t_d6b667e8ab402a 63-81
+ARCHITECTURE.md
+  s_ba58b2449595c8::t_9d19300598dfaa 332,337-339
+  s_ba58b2449595c8::t_1ec9dbd0bba6bd 317-319
+tests/engine/agents/test_output_format.py
+  s_ba58b2449595c8::t_db13b9f6ad238c 75,81,83-87
+  s_ba58b2449595c8::t_8e63abc65e3d9a 76-80,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "3e63717f6a2381faf8bf2ddb3b54e386e40e8b58",
+  "prompts": {},
+  "sessions": {
+    "s_ba58b2449595c8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5417b1ba-7c88-4f9b-b86c-bd9c347a3783",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
