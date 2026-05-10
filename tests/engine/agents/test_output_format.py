@@ -56,6 +56,22 @@ def test_renders_literal_choices() -> None:
     assert "mode: 'fast' | 'slow'," in out
 
 
+def test_renders_variadic_tuple_as_array() -> None:
+    class _Variadic(BaseModel):
+        rows: tuple[int, ...]
+
+    out = render_output_format(_Variadic)
+    assert "rows: int[]," in out
+
+
+def test_renders_fixed_length_tuple_preserving_member_types() -> None:
+    class _Fixed(BaseModel):
+        triple: tuple[str, int, float]
+
+    out = render_output_format(_Fixed)
+    assert "triple: [string, int, float]," in out
+
+
 def test_handles_recursive_reference() -> None:
     class _Tree(BaseModel):
         name: str

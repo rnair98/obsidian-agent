@@ -26,12 +26,26 @@ class GithubConfig(BaseModel):
     installation_id: int = 0
 
 
+class ReasoningConfig(BaseModel):
+    """Reasoning controls passed through to the Responses API.
+
+    Mirrors the ``reasoning={...}`` kwarg shape that ``langchain_openai``'s
+    ``ChatOpenAI`` forwards to the OpenAI Responses API. Kept as a typed
+    sub-model so YAML overrides are validated rather than silently
+    accepted via ``extra="allow"``.
+    """
+
+    effort: Literal["low", "medium", "high", "xhigh"] | None = None
+    summary: Literal["auto", "concise", "detailed"] | None = None
+    model_config = ConfigDict(extra="allow")
+
+
 class LLMConfig(BaseModel):
     """LLM configuration. Only model is required; all other params pass through."""
 
     model: str
     use_responses_api: bool = True
-    reasoning_effort: Literal["low", "medium", "high", "xhigh"] | None = None
+    reasoning: ReasoningConfig | None = None
     verbosity: Literal["low", "medium", "high"] | None = None
     streaming: bool = False
     stream_usage: bool = False

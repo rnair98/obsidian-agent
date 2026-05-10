@@ -21,7 +21,13 @@ _EMPTY_OVERRIDES: Mapping[str, Any] = MappingProxyType({})
 
 @dataclass(frozen=True, slots=True)
 class AgentSpec(Generic[T]):
-    """Frozen, hashable bundle describing one agent."""
+    """Frozen bundle describing one agent.
+
+    Not hashable in the general case — ``llm_overrides`` defaults to a
+    ``MappingProxyType`` (no ``__hash__``) and callers may pass concrete
+    ``list``/``dict`` values for ``tools``/``llm_overrides``. Treat
+    instances as values, not dict keys.
+    """
 
     name: str
     output_schema: type[T]

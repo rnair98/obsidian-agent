@@ -15,7 +15,7 @@ class Source(BaseModel):
     title: str = Field(..., description="Title of the source")
     url: str = Field(..., description="URL of the source")
     summary: str = Field(..., description="Brief summary of the content")
-    relevance_score: int = Field(..., description="Relevance score (1-10)")
+    relevance_score: int = Field(..., ge=1, le=10, description="Relevance score (1-10)")
 
 
 class ResearcherOutput(BaseModel):

@@ -58,7 +58,15 @@ def _render_type(
             return f"{_render_type(non_none[0], indent_size, prefix, seen)} | null"
         return " | ".join(_render_type(a, indent_size, prefix, seen) for a in args)
 
-    if origin in (list, tuple, set, frozenset):
+    if origin is tuple:
+        if not args:
+            return "unknown[]"
+        if len(args) == 2 and args[1] is Ellipsis:
+            return f"{_render_type(args[0], indent_size, prefix, seen)}[]"
+        rendered = ", ".join(_render_type(a, indent_size, prefix, seen) for a in args)
+        return f"[{rendered}]"
+
+    if origin in (list, set, frozenset):
         inner = args[0] if args else object
         return f"{_render_type(inner, indent_size, prefix, seen)}[]"
 

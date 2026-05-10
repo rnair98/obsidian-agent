@@ -8,6 +8,7 @@ plumbing stays sharp.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -15,13 +16,22 @@ import polars as pl
 
 from app.engine.backends import FilesystemBackend
 
+_SLUG_INVALID_RE = re.compile(r"[^a-z0-9._-]+")
+
 
 def _timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
 def _slugify(topic: str) -> str:
-    return topic.lower().replace(" ", "-")
+    """Render ``topic`` as a single safe filename component.
+
+    Strips path separators, ``..`` traversal, and any character outside
+    ``[a-z0-9._-]`` so the result can never escape the parent directory.
+    """
+    cleaned = _SLUG_INVALID_RE.sub("-", topic.lower().replace(" ", "-"))
+    cleaned = cleaned.strip("._-")
+    return cleaned or "untitled"
 
 
 def load_memories(memories_dir: Path, backend: FilesystemBackend) -> list[str]:
@@ -96,4 +106,4 @@ def write_sources(
             "score": [entry.get("score", "") for entry in sources],
         }
     )
-    frame.write_csv(backend.resolve(sources_path))
+    backend.write_text(sources_path, frame.write_csv(), encoding="utf-8")

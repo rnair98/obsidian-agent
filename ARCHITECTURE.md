@@ -584,7 +584,8 @@ Use this when joining the project (human or agent):
 - [ ] Read Section 1 (TL;DR) and Section 2 (Mental Model).
 - [ ] Trace a request end-to-end in code:
       `api/v1/workflows.py` → `executor.py` → `graphs/research.py` →
-      `nodes/researcher.py` → `nodes/builders/agent.py`.
+      `nodes/agent.py` (`make_agent_node`) → `nodes/builders/agent.py`
+      (`build_agent_executor_from_spec`) → `agents/researcher.py` (`SPEC`).
 - [ ] Read `schema.py` until you can list `ResearchState` fields from memory.
 - [ ] Read `app/core/resources/agent_config.yaml` to understand each
       agent's mission in its own words.

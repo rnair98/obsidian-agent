@@ -32,6 +32,13 @@ def test_strips_bare_code_fence() -> None:
     assert out.name == "beta"
 
 
+def test_strips_uppercase_and_variant_fences() -> None:
+    for tag in ("Json", "JSON", "jsonc", "json5"):
+        raw = f'```{tag}\n{{"name": "x", "score": 0, "tags": []}}\n```'
+        out = parse_structured(raw, Sample)
+        assert out.name == "x"
+
+
 def test_strips_yapping_prefix_and_suffix() -> None:
     raw = (
         "Sure! Here is the JSON you asked for:\n"

@@ -32,7 +32,7 @@ from pydantic import BaseModel, ValidationError
 T = TypeVar("T", bound=BaseModel)
 
 _tracer = trace.get_tracer(__name__)
-_FENCE_RE = re.compile(r"^```(?:json|JSON)?\s*\n?(.*?)\n?```\s*$", re.DOTALL)
+_FENCE_RE = re.compile(r"^```\w*\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
 
 
 class StructuredParseError(ValueError):

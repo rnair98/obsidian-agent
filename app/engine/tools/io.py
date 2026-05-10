@@ -63,13 +63,29 @@ def write_report(content: str) -> str:
     return f"Report saved to {written_path}"
 
 
+def _format_zettel_note(note: ZettelNoteInput) -> str:
+    """Render a note with YAML frontmatter so ``title`` and ``tags`` survive."""
+    if not note.title and not note.tags:
+        return note.content
+    lines = ["---"]
+    if note.title:
+        escaped = note.title.replace('"', '\\"')
+        lines.append(f'title: "{escaped}"')
+    if note.tags:
+        rendered_tags = ", ".join(f'"{t}"' for t in note.tags)
+        lines.append(f"tags: [{rendered_tags}]")
+    lines.extend(["---", "", note.content])
+    return "\n".join(lines)
+
+
 @tool(parse_docstring=True)
 def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
     """Persist extracted atomic notes to ``settings.VAULT_DIR``.
 
     Args:
-        notes: Collection of atomic notes to write. Each note's ``content``
-            is saved as ``{id}.md`` in the vault.
+        notes: Collection of atomic notes to write. Each note is saved as
+            ``{id}.md`` in the vault, with ``title``/``tags`` rendered as
+            YAML frontmatter when present.
 
     Returns:
         A status string naming the number of notes written and the vault
@@ -79,5 +95,9 @@ def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
     backend = artifacts_backend()
     backend.mkdir(vault_dir)
     for note in notes:
-        backend.write_text(vault_dir / f"{note.id}.md", note.content, encoding="utf-8")
+        backend.write_text(
+            vault_dir / f"{note.id}.md",
+            _format_zettel_note(note),
+            encoding="utf-8",
+        )
     return f"Saved {len(notes)} notes to {backend.resolve(vault_dir)}"
