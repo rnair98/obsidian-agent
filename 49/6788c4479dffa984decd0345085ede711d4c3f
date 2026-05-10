@@ -1,0 +1,38 @@
+app/engine/tools/io.py
+  s_af2bc12717f803::t_24aef6ffa7c664 66-80,86-88,98-102
+app/core/settings.py
+  s_af2bc12717f803::t_936bd6666900b7 29-42,48
+tests/engine/agents/test_output_format.py
+  s_af2bc12717f803::t_cf6b3d3dde3a8e 59-74
+tests/engine/test_parsing.py
+  s_af2bc12717f803::t_aaefae8cae3687 35-41
+ARCHITECTURE.md
+  s_af2bc12717f803::t_a7ef231e998769 587-588
+app/engine/agents/researcher.py
+  s_af2bc12717f803::t_52d0ebd51e46b5 18
+app/engine/persistence.py
+  s_af2bc12717f803::t_c4d57fe5dec05d 11,19-20,27-34
+  s_af2bc12717f803::t_b5151e8fadb472 109
+app/engine/parsing.py
+  s_af2bc12717f803::t_55ab223c8f9f66 35
+app/engine/agents/spec.py
+  s_af2bc12717f803::t_462f6714bb0720 24-30
+app/engine/agents/output_format.py
+  s_af2bc12717f803::t_cb5292f3505769 61-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "496788c4479dffa984decd0345085ede711d4c3f",
+  "prompts": {},
+  "sessions": {
+    "s_af2bc12717f803": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f537059b-ea3c-466f-82cf-590a255ea748",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
