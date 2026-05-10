@@ -1,0 +1,19 @@
+.gitignore
+  s_a837aeeb74e061::t_6c3b22a9c95256 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "fb081073c4a70ce95d304d5950f1615de14ccced",
+  "prompts": {},
+  "sessions": {
+    "s_a837aeeb74e061": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e13e2-5fbd-7f60-aaea-f2e3db9d0d36",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
