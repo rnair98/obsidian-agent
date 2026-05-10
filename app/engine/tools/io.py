@@ -72,7 +72,7 @@ def _format_zettel_note(note: ZettelNoteInput) -> str:
         escaped = note.title.replace('"', '\\"')
         lines.append(f'title: "{escaped}"')
     if note.tags:
-        escaped_tags = [t.replace('"', '\\"') for t in note.tags]
+        escaped_tags = [t.replace('\\', '\\\\').replace('"', '\\"') for t in note.tags]
         rendered_tags = ", ".join(f'"{t}"' for t in escaped_tags)
         lines.append(f"tags: [{rendered_tags}]")
     lines.extend(["---", "", note.content])
