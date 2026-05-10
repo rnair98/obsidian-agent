@@ -24,6 +24,7 @@ wheels/
 node_modules/
 
 # ai agent directories
+.worktrees/
 .agents/
 .agent/
 .claude/
