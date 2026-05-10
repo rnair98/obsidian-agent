@@ -18,8 +18,9 @@ class InProcessFilesystemBackend:
     """Local filesystem backend constrained to a sandboxed base path."""
 
     def __init__(self, base_path: str | Path = DEFAULT_ASSETS_DIR) -> None:
+        # Resolve only — do not create the directory at construction time.
+        # The first ``mkdir`` / ``write_*`` call materializes it on demand.
         self.base_path = Path(base_path).expanduser().resolve()
-        self.base_path.mkdir(parents=True, exist_ok=True)
 
     def resolve(self, path: str | Path) -> Path:
         candidate = Path(path)

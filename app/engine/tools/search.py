@@ -25,18 +25,18 @@ def clean_terms(terms: list[str]) -> list[str]:
 
 
 def build_boolean_query(query: SearchQuery) -> str:
-    if query["raw"]:
-        return query["raw"]
+    if query.raw:
+        return query.raw
 
     parts: list[str] = []
-    any_terms = clean_terms(query["any_terms"])
-    all_terms = clean_terms(query["all_terms"])
-    phrases = clean_terms(query["phrases"])
-    excluded = clean_terms(query["excluded"])
-    sites = clean_terms(query["sites"])
-    filetypes = clean_terms(query["filetypes"])
-    intitle = clean_terms(query["intitle"])
-    inurl = clean_terms(query["inurl"])
+    any_terms = clean_terms(query.any_terms)
+    all_terms = clean_terms(query.all_terms)
+    phrases = clean_terms(query.phrases)
+    excluded = clean_terms(query.excluded)
+    sites = clean_terms(query.sites)
+    filetypes = clean_terms(query.filetypes)
+    intitle = clean_terms(query.intitle)
+    inurl = clean_terms(query.inurl)
 
     if any_terms:
         if len(any_terms) == 1:
@@ -67,17 +67,17 @@ def build_boolean_query(query: SearchQuery) -> str:
 
 
 def build_semantic_query(query: SearchQuery, fallback: str) -> str:
-    if query["raw"]:
-        return query["raw"]
-    all_terms = clean_terms(query["all_terms"])
-    any_terms = clean_terms(query["any_terms"])
-    phrases = clean_terms(query["phrases"])
+    if query.raw:
+        return query.raw
+    all_terms = clean_terms(query.all_terms)
+    any_terms = clean_terms(query.any_terms)
+    phrases = clean_terms(query.phrases)
     parts = phrases + all_terms + any_terms
     return " ".join(parts) if parts else fallback
 
 
 @tool(parse_docstring=True)
-def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
+async def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
     """Search the web using Brave Search.
 
     Args:
@@ -104,8 +104,8 @@ def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
     }
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.get(url, params=params, headers=headers)
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(url, params=params, headers=headers)
             response.raise_for_status()
             payload = response.json()
     except (httpx.HTTPError, ValueError) as exc:
@@ -126,7 +126,7 @@ def call_brave_search(query: str) -> tuple[list[dict[str, str]], str | None]:
 
 
 @tool(parse_docstring=True)
-def call_exa_search(
+async def call_exa_search(
     query: str, search_type: str = "auto"
 ) -> tuple[list[dict[str, str]], str | None]:
     """Search using Exa.ai's neural/semantic search.
@@ -159,14 +159,13 @@ def call_exa_search(
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": f"Bearer {api_key}",
         "x-api-key": api_key,
         "User-Agent": "langgraph-researcher/1.0",
     }
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.post(
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
                 settings.EXA_SEARCH_URL,
                 content=orjson.dumps(payload),
                 headers=headers,
@@ -191,7 +190,7 @@ def call_exa_search(
 
 
 @tool(parse_docstring=True)
-def call_exa_context(query: str) -> tuple[str | None, str | None]:
+async def call_exa_context(query: str) -> tuple[str | None, str | None]:
     """Fetch code context or snippets from Exa for a programming query.
 
     Useful for retrieving code examples or library documentation relevant
@@ -222,8 +221,8 @@ def call_exa_context(query: str) -> tuple[str | None, str | None]:
     }
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.post(
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
                 settings.EXA_CONTEXT_URL,
                 content=orjson.dumps(payload),
                 headers=headers,
@@ -240,8 +239,8 @@ def merge_sources(
     secondary: list[dict[str, str]],
     limit: int,
 ) -> list[dict[str, str]]:
-    seen: dict[str, float] = {}
-    merged: list[dict[str, str]] = []
+    """Merge two source lists, deduping by URL and keeping the higher-scored entry."""
+    best: dict[str, tuple[float, dict[str, str]]] = {}
     for index, entry in enumerate(primary + secondary):
         url = entry.get("url", "")
         if not url:
@@ -256,8 +255,8 @@ def merge_sources(
         if entry.get("notes"):
             score += 0.5
         score += 1.0 / (index + 1)
-        if url not in seen or score > seen[url]:
-            seen[url] = score
-            merged.append(entry)
-    merged.sort(key=lambda item: seen.get(item.get("url", ""), 0.0), reverse=True)
-    return merged[:limit]
+        existing = best.get(url)
+        if existing is None or score > existing[0]:
+            best[url] = (score, entry)
+    ranked = sorted(best.values(), key=lambda item: item[0], reverse=True)
+    return [entry for _, entry in ranked[:limit]]

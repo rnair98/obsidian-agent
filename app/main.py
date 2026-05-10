@@ -1,28 +1,27 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from phoenix.otel import register
 
 # Import graphs package to trigger workflow registration
 import app.engine.graphs  # noqa: F401
 from app.api.v1.router import api_router
 from app.core.logger import logger
+from app.core.settings import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    register(
-        project_name="obsidian-agent",
-        auto_instrument=True,
-    )
-    logger.info("Phoenix OTEL tracer registered")
+    if settings.PHOENIX_ENABLED:
+        from phoenix.otel import register
+
+        register(project_name="obsidian-agent", auto_instrument=True)
+        logger.info("Phoenix OTEL tracer registered")
+    else:
+        logger.info("Phoenix OTEL tracer disabled (PHOENIX_ENABLED=false)")
     yield
 
 
 app = FastAPI(lifespan=lifespan)
-
-# Include API v1 router
 app.include_router(api_router, prefix="/api/v1")
 
 

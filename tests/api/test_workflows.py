@@ -7,22 +7,20 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_unregistered_workflow_returns_404() -> None:
-    """The Workflow enum admits 'persist' (a node, not an invocable
-    workflow); the endpoint must translate get_workflow's ValueError into
-    an HTTP 404 rather than a 500.
+def test_node_only_name_rejected_at_validation() -> None:
+    """``persist`` is a node, not a WorkflowName; the route must 422 it
+    at request validation rather than 404 from the registry.
     """
     client = TestClient(app)
     resp = client.post(
         "/api/v1/workflows/run/persist",
         json={"topic": "routing-test"},
     )
-    assert resp.status_code == 404
-    assert "persist" in resp.json()["detail"].lower()
+    assert resp.status_code == 422
 
 
 def test_unknown_enum_value_returns_422() -> None:
-    """A value outside the Workflow enum should fail at request validation."""
+    """A value outside WorkflowName should fail at request validation."""
     client = TestClient(app)
     resp = client.post(
         "/api/v1/workflows/run/not-a-real-workflow",
