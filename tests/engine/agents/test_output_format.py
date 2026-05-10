@@ -72,6 +72,19 @@ def test_renders_fixed_length_tuple_preserving_member_types() -> None:
     assert "triple: [string, int, float]," in out
 
 
+def test_renders_unparameterized_dict_without_raising() -> None:
+    # ``typing.Dict`` (no params) has ``get_origin == dict`` but empty args,
+    # so the renderer must fall back to a generic ``map<...>`` instead of
+    # blowing up on a 2-tuple unpack.
+    from typing import Dict  # noqa: UP035 — intentionally testing the legacy form
+
+    class _Loose(BaseModel):
+        payload: Dict  # noqa: UP006 — see above
+
+    out = render_output_format(_Loose)
+    assert "payload: map<string, unknown>," in out
+
+
 def test_handles_recursive_reference() -> None:
     class _Tree(BaseModel):
         name: str

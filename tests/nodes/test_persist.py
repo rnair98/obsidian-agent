@@ -60,3 +60,22 @@ def test_persist_writes_sources_and_memory(tmp_backend) -> None:
     memory_body = memory_files[0].read_text()
     assert "langgraph persistence" in memory_body
     assert "langgraph state is a TypedDict" in memory_body
+
+
+def test_persist_escapes_topic_quotes_in_frontmatter(tmp_backend) -> None:
+    state = _state()
+    state["topic"] = 'risky "topic" with \\ backslash'
+
+    persist_artifacts(state)
+
+    memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
+    body = memory_files[0].read_text()
+    assert 'topic: "risky \\"topic\\" with \\\\ backslash"' in body
+
+
+def test_persist_does_not_overwrite_same_second_runs(tmp_backend) -> None:
+    persist_artifacts(_state())
+    persist_artifacts(_state())
+
+    memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
+    assert len(memory_files) == 2

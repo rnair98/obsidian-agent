@@ -11,6 +11,7 @@ from github import GithubException
 
 from app.core.logger import logger
 from app.engine.backends import assets_backend, get_filesystem_backend
+from app.engine.backends.errors import FilesystemBackendError
 from app.services.gh_client.auth import GitHubHandle
 from app.services.gh_client.types import SnapshotResult
 
@@ -207,7 +208,7 @@ class GitHubRepositoryService:
                     destination=snapshot_relative_dir,
                     strip_components=1,
                 )
-        except (httpx.HTTPError, OSError) as exc:
+        except (httpx.HTTPError, OSError, FilesystemBackendError) as exc:
             logger.warning(
                 "Failed to snapshot '{}' at '{}' from tarball: {}",
                 self.repo.full_name,

@@ -71,6 +71,8 @@ def _render_type(
         return f"{_render_type(inner, indent_size, prefix, seen)}[]"
 
     if origin is dict:
+        if len(args) != 2:
+            return "map<string, unknown>"
         key_type, value_type = args
         return (
             f"map<{_render_type(key_type, indent_size, prefix, seen)}, "

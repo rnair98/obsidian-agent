@@ -314,8 +314,9 @@ Code-execution port. Today: `LocalSubprocessSandboxBackend` shells out to
 
 A frozen dataclass that bundles **schema + prompt + tools + per-agent LLM
 overrides** for a single agent. One `SPEC` per agent module under
-`app/engine/agents/`. The node modules in `app/engine/nodes/<name>.py`
-do nothing more than wire `SPEC` into `build_agent_executor_from_spec()`.
+`app/engine/agents/`. Graphs wire each `SPEC` through `make_agent_node(...)`
+in `app/engine/nodes/agent.py`, which builds executors via
+`build_agent_executor_from_spec()` — there are no per-agent node modules.
 
 `spec.system_prompt()` resolves YAML overrides
 (`settings.agents.<name>.system_prompt`) before falling back to
@@ -328,16 +329,14 @@ receive a free-form string (tool args, persisted artifacts, future
 non-OpenAI providers) — the primary structured-output mechanism remains
 `ProviderStrategy(spec.output_schema)` inside `create_agent`.
 
-### Output schemas (`app/engine/agents/<name>.py` + `app/engine/outputs.py`)
+### Output schemas (`app/engine/agents/<name>.py`)
 
 `ResearcherOutput`, `SummarizerOutput`, `ZettelkastenOutput`, `Source`,
 `ZettelkastenNote` — defined alongside their prompts in `agents/<name>.py`
 and bound to the agents via `ProviderStrategy(...)` so OpenAI returns
-structured JSON matching these Pydantic models. `outputs.py` is a pure
-re-export façade for backward compatibility; new code should import from
-`app.engine.agents.<name>` directly. Changing a field is still a breaking
-change, but the prompt that describes it is rendered automatically — no
-hand-maintained schema text to keep in sync.
+structured JSON matching these Pydantic models. Changing a field is still
+a breaking change, but the prompt that describes it is rendered
+automatically — no hand-maintained schema text to keep in sync.
 
 ### `parse_structured` (`app/engine/parsing.py`)
 

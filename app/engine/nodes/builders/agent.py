@@ -110,12 +110,21 @@ async def run_agent_executor(
     final_messages: list[AnyMessage] | None = None
     modes = list(stream_mode or ["messages", "updates"])
 
-    async for mode, data in agent_executor.astream(
+    async for chunk in agent_executor.astream(
         input=state,
         context=runtime_context,
         config=config,
         stream_mode=modes,
     ):
+        # LangGraph yields ``(mode, data)`` tuples for multi-mode streams
+        # but bare ``data`` when a single mode is requested as a list.
+        if isinstance(chunk, tuple) and len(chunk) == 2:
+            mode, data = chunk
+        elif len(modes) == 1:
+            mode, data = modes[0], chunk
+        else:
+            continue
+
         if mode == "messages" and log_stream_chunks:
             if isinstance(data, tuple) and len(data) == 2:
                 token, _ = data

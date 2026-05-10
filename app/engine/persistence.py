@@ -23,6 +23,18 @@ def _timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _yaml_double_quoted(value: str) -> str:
+    """Render ``value`` as a YAML double-quoted scalar with escaping.
+
+    Backslashes and double-quotes are escaped (YAML's double-quoted style
+    treats `\\` as an escape introducer); newlines are folded to spaces so
+    a multi-line user-supplied topic can't break the frontmatter block.
+    """
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    escaped = escaped.replace("\n", " ").replace("\r", " ")
+    return f'"{escaped}"'
+
+
 def _slugify(topic: str) -> str:
     """Render ``topic`` as a single safe filename component.
 
@@ -57,19 +69,20 @@ def persist_memories(
 ) -> Path:
     """Write a frontmatter-rich research-run memory; return the resolved path."""
     backend.mkdir(memories_dir)
-    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S%f")
     memory_path = memories_dir / f"{_slugify(topic)}-{ts}.md"
+    report_path_str = report_path.as_posix() if report_path else ""
     body = "\n".join(
         [
             "---",
-            f'topic: "{topic}"',
+            f"topic: {_yaml_double_quoted(topic)}",
             f"created_at: {_timestamp()}",
             "type: research_run",
             f"notes_count: {len(notes)}",
             f"source_count: {len(sources)}",
             f"insight_count: {len(insights)}",
             f"reasoning_count: {len(reasoning)}",
-            f'report_path: "{report_path.as_posix() if report_path else ""}"',
+            f"report_path: {_yaml_double_quoted(report_path_str)}",
             "---",
             "",
             "# Key Insights",

@@ -7,11 +7,15 @@ functions belong here.
 
 from __future__ import annotations
 
+import re
+
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.core.settings import settings
 from app.engine.backends import artifacts_backend
+
+_NOTE_ID_INVALID_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class ZettelNoteInput(BaseModel):
@@ -63,17 +67,37 @@ def write_report(content: str) -> str:
     return f"Report saved to {written_path}"
 
 
+def _yaml_quote(value: str) -> str:
+    """Render ``value`` as a YAML double-quoted scalar with escaping.
+
+    YAML's double-quoted style treats ``\\`` as an escape introducer, so
+    backslashes must be escaped alongside ``"``. Newlines are folded to
+    spaces so a single value can't break out of the frontmatter block.
+    """
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    escaped = escaped.replace("\n", " ").replace("\r", " ")
+    return f'"{escaped}"'
+
+
+def _safe_note_id(note_id: str) -> str:
+    """Reduce ``note_id`` to a single safe path component.
+
+    Collapses path separators, ``..`` traversal, and any character outside
+    ``[A-Za-z0-9._-]`` so a model-emitted id can never escape the vault.
+    """
+    cleaned = _NOTE_ID_INVALID_RE.sub("-", note_id).strip("._-")
+    return cleaned or "untitled"
+
+
 def _format_zettel_note(note: ZettelNoteInput) -> str:
     """Render a note with YAML frontmatter so ``title`` and ``tags`` survive."""
     if not note.title and not note.tags:
         return note.content
     lines = ["---"]
     if note.title:
-        escaped = note.title.replace('"', '\\"')
-        lines.append(f'title: "{escaped}"')
+        lines.append(f"title: {_yaml_quote(note.title)}")
     if note.tags:
-        escaped_tags = [t.replace('\\', '\\\\').replace('"', '\\"') for t in note.tags]
-        rendered_tags = ", ".join(f'"{t}"' for t in escaped_tags)
+        rendered_tags = ", ".join(_yaml_quote(t) for t in note.tags)
         lines.append(f"tags: [{rendered_tags}]")
     lines.extend(["---", "", note.content])
     return "\n".join(lines)
@@ -95,10 +119,17 @@ def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
     vault_dir = settings.VAULT_DIR
     backend = artifacts_backend()
     backend.mkdir(vault_dir)
+    seen_ids: set[str] = set()
+    written = 0
     for note in notes:
+        safe_id = _safe_note_id(note.id)
+        if safe_id in seen_ids:
+            continue
+        seen_ids.add(safe_id)
         backend.write_text(
-            vault_dir / f"{note.id}.md",
+            vault_dir / f"{safe_id}.md",
             _format_zettel_note(note),
             encoding="utf-8",
         )
-    return f"Saved {len(notes)} notes to {backend.resolve(vault_dir)}"
+        written += 1
+    return f"Saved {written} notes to {backend.resolve(vault_dir)}"
