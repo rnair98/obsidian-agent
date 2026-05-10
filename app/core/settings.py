@@ -37,7 +37,7 @@ class ReasoningConfig(BaseModel):
 
     effort: Literal["low", "medium", "high", "xhigh"] | None = None
     summary: Literal["auto", "concise", "detailed"] | None = None
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
 
 class LLMConfig(BaseModel):
