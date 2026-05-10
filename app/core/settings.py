@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import (
@@ -26,24 +26,44 @@ class GithubConfig(BaseModel):
     installation_id: int = 0
 
 
+class ReasoningConfig(BaseModel):
+    """Reasoning controls passed through to the Responses API.
+
+    Mirrors the ``reasoning={...}`` kwarg shape that ``langchain_openai``'s
+    ``ChatOpenAI`` forwards to the OpenAI Responses API. Kept as a typed
+    sub-model so YAML overrides are validated rather than silently
+    accepted via ``extra="allow"``.
+    """
+
+    effort: Literal["low", "medium", "high", "xhigh"] | None = None
+    summary: Literal["auto", "concise", "detailed"] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
 class LLMConfig(BaseModel):
     """LLM configuration. Only model is required; all other params pass through."""
 
     model: str
     use_responses_api: bool = True
-    reasoning_effort: Optional[Literal["low", "medium", "high", "xhigh"]] = None
-    verbosity: Optional[Literal["low", "medium", "high"]] = None
+    reasoning: ReasoningConfig | None = None
+    verbosity: Literal["low", "medium", "high"] | None = None
     streaming: bool = False
     stream_usage: bool = False
-    timeout: Optional[int] = None
+    timeout: int | None = None
     temperature: float = 1.0
     model_kwargs: dict = Field(default_factory=dict)
-    api_key: Optional[str] = None
+    api_key: str | None = None
     model_config = ConfigDict(extra="allow")
 
 
 class AgentPromptConfig(BaseModel):
-    system_prompt: str
+    """Per-agent runtime override for the system prompt.
+
+    Empty string (or omission) falls through to the default defined on
+    the corresponding ``AgentSpec`` in ``app/engine/agents/<name>.py``.
+    """
+
+    system_prompt: str = ""
 
 
 class AgentsConfig(BaseModel):
@@ -87,6 +107,9 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Telemetry
+    PHOENIX_ENABLED: bool = True
 
     # Checkpointer (LangGraph AsyncPostgresSaver connection string)
     DATABASE_URL: str = ""

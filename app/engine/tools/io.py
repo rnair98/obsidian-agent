@@ -1,120 +1,37 @@
-import re
-from datetime import UTC, datetime
-from pathlib import Path
+"""Agent-callable IO tools.
 
-import polars as pl
+Internal persistence helpers (``load_memories``, ``persist_memories``,
+``write_sources``) live in :mod:`app.engine.persistence` — only ``@tool``
+functions belong here.
+"""
+
+from __future__ import annotations
+
+import re
+
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.core.settings import settings
-from app.engine.backends import get_filesystem_backend
-from app.engine.backends.protocol import FilesystemBackend
+from app.engine.backends import artifacts_backend
+
+_NOTE_ID_INVALID_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
-def _resolve_backend() -> FilesystemBackend:
-    return get_filesystem_backend(
-        backend_type=settings.filesystem.backend_type,
-        base_path=settings.filesystem.base_path,
-    )
+class ZettelNoteInput(BaseModel):
+    """Tool-side schema for a single zettelkasten note write.
 
+    Defined here (not imported from ``agents/zettelkasten.py``) to avoid a
+    circular import: the agent module imports the tool function, and the
+    tool function needs the schema at decoration time. Field names mirror
+    :class:`app.engine.agents.zettelkasten.ZettelkastenNote` so the agent's
+    structured output flows through unchanged.
+    """
 
-def timestamp() -> str:
-    return datetime.now(UTC).isoformat()
-
-
-def ensure_dir(path: Path, backend: FilesystemBackend) -> None:
-    backend.mkdir(path)
-
-
-def load_memories(
-    memories_dir: Path,
-    backend: FilesystemBackend,
-) -> list[str]:
-    if not backend.is_dir(memories_dir):
-        return []
-
-    memories: list[str] = []
-    for memory in backend.list_dir(memories_dir):
-        if memory.suffix != ".md":
-            continue
-        memories.append(backend.read_text(memory, encoding="utf-8"))
-    return memories
-
-
-def extract_memory_insights(memories: list[str]) -> list[str]:
-    insights: list[str] = []
-    for memory in memories:
-        section_match = re.split(r"^# Key Insights\s*$", memory, flags=re.MULTILINE)
-        if len(section_match) < 2:
-            continue
-        section = section_match[1]
-        for line in section.splitlines():
-            if line.startswith("- "):
-                insights.append(line[2:].strip())
-    return insights
-
-
-def persist_memories(
-    memories_dir: Path,
-    topic: str,
-    notes: list[str],
-    insights: list[str],
-    reasoning: list[str],
-    sources: list[dict[str, str]],
-    report_path: Path | None,
-    backend: FilesystemBackend,
-) -> list[Path]:
-    ensure_dir(memories_dir, backend=backend)
-    slug = topic.lower().replace(" ", "-")
-    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
-    memory_path = memories_dir / f"{slug}-{ts}.md"
-    content = "\n".join(
-        [
-            "---",
-            f'topic: "{topic}"',
-            f"created_at: {timestamp()}",
-            "type: research_run",
-            f"notes_count: {len(notes)}",
-            f"source_count: {len(sources)}",
-            f"insight_count: {len(insights)}",
-            f"reasoning_count: {len(reasoning)}",
-            f'report_path: "{report_path.as_posix() if report_path else ""}"',
-            "---",
-            "",
-            "# Key Insights",
-            "",
-            *[f"- {insight}" for insight in insights],
-            "",
-            "# Reasoning Log",
-            "",
-            *[f"- {entry}" for entry in reasoning],
-            "",
-            "# Research Notes",
-            "",
-            *[f"- {note}" for note in notes],
-            "",
-        ]
-    )
-    backend.write_text(memory_path, content, encoding="utf-8")
-    return [backend.resolve(memory_path)]
-
-
-def write_sources(
-    sources_path: Path,
-    sources: list[dict[str, str]],
-    backend: FilesystemBackend,
-) -> None:
-    ensure_dir(sources_path.parent, backend=backend)
-    frame = pl.DataFrame(
-        {
-            "title": [entry.get("title", "") for entry in sources],
-            "url": [entry.get("url", "") for entry in sources],
-            "notes": [entry.get("notes", "") for entry in sources],
-            "provider": [entry.get("provider", "") for entry in sources],
-            "score": [entry.get("score", "") for entry in sources],
-        }
-    )
-    frame.write_csv(backend.resolve(sources_path))
+    id: str = Field(..., description="Unique slug/ID for the note")
+    title: str = Field(..., description="Title of the atomic note")
+    content: str = Field(..., description="Markdown content of the note")
+    tags: list[str] = Field(default_factory=list, description="List of tags")
 
 
 @tool(parse_docstring=True)
@@ -143,43 +60,82 @@ def write_report(content: str) -> str:
     Returns:
         A status string naming the resolved output path.
     """
-    backend = _resolve_backend()
+    backend = artifacts_backend()
     output_path = settings.OUTPUT_DIR / "report.md"
-    ensure_dir(output_path.parent, backend=backend)
+    backend.mkdir(output_path.parent)
     written_path = backend.write_text(output_path, content, encoding="utf-8")
     return f"Report saved to {written_path}"
 
 
-class ZettelNote(BaseModel):
-    id: str = Field(..., description="Unique identifier for the note (slug format)")
-    title: str = Field(..., description="Title of the note")
-    content: str = Field(..., description="Markdown content of the note")
-    links: list[str] = Field(
-        default_factory=list, description="List of linked note IDs"
-    )
+def _yaml_quote(value: str) -> str:
+    """Render ``value`` as a YAML double-quoted scalar with escaping.
+
+    YAML's double-quoted style treats ``\\`` as an escape introducer, so
+    backslashes must be escaped alongside ``"``. Newlines are folded to
+    spaces so a single value can't break out of the frontmatter block.
+    """
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    escaped = escaped.replace("\n", " ").replace("\r", " ")
+    return f'"{escaped}"'
+
+
+def _safe_note_id(note_id: str) -> str:
+    """Reduce ``note_id`` to a single safe path component.
+
+    Collapses path separators, ``..`` traversal, and any character outside
+    ``[A-Za-z0-9._-]`` so a model-emitted id can never escape the vault.
+    """
+    cleaned = _NOTE_ID_INVALID_RE.sub("-", note_id).strip("._-")
+    return cleaned or "untitled"
+
+
+def _format_zettel_note(note: ZettelNoteInput) -> str:
+    """Render a note with YAML frontmatter so ``title`` and ``tags`` survive."""
+    if not note.title and not note.tags:
+        return note.content
+    lines = ["---"]
+    if note.title:
+        lines.append(f"title: {_yaml_quote(note.title)}")
+    if note.tags:
+        rendered_tags = ", ".join(_yaml_quote(t) for t in note.tags)
+        lines.append(f"tags: [{rendered_tags}]")
+    lines.extend(["---", "", note.content])
+    return "\n".join(lines)
 
 
 @tool(parse_docstring=True)
-def write_zettelkasten_notes(notes: list[ZettelNote]) -> str:
+def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
     """Persist extracted atomic notes to ``settings.VAULT_DIR``.
 
     Args:
-        notes: Collection of atomic notes to write. Each note's ``content``
-            is saved as ``{id}.md`` in the vault.
+        notes: Collection of atomic notes to write. Each note is saved as
+            ``{id}.md`` in the vault, with ``title``/``tags`` rendered as
+            YAML frontmatter when present.
 
     Returns:
         A status string naming the number of notes written and the vault
         path they were saved to.
     """
     vault_dir = settings.VAULT_DIR
-    backend = _resolve_backend()
-    ensure_dir(vault_dir, backend=backend)
-    # Simplified for the tool version, assuming inputs are pre-formatted
-    # or we format them here.
-    count = 0
+    backend = artifacts_backend()
+    backend.mkdir(vault_dir)
+    seen_ids: set[str] = set()
+    written = 0
     for note in notes:
-        # note is now a ZettelNote object
-        p = vault_dir / f"{note.id}.md"
-        backend.write_text(p, note.content, encoding="utf-8")
-        count += 1
-    return f"Saved {count} notes to {backend.resolve(vault_dir)}"
+        base_id = _safe_note_id(note.id)
+        safe_id = base_id
+        suffix = 2
+        # Disambiguate collisions instead of dropping notes silently.
+        # Two notes with the same sanitized id (e.g. "Foo" / "foo/" both
+        # collapse to "foo") now persist as ``foo.md`` and ``foo-2.md``.
+        while safe_id in seen_ids:
+            safe_id = f"{base_id}-{suffix}"
+            suffix += 1
+        seen_ids.add(safe_id)
+        backend.write_text(
+            vault_dir / f"{safe_id}.md",
+            _format_zettel_note(note),
+            encoding="utf-8",
+        )
+        written += 1
+    return f"Saved {written} notes to {backend.resolve(vault_dir)}"

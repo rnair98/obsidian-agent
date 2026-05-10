@@ -24,6 +24,7 @@ dependencies = [
     "modal>=1.4.1",
     "tree-sitter>=0.25.2",
     "tree-sitter-language-pack>=1.5.0",
+    "json-repair>=0.30",
 ]
 
 [tool.uv]
