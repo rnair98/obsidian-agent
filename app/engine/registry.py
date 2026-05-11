@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
-from langgraph.checkpoint.memory import BaseCheckpointSaver
-from langgraph.graph.state import CompiledStateGraph
+from langchain_core.runnables import Runnable
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
-WorkflowFactory = Callable[[BaseCheckpointSaver], CompiledStateGraph]
+WorkflowFactory = Callable[
+    [BaseCheckpointSaver[Any]],
+    Runnable[Any, Any],
+]
 
-# Global registry: name -> factory function
 _WORKFLOW_REGISTRY: dict[str, WorkflowFactory] = {}
 
 
@@ -17,7 +20,9 @@ def workflow(name: str) -> Callable[[WorkflowFactory], WorkflowFactory]:
 
     Usage:
         @workflow("my-workflow")
-        def create_my_workflow(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
+        def create_my_workflow(
+            checkpointer: BaseCheckpointSaver[Any],
+        ) -> Runnable[Any, Any]:
             ...
     """
 
@@ -35,8 +40,8 @@ def list_workflows() -> list[str]:
 
 def get_workflow(
     name: str,
-    checkpointer: BaseCheckpointSaver,
-) -> CompiledStateGraph:
+    checkpointer: BaseCheckpointSaver[Any],
+) -> Runnable[Any, Any]:
     """Retrieve a compiled workflow graph by name."""
     if name not in _WORKFLOW_REGISTRY:
         raise ValueError(f"Workflow '{name}' not found. Available: {list_workflows()}")

@@ -6,11 +6,7 @@ class PathEscapeError(ValueError):
 
 
 def normalize_path(path: str, *, cwd: str = "/") -> str:
-    """Normalize a POSIX-like virtual path.
-
-    The harness paths are not host filesystem paths. Keep this small and
-    explicit so shell semantics do not accidentally leak into local IO.
-    """
+    """Normalize a POSIX-like virtual path."""
     raw = path.strip()
     if not raw:
         raise ValueError("path must not be empty")
