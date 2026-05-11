@@ -50,7 +50,7 @@ def test_policy_uses_first_matching_rule() -> None:
 
 
 def test_shell_runs_basic_file_crud_commands() -> None:
-    session = WorkspaceSession.default()
+    session = WorkspaceSession.scratch()
 
     assert session.run("pwd").stdout == "/workspace\n"
     assert session.run("mkdir notes").exit_code == 0
@@ -60,7 +60,7 @@ def test_shell_runs_basic_file_crud_commands() -> None:
 
 
 def test_shell_rejects_unsupported_shell_syntax() -> None:
-    session = WorkspaceSession.default()
+    session = WorkspaceSession.scratch()
 
     result = session.run("cat notes/a.md | wc -l")
 
@@ -69,12 +69,12 @@ def test_shell_rejects_unsupported_shell_syntax() -> None:
 
 
 def test_shell_enforces_permission_policy() -> None:
-    session = WorkspaceSession.default()
+    session = WorkspaceSession.scratch()
     assert session.run("write /vault/a.md no").exit_code == 1
 
 
 def test_shell_cd_persists_between_commands() -> None:
-    session = WorkspaceSession.default()
+    session = WorkspaceSession.scratch()
 
     assert session.run("mkdir notes").exit_code == 0
     assert session.run("cd notes").exit_code == 0
@@ -82,3 +82,18 @@ def test_shell_cd_persists_between_commands() -> None:
     assert session.run("write a.md hello").exit_code == 0
 
     assert session.backend.read_text("/workspace/notes/a.md") == "hello"
+
+
+def test_workspace_session_with_mounts_hides_composite_construction() -> None:
+    memory = InMemoryWorkspaceBackend()
+    memory.write_text("/prior.md", "settled")
+
+    session = WorkspaceSession.with_mounts(
+        {
+            "/workspace": InMemoryWorkspaceBackend(),
+            "/memory": memory,
+        }
+    )
+
+    assert session.run("ls /").stdout == "memory\nworkspace\n"
+    assert session.run("cat /memory/prior.md").stdout == "settled"

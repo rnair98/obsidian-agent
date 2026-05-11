@@ -13,8 +13,8 @@ from langgraph.graph.state import CompiledStateGraph
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.agents.spec import AgentSpec
+from app.engine.nodes.builders.middleware import context_editing, tool_retry
 from app.engine.schema import ResearchContext, ResearchState
-from app.engine.tools.middleware import context_editing, tool_retry
 
 __all__ = [
     "AgentRunResult",
@@ -123,11 +123,7 @@ async def run_agent_executor(
         # cannot use ``isinstance(chunk, tuple)`` alone to detect framing.
         if len(modes) == 1:
             mode, data = modes[0], chunk
-        elif (
-            isinstance(chunk, tuple)
-            and len(chunk) == 2
-            and isinstance(chunk[0], str)
-        ):
+        elif isinstance(chunk, tuple) and len(chunk) == 2 and isinstance(chunk[0], str):
             mode, data = chunk
         else:
             continue

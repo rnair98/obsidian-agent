@@ -92,16 +92,17 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
 1. **LangGraph `StateGraph` is the orchestrator.** Each agent is a *node* that
    reads/writes a shared `ResearchState` (a `TypedDict` annotated with
    `add_messages` for conversation accumulation). Edges are static.
-2. **`ResearchContext` is immutable per run.** It carries read-only knobs
-   (search limits, seed URLs, experiment snippets). It is a frozen slotted
-   dataclass — never mutate it; set values in the request/config instead.
+2. **`ResearchContext` is immutable per run.** It is a frozen slotted
+   dataclass reserved for read-only runtime context passed through LangGraph.
+   Never mutate it; add explicit request/state fields only when a workflow
+   actually consumes them.
 3. **Import-time registration.** Workflows self-register via the
    `@workflow(name)` decorator in `app/engine/registry.py`. The registry is
    populated only when `app.engine.graphs` is imported (`main.py` does this
    for its side-effect). **A new graph that isn't reachable from
    `app/engine/graphs/__init__.py` will never appear in the registry.**
 4. **Agents compose LangChain built-ins + MCP + custom tools.** See
-   `app/engine/tools/constants.py` — the OpenAI `web_search` and
+   `app/engine/tools/__init__.py` — the OpenAI `web_search` and
    `code_interpreter` server-side tools plus MCP endpoints (`deepwiki`,
    `exa`) are the primary research capability. Custom `@tool` functions
    (`fetch_url`, `write_report`, `write_zettelkasten_notes`,
@@ -189,8 +190,7 @@ app/
 ├── engine/
 │   ├── executor.py               # async execute(workflow_name, request) — the only run entrypoint
 │   ├── registry.py               # @workflow(name) decorator + get_workflow/list_workflows
-│   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest, SearchQuery (BaseModel)
-│   ├── persistence.py            # persist_memories / write_sources (node-side IO helpers)
+│   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest
 │   ├── parsing.py                # parse_structured() — layered SAP-lite recovery (strict → fence-strip → yapping → json-repair)
 │   ├── workspace.py              # build_workspace_session + FilesystemBackend-backed workspace mounts
 │   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
@@ -199,6 +199,11 @@ app/
 │   │   ├── researcher.py         # ResearcherOutput + Source + DEFAULT_PROMPT + SPEC
 │   │   ├── summarizer.py         # SummarizerOutput + DEFAULT_PROMPT + SPEC
 │   │   └── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + DEFAULT_PROMPT + SPEC
+│   ├── artifacts/                # Durable artifact stores + workspace mount adapter
+│   │   ├── __init__.py           # public exports: MarkdownMemoryStore, CsvSourceStore, ArtifactWorkspaceBackend
+│   │   ├── memory.py             # MarkdownMemoryStore (.memories research-run format)
+│   │   ├── sources.py            # CsvSourceStore (sources.csv column contract)
+│   │   └── mounts.py             # ArtifactWorkspaceBackend (FilesystemBackend → WorkspaceBackend)
 │   ├── backends/                 # Filesystem hexagon (Protocol + adapter + factory + errors)
 │   │   ├── protocol.py           # FilesystemBackend Protocol — the contract
 │   │   ├── inprocess.py          # InProcessFilesystemBackend (sandboxed local fs)
@@ -218,14 +223,10 @@ app/
 │   │   └── builders/
 │   │       └── agent.py          # build_agent_executor_from_spec(AgentSpec) + run_agent_executor (invoke vs. stream)
 │   └── tools/                    # LangChain @tool functions given to agents
-│       ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
-│       ├── io.py                 # write_report, write_zettelkasten_notes (durable artifact @tool functions)
+│       ├── __init__.py           # OPENAI_TOOLS, MCP_TOOLS + public tool exports
+│       ├── artifacts.py          # write_report, write_zettelkasten_notes
+│       ├── research.py           # fetch_url, get_repo_tree, run_python_experiment
 │       ├── shell.py              # shell tool adapter over app.harness runtime
-│       ├── search.py             # async call_brave_search / call_exa_search / call_exa_context + query builders
-│       ├── web.py                # async fetch_url (Jina Reader → markdown)
-│       ├── sandbox.py            # async run_python_experiment (asyncio.to_thread → LocalSubprocessSandboxBackend)
-│       ├── github.py             # async get_repo_tree (asyncio.to_thread → GitHubRepositoryService)
-│       └── middleware.py         # ToolRetryMiddleware + ContextEditingMiddleware (wired in nodes/builders/agent.py)
 ├── harness/
 │   ├── __init__.py               # public harness exports
 │   ├── fs.py                     # WorkspaceBackend Protocol + in-memory backend
@@ -291,7 +292,6 @@ by merging node return values.
 |---|---|---|---|
 | `messages` | `Annotated[list[AnyMessage], add_messages]` | all agents | all agents |
 | `topic` | `str` | executor (from request) | researcher |
-| `search_query` | `SearchQuery \| None` | executor | search tools |
 | `research_notes` | `list[str]` | researcher | summarizer, persist |
 | `experiments` | `list[str]` | researcher | summarizer |
 | `code_context` | `list[str]` | researcher | summarizer |
@@ -308,15 +308,14 @@ are *not* carried in state.
 ### `ResearchContext` (frozen dataclass)
 
 Immutable per-run config surfaced into nodes via `Runtime[ResearchContext]`.
-Fields: `search_limit`, `exa_search_type`, `fetch_code_context`, `seed_urls`,
-`experiment_snippets`. **Never mutate.** If a node needs to "change" context,
-emit a new state field instead.
+No fields are currently defined. **Never mutate.** If a node needs runtime
+context, add the field at the executor/request boundary and document the
+consumer.
 
 ### `ResearchRequest` (Pydantic, `extra="forbid"`)
 
-HTTP request body. Strict: unknown fields raise 422. Fields: `topic` (≥3
-chars), `seed_urls`, `experiment_snippets`, `search` (optional
-`SearchQuery`).
+HTTP request body. Strict: unknown fields raise 422. Field: `topic` (≥3
+chars).
 
 ### `FilesystemBackend` (Protocol)
 
@@ -341,9 +340,11 @@ adapts the artifact `FilesystemBackend` into workspace mounts: `/memory`
 maps to `settings.MEMORIES_DIR` and `/vault` maps to `settings.VAULT_DIR`.
 
 `WorkspaceSession` owns the current working directory, permission policy, and
-command dispatch for the `shell` tool. The session is installed per workflow
-run via `workspace_scope(...)` in `executor.execute`; it is deliberately not
-stored in `ResearchState`.
+command dispatch for the `shell` tool. Use `WorkspaceSession.scratch()` for
+scratch-only tests and `WorkspaceSession.with_mounts(...)` for explicit
+runtime mount assembly. The session is installed per workflow run via
+`workspace_scope(...)` in `executor.execute`; it is deliberately not stored in
+`ResearchState`.
 
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
@@ -404,8 +405,6 @@ Settings resolve in this priority order
   prompt **override** blocks. Each `system_prompt` defaults to `""`; an
   empty string falls through to the `default_system_prompt` defined on
   the corresponding `AgentSpec` in `app/engine/agents/<name>.py`.
-- `workflow: WorkflowConfig` — `search_limit`, `exa_search_type`,
-  `fetch_code_context`.
 - `filesystem: FilesystemConfig` — `backend_type`, `base_path`.
 - **Paths** — `MEMORIES_DIR`, `VAULT_DIR`, `OUTPUT_DIR`, `LOGS_DIR`.
 - **`DATABASE_URL`** — Postgres connection string for the LangGraph
@@ -413,7 +412,7 @@ Settings resolve in this priority order
 - **`PHOENIX_ENABLED`** — when false, the FastAPI lifespan skips the
   Arize Phoenix `register()` call. Default `true`. Useful for tests and
   air-gapped runs.
-- **API keys** — `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `JINA_API_KEY`.
+- **API keys** — `JINA_API_KEY`.
 
 Anything else in `.env` is silently ignored (`extra="ignore"`).
 
@@ -442,15 +441,14 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | Orchestration | `langgraph` + `langchain` | everywhere in `engine/` |
 | Checkpointing | `langgraph-checkpoint-postgres` | `executor.execute` |
 | Postgres driver | `psycopg[binary]` | required by checkpoint postgres imports |
-| Built-in tools | OpenAI `web_search`, `code_interpreter` | `tools/constants.py: OPENAI_TOOLS` |
-| MCP tools | `deepwiki`, `exa` | `tools/constants.py: MCP_TOOLS` |
+| Built-in tools | OpenAI `web_search`, `code_interpreter` | `tools/__init__.py: OPENAI_TOOLS` |
+| MCP tools | `deepwiki`, `exa` | `tools/__init__.py: MCP_TOOLS` |
 | Agent workspace | Typed virtual shell harness + durable artifact mounts | `app/harness/`, `engine/workspace.py`, `tools/shell.py` |
-| Web search | Brave, Exa | `tools/search.py` |
-| URL → Markdown | Jina Reader (`r.jina.ai`) | `tools/web.py` |
+| URL → Markdown | Jina Reader (`r.jina.ai`) | `tools/research.py: fetch_url` |
 | Sandboxed code exec | subprocess (local), Modal (planned) | `sandbox/local.py`, `test_modal.py` |
 | GitHub | PyGithub (App-installation auth) | `services/gh_client/` |
 | Code IR parsing | tree-sitter + tree-sitter-language-pack | `services/codesearch/` |
-| Tabular sources | Polars | `tools/io.py: write_sources` |
+| Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
@@ -505,7 +503,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 1. Implement `ExecutionSandboxBackend` in a new `app/engine/sandbox/<name>.py`.
 2. Add an enum member to `ExecutionBackendType` in
    `app/engine/sandbox/models.py`.
-3. Add a selector (by config) in `tools/sandbox.py` or introduce a factory
+3. Add a selector (by config) in `tools/research.py` or introduce a factory
    analogous to `backends/factory.py`.
 
 ### Add a new workflow
@@ -549,11 +547,6 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
   `artifacts_backend()` and `assets_backend()` (in
   `app.engine.backends`) instead of passing `base_path` strings around —
   the separation is load-bearing.
-- **`SearchQuery` is a Pydantic ``BaseModel`` with all-optional fields.**
-  Used by both the HTTP request body and the search-tool query builder.
-  Partial requests like ``{"raw": "x"}`` are accepted because every field
-  defaults to an empty string / list. Changing required fields is still
-  a three-way break (API, state, tools).
 - **An agent's schema, prompt, tools, and per-agent LLM overrides live
   in the same file** under `app/engine/agents/<name>.py` as a single
   `SPEC: AgentSpec[...]`. Never split them. Graphs wire the spec into
@@ -582,7 +575,8 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
 | `tests/test_settings.py` | `FilesystemConfig.backend_type` defaults to a supported enum value |
 | `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
-| `tests/nodes/test_persist.py` | `persist_artifacts` writes `sources.csv` and memory markdown end-to-end against a tmp filesystem |
+| `tests/engine/test_artifacts.py` | `MarkdownMemoryStore`, `CsvSourceStore` formatting and write behavior |
+| `tests/nodes/test_persist.py` | `persist_artifacts` writes sources and memory artifacts end-to-end against a tmp filesystem |
 | `tests/harness/` | Typed workspace core, shell tool adapter, and executor/agent wiring |
 
 LangGraph executor end-to-end behavior (requires a fake LLM and
@@ -604,15 +598,18 @@ the filesystem and update this file.
   `app/engine/nodes/agent.py`. New agents do **not** add a node module;
   they add an `AgentSpec` under `app/engine/agents/<name>.py` and the
   graph wires it via `make_agent_node(SPEC)`.
-- **Tools split.** `app/engine/tools/io.py` now contains only `@tool`
-  functions. Persistence helpers (`persist_memories`, `write_sources`) live
-  in `app/engine/persistence.py`; ad hoc research
-  notes should be ordinary files created through the `shell` tool rather
-  than a bespoke note-saving tool.
-- **Async tool surface.** `tools/web.py`, `tools/search.py`,
-  `tools/sandbox.py`, and `tools/github.py` are async-first; sync
-  third-party calls (PyGithub, `subprocess.run`) are wrapped in
-  `asyncio.to_thread` so the LangGraph event loop is not blocked.
+- **Artifact stores.** `app/engine/artifacts/` owns durable artifact formats:
+  `MarkdownMemoryStore` writes `.memories` research-run markdown,
+  `CsvSourceStore` writes `sources.csv`, and `ArtifactWorkspaceBackend`
+  exposes artifact subtrees as workspace mounts. Ad hoc research notes should
+  be ordinary files created through the `shell` tool rather than a bespoke
+  note-saving tool.
+- **Tool surface.** `app/engine/tools/` contains only active LangChain tool
+  wrappers and server-side tool descriptors: artifact writers in
+  `tools/artifacts.py`, research helpers in `tools/research.py`, and the
+  workspace shell adapter in `tools/shell.py`. Sync third-party calls
+  (PyGithub, `subprocess.run`) are wrapped in `asyncio.to_thread` so the
+  LangGraph event loop is not blocked.
 
 ---
 

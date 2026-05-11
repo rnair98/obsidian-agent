@@ -19,7 +19,6 @@ def test_researcher_spec_exposes_shell_tool() -> None:
     tool_names = {getattr(tool, "name", "") for tool in RESEARCHER_SPEC.tools}
 
     assert "shell" in tool_names
-    assert "save_note" not in tool_names
 
 
 @pytest.mark.asyncio
@@ -42,7 +41,7 @@ async def test_executor_installs_workspace_scope(
     monkeypatch.setattr("app.engine.executor.get_workflow", fake_get_workflow)
     monkeypatch.setattr(
         "app.engine.executor.build_workspace_session",
-        WorkspaceSession.default,
+        WorkspaceSession.scratch,
     )
 
     result: dict[str, Any] = await execute(

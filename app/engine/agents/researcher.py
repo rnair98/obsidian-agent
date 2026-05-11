@@ -6,18 +6,16 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
-from app.engine.tools.shell import shell
-from app.engine.tools.web import fetch_url
+from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS, fetch_url, shell
 
 
 class Source(BaseModel):
     """A single source surfaced during research.
 
     Field names intentionally mirror the keys consumed by
-    :func:`app.engine.persistence.write_sources` and produced by the
-    search tools in :mod:`app.engine.tools.search` so structured-output
-    sources round-trip to ``sources.csv`` without key translation.
+    :class:`app.engine.artifacts.CsvSourceStore` and produced by the search
+    tools so structured-output sources
+    round-trip to ``sources.csv`` without key translation.
     """
 
     title: str = Field(..., description="Title of the source")

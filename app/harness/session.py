@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from app.harness.fs import (
     InMemoryWorkspaceBackend,
+    WorkspaceBackend,
     WorkspaceBackendError,
     format_entries,
 )
@@ -23,16 +24,27 @@ class WorkspaceSession:
     cwd: str = "/workspace"
 
     @classmethod
-    def default(cls) -> "WorkspaceSession":
-        workspace = InMemoryWorkspaceBackend()
+    def scratch(cls) -> "WorkspaceSession":
+        return cls.with_mounts({"/workspace": InMemoryWorkspaceBackend()})
+
+    @classmethod
+    def with_mounts(
+        cls,
+        mounts: dict[str, WorkspaceBackend],
+        *,
+        policy: PermissionPolicy | None = None,
+    ) -> "WorkspaceSession":
+        normalized_mounts = dict(mounts)
+        if "/" not in normalized_mounts:
+            normalized_mounts["/"] = (
+                normalized_mounts.get("/workspace") or InMemoryWorkspaceBackend()
+            )
         backend = CompositeWorkspaceBackend(
-            {
-                "/": workspace,
-                "/workspace": workspace,
-            }
+            normalized_mounts,
         )
-        backend.mkdir("/workspace")
-        return cls(backend=backend, policy=PermissionPolicy.default())
+        if "/workspace" in normalized_mounts:
+            backend.mkdir("/workspace")
+        return cls(backend=backend, policy=policy or PermissionPolicy.default())
 
     def run(self, command: str) -> CommandResult:
         if any(token in command for token in _UNSUPPORTED_TOKENS):

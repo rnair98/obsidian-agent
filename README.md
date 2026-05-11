@@ -60,7 +60,7 @@ Registered workflows: `research` (full pipeline), `researcher`,
   prompts. Loaded as a lower-precedence source behind env vars.
 - Key keys: `DATABASE_URL` (enables `AsyncPostgresSaver`; empty falls
   back to in-memory checkpointing), `OPENAI_API_KEY`,
-  `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `JINA_API_KEY`,
+  `JINA_API_KEY`,
   `GITHUB__APP_ID`, `GITHUB__PRIVATE_KEY`, `GITHUB__INSTALLATION_ID`.
 
 ## Local development

@@ -28,13 +28,7 @@ from app.harness.runtime import workspace_scope
 
 
 def _initial_context(request: ResearchRequest) -> ResearchContext:
-    return ResearchContext(
-        search_limit=settings.workflow.search_limit,
-        exa_search_type=settings.workflow.exa_search_type,
-        fetch_code_context=settings.workflow.fetch_code_context,
-        seed_urls=request.seed_urls,
-        experiment_snippets=request.experiment_snippets,
-    )
+    return ResearchContext()
 
 
 def _initial_state(
@@ -47,7 +41,6 @@ def _initial_state(
             HumanMessage(content=f"Please process the topic: {request.topic}"),
         ],
         "topic": request.topic,
-        "search_query": request.search,
         "research_notes": [],
         "experiments": [],
         "code_context": [],

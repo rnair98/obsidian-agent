@@ -6,7 +6,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools.io import write_report
+from app.engine.tools import write_report
 
 
 class SummarizerOutput(BaseModel):

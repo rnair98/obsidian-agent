@@ -1,11 +1,3 @@
-"""Agent-callable IO tools.
-
-Internal persistence helpers (``persist_memories``, ``write_sources``) live
-in :mod:`app.engine.persistence` — only durable artifact-writing ``@tool``
-functions belong here. Ad hoc agent notes should be plain files written
-through the shell tool's workspace mounts.
-"""
-
 from __future__ import annotations
 
 import re
@@ -20,14 +12,7 @@ _NOTE_ID_INVALID_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class ZettelNoteInput(BaseModel):
-    """Tool-side schema for a single zettelkasten note write.
-
-    Defined here (not imported from ``agents/zettelkasten.py``) to avoid a
-    circular import: the agent module imports the tool function, and the
-    tool function needs the schema at decoration time. Field names mirror
-    :class:`app.engine.agents.zettelkasten.ZettelkastenNote` so the agent's
-    structured output flows through unchanged.
-    """
+    """Tool-side schema for a single zettelkasten note write."""
 
     id: str = Field(..., description="Unique slug/ID for the note")
     title: str = Field(..., description="Title of the atomic note")
@@ -53,29 +38,17 @@ def write_report(content: str) -> str:
 
 
 def _yaml_quote(value: str) -> str:
-    """Render ``value`` as a YAML double-quoted scalar with escaping.
-
-    YAML's double-quoted style treats ``\\`` as an escape introducer, so
-    backslashes must be escaped alongside ``"``. Newlines are folded to
-    spaces so a single value can't break out of the frontmatter block.
-    """
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     escaped = escaped.replace("\n", " ").replace("\r", " ")
     return f'"{escaped}"'
 
 
 def _safe_note_id(note_id: str) -> str:
-    """Reduce ``note_id`` to a single safe path component.
-
-    Collapses path separators, ``..`` traversal, and any character outside
-    ``[A-Za-z0-9._-]`` so a model-emitted id can never escape the vault.
-    """
     cleaned = _NOTE_ID_INVALID_RE.sub("-", note_id).strip("._-")
     return cleaned or "untitled"
 
 
 def _format_zettel_note(note: ZettelNoteInput) -> str:
-    """Render a note with YAML frontmatter so ``title`` and ``tags`` survive."""
     if not note.title and not note.tags:
         return note.content
     lines = ["---"]
@@ -110,9 +83,6 @@ def write_zettelkasten_notes(notes: list[ZettelNoteInput]) -> str:
         base_id = _safe_note_id(note.id)
         safe_id = base_id
         suffix = 2
-        # Disambiguate collisions instead of dropping notes silently.
-        # Two notes with the same sanitized id (e.g. "Foo" / "foo/" both
-        # collapse to "foo") now persist as ``foo.md`` and ``foo-2.md``.
         while safe_id in seen_ids:
             safe_id = f"{base_id}-{suffix}"
             suffix += 1

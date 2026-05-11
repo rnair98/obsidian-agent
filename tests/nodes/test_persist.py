@@ -30,7 +30,6 @@ def _state() -> ResearchState:
     return ResearchState(
         messages=[],
         topic="langgraph persistence",
-        search_query=None,
         research_notes=["note-a", "note-b"],
         experiments=[],
         code_context=[],

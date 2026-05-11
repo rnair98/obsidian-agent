@@ -36,6 +36,7 @@ class PermissionPolicy:
     def default(cls) -> "PermissionPolicy":
         return cls(
             [
+                PermissionRule.allow("read", "/"),
                 PermissionRule.allow("read", "/workspace"),
                 PermissionRule.allow("read", "/workspace/**"),
                 PermissionRule.allow("write", "/workspace"),

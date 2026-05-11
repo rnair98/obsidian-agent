@@ -27,3 +27,12 @@ def test_unknown_enum_value_returns_422() -> None:
         json={"topic": "enum-validation"},
     )
     assert resp.status_code == 422
+
+
+def test_legacy_search_request_field_rejected() -> None:
+    client = TestClient(app)
+    resp = client.post(
+        "/api/v1/workflows/run/research",
+        json={"topic": "routing-test", "search": {"raw": "old custom search"}},
+    )
+    assert resp.status_code == 422

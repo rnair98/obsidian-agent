@@ -6,7 +6,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools.io import write_zettelkasten_notes
+from app.engine.tools import write_zettelkasten_notes
 
 
 class ZettelkastenNote(BaseModel):

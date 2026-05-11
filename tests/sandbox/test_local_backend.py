@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.engine.sandbox.local import LocalSubprocessSandboxBackend
 from app.engine.sandbox.models import ExecutionBackendType, ExecutionResult
-from app.engine.tools.sandbox import (
+from app.engine.tools.research import (
     EXPERIMENT_ERROR_PREFIX,
     NO_OUTPUT_MESSAGE,
     format_execution_result,

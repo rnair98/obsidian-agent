@@ -6,7 +6,7 @@ from app.harness.session import WorkspaceSession
 
 
 def test_shell_adapter_uses_current_workspace_session() -> None:
-    session = WorkspaceSession.default()
+    session = WorkspaceSession.scratch()
 
     with workspace_scope(session):
         result = run_shell_command("pwd")
