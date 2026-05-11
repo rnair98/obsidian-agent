@@ -1,0 +1,23 @@
+app/engine/parsing.py
+  s_3516f444f4bead::t_fe51e88c883455 1,82,88
+app/harness/paths.py
+  s_3516f444f4bead::t_fe51e88c883455 9
+app/engine/registry.py
+  s_3516f444f4bead::t_fe51e88c883455 4,6-7,9-12,23-25,43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "ccfc4b5c6aac37c5f35663eee60a4efe49fea264",
+  "prompts": {},
+  "sessions": {
+    "s_3516f444f4bead": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e1447-0ab9-7d52-a6e4-8b500b3afb5a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
