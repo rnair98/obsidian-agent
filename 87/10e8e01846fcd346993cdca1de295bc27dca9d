@@ -1,0 +1,75 @@
+ARCHITECTURE.md
+  s_3516f444f4bead::t_bd5639fbf22a03 95-98,105,193,226-228,311-313,317-318,415,444-445,447,506,607-612
+  s_3516f444f4bead::t_ce9e59c1038bb8 202-206,343-347,451,578-579,601-606
+app/engine/executor.py
+  s_3516f444f4bead::t_b46dec14fd860b 31
+tests/test_imports.py
+  s_3516f444f4bead::t_91bfeb98f9d4f6 36,44-48,50,58
+  s_3516f444f4bead::t_099b28fb03ce07 35
+  s_3516f444f4bead::t_6005bea486e370 34
+app/engine/agents/zettelkasten.py
+  s_3516f444f4bead::t_f66e56f1476689 9
+tests/harness/test_harness_wiring.py
+  s_3516f444f4bead::t_966748b418a49c 44
+app/engine/tools/__init__.py
+  s_3516f444f4bead::t_3a18d58106386f 1-7,9-51
+tests/sandbox/test_local_backend.py
+  s_3516f444f4bead::t_ddbaec3fffd1d0 5
+tests/engine/test_artifacts.py
+  s_3516f444f4bead::t_c53faf146b395a 1-24,26-57
+  s_3516f444f4bead::t_f4889e19179417 25
+tests/api/test_workflows.py
+  s_3516f444f4bead::t_e732523ed79427 30-38
+app/engine/nodes/builders/agent.py
+  s_3516f444f4bead::t_67f2a2c30a5548 16
+  ai_agent 126
+app/harness/session.py
+  s_3516f444f4bead::t_177a58701a99e6 8,27-41,43,45-47
+app/engine/artifacts/sources.py
+  s_3516f444f4bead::t_f16f88aa93e9f4 1,3-30,32-37
+tests/harness/test_shell_tool_adapter.py
+  s_3516f444f4bead::t_d3d683dcc01991 9
+README.md
+  s_3516f444f4bead::t_13f103146662bd 63
+app/engine/artifacts/__init__.py
+  s_3516f444f4bead::t_a71e822b54abd8 1-5
+app/engine/artifacts/memory.py
+  s_3516f444f4bead::t_a78ea3205e43a5 4,29-75
+app/engine/tools/research.py
+  s_3516f444f4bead::t_ea352fe0643a09 1,5,7,9-10,14-43,69-91
+app/engine/agents/summarizer.py
+  s_3516f444f4bead::t_62c2ac058b8267 9
+app/engine/schema.py
+  s_3516f444f4bead::t_6c020b441e00ba 3,13
+app/engine/tools/artifacts.py
+  s_3516f444f4bead::t_9c8282cc7792b3 15
+app/engine/agents/researcher.py
+  s_3516f444f4bead::t_654651d1b7a215 9,17
+  s_3516f444f4bead::t_7db85c94727723 16,18
+app/engine/artifacts/mounts.py
+  s_3516f444f4bead::t_9d4cd25084b55b 1-80
+app/engine/workspace.py
+  s_3516f444f4bead::t_03b257d90ecaa9 4,6,17,19-20,24,28-30
+app/harness/policy.py
+  s_3516f444f4bead::t_a31057184efc78 39
+app/engine/nodes/persist.py
+  s_3516f444f4bead::t_dbf0967d17450b 3,15-22
+tests/harness/test_workspace_core.py
+  s_3516f444f4bead::t_5041600adc1523 53,63,72,77,85-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "8710e8e01846fcd346993cdca1de295bc27dca9d",
+  "prompts": {},
+  "sessions": {
+    "s_3516f444f4bead": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e1447-0ab9-7d52-a6e4-8b500b3afb5a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
