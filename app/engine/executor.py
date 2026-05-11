@@ -23,12 +23,13 @@ from app.core.settings import settings
 from app.engine.nodes.types import WorkflowName
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
+from app.engine.vaults import resolve_vault
 from app.engine.workspace import build_workspace_session
 from app.harness.runtime import workspace_scope
 
 
 def _initial_context(request: ResearchRequest) -> ResearchContext:
-    return ResearchContext()
+    return ResearchContext(vault=resolve_vault(request))
 
 
 def _initial_state(
@@ -75,7 +76,7 @@ async def execute(
 
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer)
-        with workspace_scope(build_workspace_session()):
+        with workspace_scope(build_workspace_session(context.vault)):
             result: dict[str, object] = await graph.ainvoke(
                 input=state, config=config, context=context
             )

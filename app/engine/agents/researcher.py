@@ -6,7 +6,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS, fetch_url, shell
+from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS, shell
 
 
 class Source(BaseModel):
@@ -66,7 +66,12 @@ If no relevant memories are present, begin fresh without comment.
 <workspace>
 Use the shell tool for Unix-style memory archaeology and scratch notes.
 During research, create any ad hoc notes as ordinary files under
-`/workspace` rather than using a special note-taking tool.
+`/workspace` rather than using a special note-taking tool. For ad hoc
+calculations or analysis scripts, write a small Python file and run it with
+`python script.py`, or use `python -c "..."`; this runs through the Monty
+sandbox rather than a host subprocess. Fetch web pages as markdown with
+`curl URL`; this is a constrained workspace command backed by Jina Reader,
+not a host shell invocation.
 </workspace>
 
 <constraints>
@@ -81,5 +86,5 @@ SPEC: AgentSpec[ResearcherOutput] = AgentSpec(
     name="researcher",
     output_schema=ResearcherOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, shell),
+    tools=(*OPENAI_TOOLS, *MCP_TOOLS, shell),
 )

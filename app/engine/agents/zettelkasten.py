@@ -6,7 +6,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import write_zettelkasten_notes
+from app.engine.tools import shell
 
 
 class ZettelkastenNote(BaseModel):
@@ -42,6 +42,12 @@ Extract atomic, evergreen insights from the research and report. Each note shoul
 Focus on quality over quantity. 5 excellent notes are better than 20 shallow ones.
 </constraints>
 
+<workspace>
+Atomic notes are materialized as ordinary markdown files under `/vault`.
+Use the shell tool only when you need to inspect or create supporting files;
+do not rely on bespoke artifact-writing tools.
+</workspace>
+
 $output_format
 """
 
@@ -50,5 +56,5 @@ SPEC: AgentSpec[ZettelkastenOutput] = AgentSpec(
     name="zettelkasten",
     output_schema=ZettelkastenOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(write_zettelkasten_notes,),
+    tools=(shell,),
 )

@@ -13,11 +13,11 @@
 </div>
 
 A single POST kicks off a full research run: the researcher gathers
-sources (web search, MCP tools, sandboxed code execution), the
+sources (web search, MCP tools, Monty-backed shell Python), the
 summarizer produces a Markdown report, the zettelkasten agent extracts
 atomic notes into `.vault/`, and the persist node writes a Polars CSV
-of sources and a frontmatter-rich memory mounted at `/memory` for later
-Unix-style archaeology.
+of sources and a frontmatter-rich memory inside the selected vault, mounted
+at `/memory` for later Unix-style archaeology.
 
 See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
@@ -36,6 +36,16 @@ just run                                  # uvicorn with --reload
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
   -H "Content-Type: application/json" \
   -d '{"topic": "emerging patterns in retrieval-augmented generation"}'
+
+# Use a local Obsidian vault as the workspace base
+curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"zettelkasten workflows","vault":{"type":"local","path":"/path/to/Vault"}}'
+
+# Use a remote Git vault as the workspace base (cloned locally; not pushed)
+curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"zettelkasten workflows","vault":{"type":"git","url":"https://github.com/user/vault.git","ref":"main"}}'
 ```
 
 Registered workflows: `research` (full pipeline), `researcher`,
@@ -45,10 +55,10 @@ Registered workflows: `research` (full pipeline), `researcher`,
 
 | Path | Written by | Contents |
 |---|---|---|
-| `outputs/report.md` | summarizer | Full research report |
-| `outputs/sources.csv` | persist | Polars-written source table |
-| `.vault/*.md` | zettelkasten | Atomic Markdown notes |
-| `.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
+| `.vault/outputs/report.md` | persist | Full research report when no vault is supplied |
+| `.vault/outputs/sources.csv` | persist | Polars-written source table |
+| `.vault/notes/*.md` | persist | Atomic Markdown notes |
+| `.vault/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
 
@@ -68,7 +78,7 @@ Registered workflows: `research` (full pipeline), `researcher`,
 ```bash
 uv sync                           # install deps (Python 3.13+)
 just fmt                          # ruff format + lint --fix
-uv run pytest                     # 18 tests: backends, sandbox, gh_client, nodes, api, imports
+uv run pytest                     # full test suite
 just phoenix                      # OTEL UI at http://localhost:6006
 just db-up                        # local postgres for checkpointing
 ```

@@ -9,6 +9,7 @@ from langchain_core.messages import AnyMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel
 
 from app.core.logger import logger
 from app.core.settings import settings
@@ -20,11 +21,18 @@ __all__ = [
     "AgentRunResult",
     "build_agent_executor_from_spec",
     "run_agent_executor",
+    "structured_response_delta",
 ]
 
 
-class AgentRunResult(TypedDict):
+class AgentRunResult(TypedDict, total=False):
     messages: list[AnyMessage]
+    research_notes: list[str]
+    key_insights: list[str]
+    sources: list[dict[str, object]]
+    reasoning: list[str]
+    report: str
+    zettelkasten_notes: list[dict[str, object]]
 
 
 def _extract_messages(result: Mapping[str, object]) -> list[AnyMessage]:
@@ -34,6 +42,21 @@ def _extract_messages(result: Mapping[str, object]) -> list[AnyMessage]:
     if not all(isinstance(m, BaseMessage) for m in messages):
         raise TypeError("Agent result messages must be LangChain message objects")
     return messages
+
+
+def structured_response_delta(response: object) -> AgentRunResult:
+    if not isinstance(response, BaseModel):
+        return {}
+    data = response.model_dump(mode="python")
+    delta: AgentRunResult = {}
+    for field in ("research_notes", "key_insights", "sources", "reasoning"):
+        if field in data:
+            delta[field] = data[field]
+    if isinstance(data.get("report_content"), str):
+        delta["report"] = data["report_content"]
+    if isinstance(data.get("notes"), list):
+        delta["zettelkasten_notes"] = data["notes"]
+    return delta
 
 
 def build_agent_executor_from_spec(spec: AgentSpec) -> CompiledStateGraph:
@@ -105,9 +128,13 @@ async def run_agent_executor(
         result = await agent_executor.ainvoke(
             input=state, context=runtime_context, config=config
         )
-        return {"messages": _extract_messages(result)}
+        return {
+            "messages": _extract_messages(result),
+            **structured_response_delta(result.get("structured_response")),
+        }
 
     final_messages: list[AnyMessage] | None = None
+    structured_delta: AgentRunResult = {}
     modes = list(stream_mode or ["messages", "updates"])
 
     async for chunk in agent_executor.astream(
@@ -138,6 +165,10 @@ async def run_agent_executor(
                     update.get("messages"), list
                 ):
                     final_messages = _extract_messages(update)
+                    if structured_response := update.get("structured_response"):
+                        structured_delta = structured_response_delta(
+                            structured_response
+                        )
 
     if final_messages is None:
         logger.debug(
@@ -148,5 +179,6 @@ async def run_agent_executor(
             input=state, context=runtime_context, config=config
         )
         final_messages = _extract_messages(result)
+        structured_delta = structured_response_delta(result.get("structured_response"))
 
-    return {"messages": final_messages}
+    return {"messages": final_messages, **structured_delta}

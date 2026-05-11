@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 import shlex
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 
+from app.harness.commands import (
+    CommandSpec,
+    WorkspaceCommand,
+    first_flag,
+    render_help,
+    unsupported_flag,
+)
 from app.harness.fs import (
     InMemoryWorkspaceBackend,
     WorkspaceBackend,
@@ -17,11 +25,42 @@ from app.harness.results import AuditEvent, CommandResult
 _UNSUPPORTED_TOKENS = ("|", "&&", "||", ";", "$(", "`", ">", "<")
 
 
+@dataclass(frozen=True, slots=True)
+class _SessionCommand:
+    spec: CommandSpec
+    method_name: str
+
+    def __call__(self, session: "WorkspaceSession", args: list[str]) -> CommandResult:
+        method = getattr(session, self.method_name)
+        return method(args)
+
+
+_CORE_COMMANDS: tuple[WorkspaceCommand, ...] = (
+    _SessionCommand(CommandSpec(name="pwd", forms=("pwd",)), "_pwd"),
+    _SessionCommand(CommandSpec(name="cd", forms=("cd [path]",)), "_cd"),
+    _SessionCommand(CommandSpec(name="ls", forms=("ls [path]",)), "_ls"),
+    _SessionCommand(CommandSpec(name="cat", forms=("cat path",)), "_cat"),
+    _SessionCommand(CommandSpec(name="mkdir", forms=("mkdir path",)), "_mkdir"),
+    _SessionCommand(
+        CommandSpec(
+            name="write",
+            forms=("write path content", "write path -- content"),
+        ),
+        "_write",
+    ),
+    _SessionCommand(CommandSpec(name="rm", forms=("rm path",)), "_rm"),
+    _SessionCommand(CommandSpec(name="mv", forms=("mv src dst",)), "_mv"),
+    _SessionCommand(CommandSpec(name="cp", forms=("cp src dst",)), "_cp"),
+    _SessionCommand(CommandSpec(name="grep", forms=("grep pattern path",)), "_grep"),
+)
+
+
 @dataclass(slots=True)
 class WorkspaceSession:
     backend: CompositeWorkspaceBackend
     policy: PermissionPolicy
     cwd: str = "/workspace"
+    commands: Mapping[str, WorkspaceCommand] = field(default_factory=dict)
 
     @classmethod
     def scratch(cls) -> "WorkspaceSession":
@@ -33,6 +72,8 @@ class WorkspaceSession:
         mounts: dict[str, WorkspaceBackend],
         *,
         policy: PermissionPolicy | None = None,
+        cwd: str = "/workspace",
+        commands: Iterable[WorkspaceCommand] = (),
     ) -> "WorkspaceSession":
         normalized_mounts = dict(mounts)
         if "/" not in normalized_mounts:
@@ -44,11 +85,19 @@ class WorkspaceSession:
         )
         if "/workspace" in normalized_mounts:
             backend.mkdir("/workspace")
-        return cls(backend=backend, policy=policy or PermissionPolicy.default())
+        return cls(
+            backend=backend,
+            policy=policy or PermissionPolicy.default(),
+            cwd=normalize_path(cwd),
+            commands=_command_map((*_CORE_COMMANDS, *commands)),
+        )
 
     def run(self, command: str) -> CommandResult:
         if any(token in command for token in _UNSUPPORTED_TOKENS):
-            return CommandResult.error("unsupported shell syntax\n", exit_code=2)
+            return CommandResult.error(
+                "unsupported shell syntax; run `help` for supported forms\n",
+                exit_code=2,
+            )
         try:
             args = shlex.split(command)
         except ValueError as exc:
@@ -58,39 +107,26 @@ class WorkspaceSession:
 
         command_name, *command_args = args
         try:
-            match command_name:
-                case "pwd":
-                    return CommandResult.ok(f"{self.cwd}\n")
-                case "cd":
-                    return self._cd(command_args)
-                case "ls":
-                    return self._ls(command_args)
-                case "cat":
-                    return self._cat(command_args)
-                case "mkdir":
-                    return self._mkdir(command_args)
-                case "write":
-                    return self._write(command_args)
-                case "rm":
-                    return self._rm(command_args)
-                case "mv":
-                    return self._mv(command_args)
-                case "cp":
-                    return self._cp(command_args)
-                case "grep":
-                    return self._grep(command_args)
-                case "git":
-                    return CommandResult.error(
-                        "git facade is not implemented yet\n", exit_code=2
-                    )
-                case _:
-                    return CommandResult.error(
-                        f"{command_name}: command not found\n", exit_code=127
-                    )
+            if command_name == "help":
+                return self._help(command_args)
+            if registered := self.commands.get(command_name):
+                return registered(self, command_args)
+            return CommandResult.error(
+                f"{command_name}: command not found\n", exit_code=127
+            )
         except (PathEscapeError, WorkspaceBackendError, ValueError) as exc:
             return CommandResult.error(f"{exc}\n")
 
+    def _pwd(self, args: list[str]) -> CommandResult:
+        spec = self.commands["pwd"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
+        return CommandResult.ok(f"{self.cwd}\n")
+
     def _cd(self, args: list[str]) -> CommandResult:
+        spec = self.commands["cd"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) > 1:
             return CommandResult.error("cd: expected zero or one path\n", exit_code=2)
         target = self._resolve(args[0] if args else "/workspace")
@@ -103,6 +139,9 @@ class WorkspaceSession:
         return CommandResult.ok(events=(event,))
 
     def _ls(self, args: list[str]) -> CommandResult:
+        spec = self.commands["ls"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) > 1:
             return CommandResult.error("ls: expected zero or one path\n", exit_code=2)
         target = self._resolve(args[0] if args else ".")
@@ -113,6 +152,9 @@ class WorkspaceSession:
         return CommandResult.ok(format_entries(entries), events=(event,))
 
     def _cat(self, args: list[str]) -> CommandResult:
+        spec = self.commands["cat"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 1:
             return CommandResult.error("cat: expected one path\n", exit_code=2)
         target = self._resolve(args[0])
@@ -122,6 +164,9 @@ class WorkspaceSession:
         return CommandResult.ok(self.backend.read_text(target), events=(event,))
 
     def _mkdir(self, args: list[str]) -> CommandResult:
+        spec = self.commands["mkdir"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 1:
             return CommandResult.error("mkdir: expected one path\n", exit_code=2)
         target = self._resolve(args[0])
@@ -136,14 +181,24 @@ class WorkspaceSession:
             return CommandResult.error(
                 "write: expected path and content\n", exit_code=2
             )
+        if args[0].startswith("-"):
+            return unsupported_flag(self.commands["write"].spec, args[0])
         target = self._resolve(args[0])
         event = self._audit("write", target)
         if not event.allowed:
             return CommandResult.error("write: permission denied\n", events=(event,))
-        self.backend.write_text(target, " ".join(args[1:]))
+        content_args = args[2:] if args[1] == "--" else args[1:]
+        if not content_args and args[1] == "--":
+            return CommandResult.error(
+                "write: expected content after --\n", exit_code=2
+            )
+        self.backend.write_text(target, " ".join(content_args))
         return CommandResult.ok(events=(event,))
 
     def _rm(self, args: list[str]) -> CommandResult:
+        spec = self.commands["rm"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 1:
             return CommandResult.error("rm: expected one path\n", exit_code=2)
         target = self._resolve(args[0])
@@ -154,6 +209,9 @@ class WorkspaceSession:
         return CommandResult.ok(events=(event,))
 
     def _mv(self, args: list[str]) -> CommandResult:
+        spec = self.commands["mv"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 2:
             return CommandResult.error(
                 "mv: expected source and destination\n", exit_code=2
@@ -167,6 +225,9 @@ class WorkspaceSession:
         return CommandResult.ok(events=events)
 
     def _cp(self, args: list[str]) -> CommandResult:
+        spec = self.commands["cp"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 2:
             return CommandResult.error(
                 "cp: expected source and destination\n", exit_code=2
@@ -180,6 +241,9 @@ class WorkspaceSession:
         return CommandResult.ok(events=events)
 
     def _grep(self, args: list[str]) -> CommandResult:
+        spec = self.commands["grep"].spec
+        if flag := first_flag(args):
+            return unsupported_flag(spec, flag)
         if len(args) != 2:
             return CommandResult.error("grep: expected pattern and path\n", exit_code=2)
         pattern = args[0]
@@ -200,3 +264,25 @@ class WorkspaceSession:
     def _audit(self, action: PolicyAction, path: str) -> AuditEvent:
         allowed = self.policy.allows(action, path)
         return AuditEvent(action=action, path=path, allowed=allowed)
+
+    def _help(self, args: list[str]) -> CommandResult:
+        if len(args) > 1:
+            return CommandResult.error(
+                "help: expected zero or one command\n",
+                exit_code=2,
+            )
+        if not args:
+            return CommandResult.ok(
+                render_help([command.spec for command in self.commands.values()])
+            )
+        command = self.commands.get(args[0])
+        if command is None:
+            return CommandResult.error(
+                f"help: unknown command: {args[0]}\n",
+                exit_code=2,
+            )
+        return CommandResult.ok(f"{command.spec.help_text}\n")
+
+
+def _command_map(commands: Iterable[WorkspaceCommand]) -> dict[str, WorkspaceCommand]:
+    return {command.spec.name: command for command in commands}

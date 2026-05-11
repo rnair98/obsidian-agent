@@ -21,14 +21,20 @@ def run_shell_command(command: str) -> str:
 
 @tool("shell", parse_docstring=True)
 def shell(command: str) -> str:
-    """Run an allowlisted command in the agent workspace.
+    """Run one exact allowlisted command in the agent workspace.
 
-    Supported commands include ``pwd``, ``cd``, ``ls``, ``cat``, ``mkdir``,
-    ``write``, ``rm``, ``mv``, ``cp``, and ``grep``. The command is parsed by
-    the workspace harness; it is not executed by the host shell.
+    Supported command forms are exactly: ``help [command]``, ``pwd``,
+    ``cd [path]``, ``ls [path]``, ``cat path``, ``mkdir path``,
+    ``write path content``, ``write path -- content``, ``rm path``,
+    ``mv src dst``, ``cp src dst``, ``grep pattern path``,
+    ``curl URL``, ``git ls-tree [-r] owner/repo``,
+    ``git clone owner/repo [ref]``, ``python -c code``, and
+    ``python path.py``. No other flags, pipelines, redirects, shell
+    expansion, or host commands are supported. Run ``help`` or
+    ``help <command>`` to inspect the grammar from inside the workspace.
 
     Args:
-        command: Single allowlisted shell-like command to run.
+        command: One supported shell-like command form from the grammar above.
 
     Returns:
         The command's stdout, or stderr when the command fails.

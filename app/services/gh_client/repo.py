@@ -19,6 +19,7 @@ GITHUB_ARCHIVE_FORMAT = "tarball"
 
 if TYPE_CHECKING:
     from github import Github
+    from github.GitTreeElement import GitTreeElement
     from github.Repository import Repository
 
     from app.engine.backends import FilesystemBackend
@@ -46,24 +47,20 @@ class GitHubRepositoryService:
             self.filesystem_backend = get_filesystem_backend(base_path=base_path)
         else:
             self.filesystem_backend = assets_backend()
+
         self.repo_name = repo_name
-        self.repo = self._get_repo(repo_name)
-        # Per-instance tree cache keyed by commit sha; avoids the
-        # lru_cache-on-method pattern that would pin ``self`` forever.
+        self.repo = self._get_repo(repo_name) if repo_name is not None else None
         self._tree_cache: dict[str, Any] = {}
 
-    def _get_repo(self, repo_name: str | None) -> "Repository | None":
+    def _get_repo(self, repo_name: str) -> "Repository | None":
         """Return a repository handle for `<owner>/<repo>` or None on access errors."""
-        if not repo_name:
-            return None
-
         try:
             return self.client.get_repo(full_name_or_id=repo_name, lazy=True)
         except GithubException as exc:
             logger.warning("GitHub repo access failed for '{}': {}", repo_name, exc)
             return None
 
-    def get_tree(self):
+    def get_tree(self) -> "list[GitTreeElement] | None":
         """Get the repository tree for the default branch."""
         if self.repo is None:
             return None
@@ -80,10 +77,20 @@ class GitHubRepositoryService:
             )
             return None
 
-    def _get_tree_for_commit_sha(self, commit_sha: str) -> Any:
+    def _get_tree_for_commit_sha(
+        self, commit_sha: str
+    ) -> "list[GitTreeElement] | None":
         cached = self._tree_cache.get(commit_sha)
         if cached is not None:
             return cached
+
+        if self.repo is None:
+            logger.warning(
+                "Attempted to get tree for commit '{}' but repo is unavailable",
+                commit_sha,
+            )
+            return None
+
         tree = self.repo.get_git_tree(commit_sha, recursive=True).tree
         self._tree_cache[commit_sha] = tree
         return tree

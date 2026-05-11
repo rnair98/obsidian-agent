@@ -36,3 +36,33 @@ def test_legacy_search_request_field_rejected() -> None:
         json={"topic": "routing-test", "search": {"raw": "old custom search"}},
     )
     assert resp.status_code == 422
+
+
+def test_local_vault_request_shape_accepted_until_execution() -> None:
+    client = TestClient(app)
+    resp = client.post(
+        "/api/v1/workflows/run/not-a-real-workflow",
+        json={
+            "topic": "vault schema",
+            "vault": {"type": "local", "path": "/tmp/test-vault"},
+        },
+    )
+
+    # The workflow enum should be the only validation failure; the request
+    # body shape itself is accepted by ResearchRequest.
+    assert resp.status_code == 422
+    assert "workflow_name" in resp.text
+    assert "vault" not in resp.text
+
+
+def test_inaccessible_git_vault_returns_400() -> None:
+    client = TestClient(app)
+    resp = client.post(
+        "/api/v1/workflows/run/research",
+        json={
+            "topic": "bad git vault",
+            "vault": {"type": "git", "url": "/definitely/not/a/git/repo"},
+        },
+    )
+
+    assert resp.status_code == 400
