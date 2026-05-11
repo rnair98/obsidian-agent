@@ -41,7 +41,7 @@ def test_tools_are_importable() -> None:
 def test_tool_schemas_describe_every_parameter() -> None:
     """Every @tool's JSON schema must cover each of its parameters."""
     from app.engine.tools.github import get_repo_tree
-    from app.engine.tools.io import save_note, write_report, write_zettelkasten_notes
+    from app.engine.tools.io import write_report, write_zettelkasten_notes
     from app.engine.tools.sandbox import run_python_experiment
     from app.engine.tools.search import (
         call_brave_search,
@@ -52,7 +52,6 @@ def test_tool_schemas_describe_every_parameter() -> None:
 
     tools = [
         get_repo_tree,
-        save_note,
         write_report,
         write_zettelkasten_notes,
         run_python_experiment,

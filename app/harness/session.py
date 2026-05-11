@@ -25,22 +25,13 @@ class WorkspaceSession:
     @classmethod
     def default(cls) -> "WorkspaceSession":
         workspace = InMemoryWorkspaceBackend()
-        memory = InMemoryWorkspaceBackend()
-        vault = InMemoryWorkspaceBackend()
-        repos = InMemoryWorkspaceBackend()
         backend = CompositeWorkspaceBackend(
             {
                 "/": workspace,
                 "/workspace": workspace,
-                "/memory": memory,
-                "/vault": vault,
-                "/repos": repos,
             }
         )
         backend.mkdir("/workspace")
-        backend.mkdir("/memory")
-        backend.mkdir("/vault")
-        backend.mkdir("/repos")
         return cls(backend=backend, policy=PermissionPolicy.default())
 
     def run(self, command: str) -> CommandResult:

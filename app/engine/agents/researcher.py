@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
 from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
-from app.engine.tools.io import save_note
 from app.engine.tools.shell import shell
 from app.engine.tools.web import fetch_url
 
@@ -59,12 +58,18 @@ Conduct thorough, multi-perspective research on the user's topic. Your output wi
 </mindset>
 
 <prior_memories>
-The initial state carries a `memories` list with frontmatter-rich
-markdown from prior research runs on related topics. Treat these as
-privileged context: extract their Key Insights, note what was already
-settled, and avoid re-deriving conclusions that have already been
-captured. If no memories are present, begin fresh without comment.
+Durable prior research runs are available as markdown files under
+`/memory`. Treat these as privileged context: use `ls`, `grep`, and `cat`
+to inspect relevant history, extract Key Insights, note what was already
+settled, and avoid re-deriving conclusions that have already been captured.
+If no relevant memories are present, begin fresh without comment.
 </prior_memories>
+
+<workspace>
+Use the shell tool for Unix-style memory archaeology and scratch notes.
+During research, create any ad hoc notes as ordinary files under
+`/workspace` rather than using a special note-taking tool.
+</workspace>
 
 <constraints>
 You are gathering raw material. Do not synthesize a final report—that comes later.
@@ -78,5 +83,5 @@ SPEC: AgentSpec[ResearcherOutput] = AgentSpec(
     name="researcher",
     output_schema=ResearcherOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, save_note, shell),
+    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, shell),
 )

@@ -1,8 +1,9 @@
 """Agent-callable IO tools.
 
-Internal persistence helpers (``load_memories``, ``persist_memories``,
-``write_sources``) live in :mod:`app.engine.persistence` — only ``@tool``
-functions belong here.
+Internal persistence helpers (``persist_memories``, ``write_sources``) live
+in :mod:`app.engine.persistence` — only durable artifact-writing ``@tool``
+functions belong here. Ad hoc agent notes should be plain files written
+through the shell tool's workspace mounts.
 """
 
 from __future__ import annotations
@@ -32,22 +33,6 @@ class ZettelNoteInput(BaseModel):
     title: str = Field(..., description="Title of the atomic note")
     content: str = Field(..., description="Markdown content of the note")
     tags: list[str] = Field(default_factory=list, description="List of tags")
-
-
-@tool(parse_docstring=True)
-def save_note(note: str) -> str:
-    """Record a research note or insight for later synthesis.
-
-    Use this to capture important findings, data points, or hypotheses
-    during the research phase.
-
-    Args:
-        note: Free-form markdown text of the observation or insight.
-
-    Returns:
-        A short acknowledgement string echoing the saved note.
-    """
-    return f"Note saved: {note}"
 
 
 @tool(parse_docstring=True)

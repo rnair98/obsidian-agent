@@ -37,7 +37,6 @@ def _state() -> ResearchState:
         sources=[{"title": "T", "url": "https://x", "notes": "", "provider": "exa"}],
         report="",
         zettelkasten_notes=[],
-        memories=[],
         reasoning=["picked exa because of code search"],
         key_insights=["langgraph state is a TypedDict"],
     )

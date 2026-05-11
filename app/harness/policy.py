@@ -36,14 +36,23 @@ class PermissionPolicy:
     def default(cls) -> "PermissionPolicy":
         return cls(
             [
+                PermissionRule.allow("read", "/workspace"),
                 PermissionRule.allow("read", "/workspace/**"),
+                PermissionRule.allow("write", "/workspace"),
                 PermissionRule.allow("write", "/workspace/**"),
+                PermissionRule.allow("delete", "/workspace"),
                 PermissionRule.allow("delete", "/workspace/**"),
+                PermissionRule.allow("execute", "/workspace"),
                 PermissionRule.allow("execute", "/workspace/**"),
+                PermissionRule.allow("read", "/memory"),
                 PermissionRule.allow("read", "/memory/**"),
+                PermissionRule.allow("write", "/memory"),
                 PermissionRule.allow("write", "/memory/**"),
+                PermissionRule.allow("delete", "/memory"),
                 PermissionRule.allow("delete", "/memory/**"),
+                PermissionRule.allow("read", "/vault"),
                 PermissionRule.allow("read", "/vault/**"),
+                PermissionRule.allow("read", "/repos"),
                 PermissionRule.allow("read", "/repos/**"),
             ]
         )

@@ -10,21 +10,21 @@ from __future__ import annotations
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import BaseCheckpointSaver, MemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
 from app.core.settings import settings
-from app.engine.backends import artifacts_backend
 from app.engine.nodes.types import WorkflowName
-from app.engine.persistence import load_memories
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
+from app.engine.workspace import build_workspace_session
 from app.harness.runtime import workspace_scope
-from app.harness.session import WorkspaceSession
 
 
 def _initial_context(request: ResearchRequest) -> ResearchContext:
@@ -40,7 +40,6 @@ def _initial_context(request: ResearchRequest) -> ResearchContext:
 def _initial_state(
     workflow_name: WorkflowName,
     request: ResearchRequest,
-    memories: list[str],
 ) -> ResearchState:
     return {
         "messages": [
@@ -49,7 +48,6 @@ def _initial_state(
         ],
         "topic": request.topic,
         "search_query": request.search,
-        "memories": memories,
         "research_notes": [],
         "experiments": [],
         "code_context": [],
@@ -62,7 +60,7 @@ def _initial_state(
 
 
 @asynccontextmanager
-async def _checkpointer() -> AsyncIterator[BaseCheckpointSaver]:
+async def _checkpointer() -> AsyncIterator[BaseCheckpointSaver[Any]]:
     """Yield a checkpointer — Postgres if configured, else in-memory."""
     if settings.DATABASE_URL:
         async with AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL) as saver:
@@ -79,11 +77,13 @@ async def execute(
     logger.info("Running workflow: {} for topic: {}", workflow_name, request.topic)
 
     config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
-    memories = load_memories(settings.MEMORIES_DIR, backend=artifacts_backend())
-    state = _initial_state(workflow_name, request, memories)
+    state = _initial_state(workflow_name, request)
     context = _initial_context(request)
 
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer)
-        with workspace_scope(WorkspaceSession.default()):
-            return await graph.ainvoke(input=state, config=config, context=context)
+        with workspace_scope(build_workspace_session()):
+            result: dict[str, object] = await graph.ainvoke(
+                input=state, config=config, context=context
+            )
+            return result

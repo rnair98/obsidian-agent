@@ -46,7 +46,6 @@ class ResearchState(TypedDict):
     sources: list[dict[str, str]]
     report: str
     zettelkasten_notes: list[dict[str, str]]
-    memories: list[str]
     reasoning: list[str]
     key_insights: list[str]
 

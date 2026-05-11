@@ -1,9 +1,10 @@
 """Filesystem persistence helpers used by nodes (not agent-callable tools).
 
 Tool functions live in :mod:`app.engine.tools.io`; this module owns
-internal helpers like ``load_memories`` / ``persist_memories`` /
-``write_sources`` so the boundary between agent-facing tools and node-side
-plumbing stays sharp.
+internal helpers like ``persist_memories`` / ``write_sources`` so the boundary
+between agent-facing tools and node-side plumbing stays sharp. Prior memories
+are exposed to agents through the `/memory` workspace mount instead of being
+eagerly loaded into graph state.
 """
 
 from __future__ import annotations
@@ -44,17 +45,6 @@ def _slugify(topic: str) -> str:
     cleaned = _SLUG_INVALID_RE.sub("-", topic.lower().replace(" ", "-"))
     cleaned = cleaned.strip("._-")
     return cleaned or "untitled"
-
-
-def load_memories(memories_dir: Path, backend: FilesystemBackend) -> list[str]:
-    """Return the contents of every ``*.md`` file under ``memories_dir``."""
-    if not backend.is_dir(memories_dir):
-        return []
-    return [
-        backend.read_text(p, encoding="utf-8")
-        for p in backend.list_dir(memories_dir)
-        if p.suffix == ".md"
-    ]
 
 
 def persist_memories(

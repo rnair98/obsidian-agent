@@ -21,7 +21,8 @@ over FastAPI. A client POSTs a research topic; a sequence of LLM agents
 (Researcher → Summarizer → Zettelkasten → Persist) produces a markdown report,
 atomic Zettel notes, a Polars CSV of sources, and durable memory files that
 seed future runs. Each run also installs a typed agent workspace harness that
-surfaces a constrained shell-like tool backed by virtual workspace mounts.
+surfaces a constrained shell-like tool backed by virtual workspace mounts;
+durable research memories are mounted at `/memory` for Unix-style archaeology.
 Postgres checkpoints the graph. Arize Phoenix captures OTEL traces.
 
 **Primary request path:**
@@ -103,7 +104,7 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
    `app/engine/tools/constants.py` — the OpenAI `web_search` and
    `code_interpreter` server-side tools plus MCP endpoints (`deepwiki`,
    `exa`) are the primary research capability. Custom `@tool` functions
-   (`fetch_url`, `save_note`, `write_report`, `write_zettelkasten_notes`,
+   (`fetch_url`, `write_report`, `write_zettelkasten_notes`,
    `run_python_experiment`, `get_repo_tree`, `shell`) layer app-specific
    behavior on top.
 5. **Filesystem writes go through `FilesystemBackend`.** Never call
@@ -115,7 +116,9 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
    execute host commands. It parses a deliberately small command subset and
    dispatches to `WorkspaceSession` / `WorkspaceBackend` implementations.
    Mutable workspace objects live in a context variable installed by the
-   executor, not in `ResearchState`.
+   executor, not in `ResearchState`. The executor mounts `.memories` at
+   `/memory` and `.vault` at `/vault`, so agents inspect durable memory with
+   ordinary file commands instead of bespoke note-taking tools.
 7. **Settings are layered.** Order of precedence (highest first): init
    args → env vars → `.env` → YAML (`app/core/resources/agent_config.yaml`)
    → file secrets. Nested fields use the `__` delimiter
@@ -134,7 +137,7 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
              ┌─────────────────────────────────────────────┐
              │  executor.execute(workflow_name, request)   │
              │  • AsyncPostgresSaver checkpointer          │
-             │  • load_memories(.memories/)                │
+             │  • mount .memories at /memory              │
              │  • build initial ResearchState + Context    │
              │  • get_workflow(name, checkpointer)         │
              └─────────────────────┬───────────────────────┘
@@ -187,8 +190,9 @@ app/
 │   ├── executor.py               # async execute(workflow_name, request) — the only run entrypoint
 │   ├── registry.py               # @workflow(name) decorator + get_workflow/list_workflows
 │   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest, SearchQuery (BaseModel)
-│   ├── persistence.py            # load_memories / persist_memories / write_sources (node-side IO helpers)
+│   ├── persistence.py            # persist_memories / write_sources (node-side IO helpers)
 │   ├── parsing.py                # parse_structured() — layered SAP-lite recovery (strict → fence-strip → yapping → json-repair)
+│   ├── workspace.py              # build_workspace_session + FilesystemBackend-backed workspace mounts
 │   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
 │   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
 │   │   ├── output_format.py      # render_output_format() — TypeScript-flavored compact schema descriptor
@@ -215,7 +219,7 @@ app/
 │   │       └── agent.py          # build_agent_executor_from_spec(AgentSpec) + run_agent_executor (invoke vs. stream)
 │   └── tools/                    # LangChain @tool functions given to agents
 │       ├── constants.py          # OPENAI_TOOLS (web_search, code_interpreter) + MCP_TOOLS (deepwiki, exa)
-│       ├── io.py                 # save_note, write_report, write_zettelkasten_notes (only @tool functions)
+│       ├── io.py                 # write_report, write_zettelkasten_notes (durable artifact @tool functions)
 │       ├── shell.py              # shell tool adapter over app.harness runtime
 │       ├── search.py             # async call_brave_search / call_exa_search / call_exa_context + query builders
 │       ├── web.py                # async fetch_url (Jina Reader → markdown)
@@ -267,7 +271,7 @@ app/
 | Dir | Owner | Contents |
 |---|---|---|
 | `.vault/` | zettelkasten node | Atomic markdown notes (`{slug}.md`) |
-| `.memories/` | persist node | Frontmatter-rich run logs; re-read by next run via `load_memories` |
+| `.memories/` | persist node + workspace mount | Frontmatter-rich run logs; mounted at `/memory` for later archaeology |
 | `outputs/` | summarizer + persist | `report.md`, `sources.csv` (Polars) |
 | `.logs/` | core.logger | `app.log` (rotating, 10 MB, zip-compressed, 1-week retention) |
 | `.assets/` | FilesystemBackend default `base_path` | GitHub snapshots at `{owner}/{repo}@{sha}/…` |
@@ -288,7 +292,6 @@ by merging node return values.
 | `messages` | `Annotated[list[AnyMessage], add_messages]` | all agents | all agents |
 | `topic` | `str` | executor (from request) | researcher |
 | `search_query` | `SearchQuery \| None` | executor | search tools |
-| `memories` | `list[str]` | executor (`load_memories`) | researcher (as context) |
 | `research_notes` | `list[str]` | researcher | summarizer, persist |
 | `experiments` | `list[str]` | researcher | summarizer |
 | `code_context` | `list[str]` | researcher | summarizer |
@@ -333,7 +336,9 @@ The typed virtual workspace harness. `WorkspaceBackend` exposes POSIX-like
 file operations over virtual paths and returns typed entries/errors instead of
 host `Path` handles. `CompositeWorkspaceBackend` routes paths by longest mount
 prefix, so `/workspace`, `/memory`, `/vault`, and `/repos` can use different
-storage strategies while the agent sees one tree.
+storage strategies while the agent sees one tree. `app.engine.workspace`
+adapts the artifact `FilesystemBackend` into workspace mounts: `/memory`
+maps to `settings.MEMORIES_DIR` and `/vault` maps to `settings.VAULT_DIR`.
 
 `WorkspaceSession` owns the current working directory, permission policy, and
 command dispatch for the `shell` tool. The session is installed per workflow
@@ -439,7 +444,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | Postgres driver | `psycopg[binary]` | required by checkpoint postgres imports |
 | Built-in tools | OpenAI `web_search`, `code_interpreter` | `tools/constants.py: OPENAI_TOOLS` |
 | MCP tools | `deepwiki`, `exa` | `tools/constants.py: MCP_TOOLS` |
-| Agent workspace | Typed virtual shell harness | `app/harness/`, `tools/shell.py` |
+| Agent workspace | Typed virtual shell harness + durable artifact mounts | `app/harness/`, `engine/workspace.py`, `tools/shell.py` |
 | Web search | Brave, Exa | `tools/search.py` |
 | URL → Markdown | Jina Reader (`r.jina.ai`) | `tools/web.py` |
 | Sandboxed code exec | subprocess (local), Modal (planned) | `sandbox/local.py`, `test_modal.py` |
@@ -600,8 +605,10 @@ the filesystem and update this file.
   they add an `AgentSpec` under `app/engine/agents/<name>.py` and the
   graph wires it via `make_agent_node(SPEC)`.
 - **Tools split.** `app/engine/tools/io.py` now contains only `@tool`
-  functions. Persistence helpers (`load_memories`, `persist_memories`,
-  `write_sources`) live in `app/engine/persistence.py`.
+  functions. Persistence helpers (`persist_memories`, `write_sources`) live
+  in `app/engine/persistence.py`; ad hoc research
+  notes should be ordinary files created through the `shell` tool rather
+  than a bespoke note-saving tool.
 - **Async tool surface.** `tools/web.py`, `tools/search.py`,
   `tools/sandbox.py`, and `tools/github.py` are async-first; sync
   third-party calls (PyGithub, `subprocess.run`) are wrapped in

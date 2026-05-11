@@ -16,8 +16,8 @@ A single POST kicks off a full research run: the researcher gathers
 sources (web search, MCP tools, sandboxed code execution), the
 summarizer produces a Markdown report, the zettelkasten agent extracts
 atomic notes into `.vault/`, and the persist node writes a Polars CSV
-of sources and a frontmatter-rich memory that subsequent runs re-read
-to avoid re-deriving settled insights.
+of sources and a frontmatter-rich memory mounted at `/memory` for later
+Unix-style archaeology.
 
 See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
@@ -48,7 +48,7 @@ Registered workflows: `research` (full pipeline), `researcher`,
 | `outputs/report.md` | summarizer | Full research report |
 | `outputs/sources.csv` | persist | Polars-written source table |
 | `.vault/*.md` | zettelkasten | Atomic Markdown notes |
-| `.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; re-read next run |
+| `.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
 
