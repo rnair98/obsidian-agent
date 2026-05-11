@@ -1,0 +1,51 @@
+tests/harness/test_harness_wiring.py
+  s_3516f444f4bead::t_49db07499ccd31 22
+  s_3516f444f4bead::t_8df30a58446158 3
+  s_3516f444f4bead::t_fe38a9af5aad5b 9,43-44,46,54-62,65-71
+  s_3516f444f4bead::t_60cd5be7227b43 14
+  s_3516f444f4bead::t_3367ef75130927 15,45,63-64
+tests/test_imports.py
+  s_3516f444f4bead::t_ef1684b7f3cef3 44
+ARCHITECTURE.md
+  s_3516f444f4bead::t_6d675e66dd1717 195,222
+  s_3516f444f4bead::t_87ecfa82b9ec3f 193,274,608-609
+  s_3516f444f4bead::t_6e0a5e59236932 24-25,107,119-121
+  s_3516f444f4bead::t_7742def151bff7 140
+  s_3516f444f4bead::t_348ab54cb8b696 339-341
+  s_3516f444f4bead::t_8acb74377735dc 447,610-611
+app/engine/executor.py
+  s_3516f444f4bead::t_bf088ce1484d04 80
+  s_3516f444f4bead::t_2f719de06666ea 26,85
+app/harness/policy.py
+  s_3516f444f4bead::t_a6db5a21f0ba42 39,41,43,45,47,49,51,53,55
+app/engine/tools/io.py
+  s_3516f444f4bead::t_6e7afdcc296022 3-6
+README.md
+  s_3516f444f4bead::t_d2be132e11ae72 19-20,51
+AGENTS.md
+  s_3516f444f4bead::t_48ca459aa0ddf5 102-111
+app/engine/workspace.py
+  s_3516f444f4bead::t_32fab8659eeb07 93,104-107
+  s_3516f444f4bead::t_680af30d6fc3bb 1-92,94-103,108-114
+app/engine/persistence.py
+  s_3516f444f4bead::t_4a311d655cf68c 4-7
+app/engine/agents/researcher.py
+  s_3516f444f4bead::t_f8250d065d5643 61-65,70-71
+  s_3516f444f4bead::t_286b5a7f867304 68-69,72-73,86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "a3403370c38429fcff4b50c99a9e4936a3da8a34",
+  "prompts": {},
+  "sessions": {
+    "s_3516f444f4bead": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e1447-0ab9-7d52-a6e4-8b500b3afb5a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
