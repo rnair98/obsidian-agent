@@ -97,3 +97,24 @@ def test_tags_backlinks_and_properties(layout: VaultLayout) -> None:
         "status": "done",
         "title": "Target",
     }
+    assert read_note(layout, file="Target") == (
+        "---\nstatus: done\ntitle: Target\n---\n\n#topic body"
+    )
+
+
+def test_set_property_does_not_accumulate_leading_body_blank_lines(
+    layout: VaultLayout,
+) -> None:
+    vault = ObsidianVaultOperations(layout)
+    create_note(
+        layout,
+        name="Target",
+        content="---\ntitle: Target\n---\n\nFirst line",
+    )
+
+    vault.set_property("status", "draft", file="Target")
+    vault.set_property("status", "done", file="Target")
+
+    assert read_note(layout, file="Target") == (
+        "---\nstatus: done\ntitle: Target\n---\n\nFirst line"
+    )

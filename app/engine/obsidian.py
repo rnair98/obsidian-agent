@@ -314,11 +314,11 @@ def _body_links_to(body: str, *, target_stem: str, target_path: str) -> bool:
 def _split_frontmatter(content: str) -> NoteProperties:
     if not content.startswith("---\n"):
         return NoteProperties(data={}, body=content)
-    end = content.find("\n---", 4)
+    end = content.find("\n---\n", 4)
     if end == -1:
         return NoteProperties(data={}, body=content)
     raw = content[4:end]
-    body = content[end + 4 :]
+    body = content[end + 5 :]
     if body.startswith("\n"):
         body = body[1:]
     loaded = yaml.safe_load(raw) if raw.strip() else {}

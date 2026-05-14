@@ -66,3 +66,5 @@ def test_inaccessible_git_vault_returns_400() -> None:
     )
 
     assert resp.status_code == 400
+    assert resp.json() == {"detail": "Invalid vault configuration"}
+    assert "definitely/not/a/git/repo" not in resp.text

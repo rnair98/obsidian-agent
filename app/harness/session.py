@@ -22,7 +22,7 @@ from app.harness.paths import PathEscapeError, normalize_path
 from app.harness.policy import PermissionPolicy, PolicyAction
 from app.harness.results import AuditEvent, CommandResult
 
-_UNSUPPORTED_TOKENS = ("|", "&&", "||", ";", "$(", "`", ">", "<")
+_UNSUPPORTED_TOKENS = {"|", "&&", "||", ";", ">", "<"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,15 +93,15 @@ class WorkspaceSession:
         )
 
     def run(self, command: str) -> CommandResult:
-        if any(token in command for token in _UNSUPPORTED_TOKENS):
-            return CommandResult.error(
-                "unsupported shell syntax; run `help` for supported forms\n",
-                exit_code=2,
-            )
         try:
             args = shlex.split(command)
         except ValueError as exc:
             return CommandResult.error(f"{exc}\n", exit_code=2)
+        if any(arg in _UNSUPPORTED_TOKENS for arg in args):
+            return CommandResult.error(
+                "unsupported shell syntax; run `help` for supported forms\n",
+                exit_code=2,
+            )
         if not args:
             return CommandResult.ok()
 

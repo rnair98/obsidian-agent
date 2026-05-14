@@ -19,6 +19,9 @@ async def run_workflow(
     try:
         return await execute(workflow_name, request)
     except VaultResolutionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid vault configuration",
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

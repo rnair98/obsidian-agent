@@ -80,6 +80,15 @@ def test_shell_rejects_unsupported_shell_syntax() -> None:
     assert "help" in result.stderr
 
 
+def test_shell_allows_operator_characters_inside_quoted_arguments() -> None:
+    session = WorkspaceSession.scratch()
+
+    result = session.run('write compare.py -- "print(1 < 2)"')
+
+    assert result.exit_code == 0
+    assert session.run("cat compare.py").stdout == "print(1 < 2)"
+
+
 def test_shell_help_lists_exact_supported_command_forms() -> None:
     session = WorkspaceSession.scratch()
 

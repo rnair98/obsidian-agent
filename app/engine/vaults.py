@@ -77,11 +77,15 @@ def _local_vault(path: Path) -> VaultLayout:
 
 
 def _git_vault(spec: GitVaultRequest) -> VaultLayout:
+    _validate_git_operand("url", spec.url)
+    if spec.ref is not None:
+        _validate_git_operand("ref", spec.ref)
     cache_path = (
         settings.filesystem.base_path / MANAGED_GIT_VAULTS_DIR / _cache_key(spec)
     )
     if not cache_path.exists():
-        _run_git(["clone", spec.url, str(cache_path)])
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        _run_git(["clone", "--", spec.url, str(cache_path)])
     else:
         _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
     if spec.ref:
@@ -92,6 +96,11 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
 def _cache_key(spec: GitVaultRequest) -> str:
     raw = f"{spec.url}\0{spec.ref or ''}".encode()
     return hashlib.sha256(raw).hexdigest()[:16]
+
+
+def _validate_git_operand(name: str, value: str) -> None:
+    if value.startswith("-"):
+        raise VaultResolutionError(f"git vault {name} must not start with '-'")
 
 
 def _run_git(args: list[str]) -> None:

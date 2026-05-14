@@ -7,7 +7,7 @@ import pytest
 
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.schema import ResearchRequest
-from app.engine.vaults import resolve_vault
+from app.engine.vaults import VaultResolutionError, resolve_vault
 
 
 def test_research_request_accepts_local_vault_object(tmp_path: Path) -> None:
@@ -120,3 +120,30 @@ def test_git_vault_resolver_clones_to_managed_writable_vault(
     assert layout.backend.is_dir("notes")
     layout.backend.write_text("notes/local.md", "local write")
     assert layout.backend.read_text("notes/local.md") == "local write"
+    assert (tmp_path / ".vaults").is_dir()
+
+
+def test_git_vault_resolver_rejects_option_shaped_operands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.core.settings.settings.filesystem.base_path", tmp_path)
+
+    with pytest.raises(VaultResolutionError, match="url must not start"):
+        resolve_vault(
+            ResearchRequest(
+                topic="git vault",
+                vault={"type": "git", "url": "--upload-pack=bad"},
+            )
+        )
+
+    with pytest.raises(VaultResolutionError, match="ref must not start"):
+        resolve_vault(
+            ResearchRequest(
+                topic="git vault",
+                vault={
+                    "type": "git",
+                    "url": "https://github.com/example/vault.git",
+                    "ref": "-bad",
+                },
+            )
+        )

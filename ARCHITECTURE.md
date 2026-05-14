@@ -302,7 +302,7 @@ by merging node return values.
 | `code_context` | `list[str]` | researcher | summarizer |
 | `sources` | `list[dict[str,str]]` | researcher | summarizer, persist |
 | `report` | `str` | summarizer | zettelkasten |
-| `zettelkasten_notes` | `list[dict[str,str]]` | zettelkasten | — |
+| `zettelkasten_notes` | `list[dict[str, object]]` | zettelkasten | — |
 | `reasoning` | `list[str]` | researcher | persist |
 | `key_insights` | `list[str]` | researcher | persist |
 
@@ -313,9 +313,11 @@ are *not* carried in state.
 ### `ResearchContext` (frozen dataclass)
 
 Immutable per-run config surfaced into nodes via `Runtime[ResearchContext]`.
-No fields are currently defined. **Never mutate.** If a node needs runtime
-context, add the field at the executor/request boundary and document the
-consumer.
+It currently carries `vault: object | None`, populated by
+`executor._initial_context()` with the resolved `VaultLayout` for artifact
+materialization and workspace mount assembly. **Never mutate.** If a node needs
+runtime context, add the field at the executor/request boundary and document
+the consumer.
 
 ### `ResearchRequest` (Pydantic, `extra="forbid"`)
 
