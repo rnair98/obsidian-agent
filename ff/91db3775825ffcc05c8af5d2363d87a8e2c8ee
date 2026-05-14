@@ -1,0 +1,35 @@
+tests/harness/test_workspace_core.py
+  s_57dd66ce34f2ef::t_cfdef857818460 83-91
+app/engine/obsidian.py
+  s_57dd66ce34f2ef::t_ba0f3bcc33a314 317,321
+ARCHITECTURE.md
+  s_57dd66ce34f2ef::t_ba0f3bcc33a314 305,316-320
+app/engine/vaults.py
+  s_57dd66ce34f2ef::t_ba0f3bcc33a314 80-82,87-88,101-103
+tests/engine/test_vaults.py
+  s_57dd66ce34f2ef::t_cfdef857818460 10,123-149
+tests/engine/test_obsidian.py
+  s_57dd66ce34f2ef::t_cfdef857818460 100-120
+tests/api/test_workflows.py
+  s_57dd66ce34f2ef::t_cfdef857818460 69-70
+app/api/v1/workflows.py
+  s_57dd66ce34f2ef::t_ba0f3bcc33a314 22-25
+app/harness/session.py
+  s_57dd66ce34f2ef::t_ba0f3bcc33a314 25,100-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ff91db3775825ffcc05c8af5d2363d87a8e2c8ee",
+  "prompts": {},
+  "sessions": {
+    "s_57dd66ce34f2ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e242e-01f3-73c0-8b9e-a7dbd11978d8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
