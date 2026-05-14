@@ -51,7 +51,7 @@ class GitCommand:
                         f"supported forms: {GIT_FORMS}\n",
                         exit_code=2,
                     )
-        except RuntimeError as exc:
+        except Exception as exc:  # noqa: BLE001 - command boundary
             return CommandResult.error(f"git: {exc}\n", exit_code=1)
 
     def _ls_tree(self, args: list[str]) -> CommandResult:
@@ -93,7 +93,7 @@ class GitCommand:
         snapshot = service.shallow_clone(ref)
         if snapshot is None:
             return CommandResult.error(f"git clone: cannot clone {repo_name}\n")
-        virtual_path = f"/repos/{snapshot.path.as_posix()}"
+        virtual_path = f"/repos/{snapshot.repo_name}@{snapshot.commit_sha}"
         status = "cached" if snapshot.skipped else "cloned"
         return CommandResult.ok(
             f"{status} {snapshot.repo_name} {snapshot.requested_ref} "

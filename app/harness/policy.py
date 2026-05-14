@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from typing import Literal
 
-PolicyAction = Literal["read", "write", "delete", "execute"]
+PolicyAction = Literal["read", "write", "delete"]
 PolicyEffect = Literal["allow", "deny"]
 
 
@@ -43,8 +43,6 @@ class PermissionPolicy:
                 PermissionRule.allow("write", "/workspace/**"),
                 PermissionRule.allow("delete", "/workspace"),
                 PermissionRule.allow("delete", "/workspace/**"),
-                PermissionRule.allow("execute", "/workspace"),
-                PermissionRule.allow("execute", "/workspace/**"),
                 PermissionRule.allow("read", "/memory"),
                 PermissionRule.allow("read", "/memory/**"),
                 PermissionRule.allow("write", "/memory"),

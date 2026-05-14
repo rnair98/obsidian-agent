@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-AuditAction = Literal["read", "write", "delete", "execute"]
+AuditAction = Literal["read", "write", "delete"]
 
 
 @dataclass(frozen=True, slots=True)
