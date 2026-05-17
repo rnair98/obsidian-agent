@@ -8,6 +8,7 @@ from pathlib import Path
 from app.engine.backends import FilesystemBackend
 
 _SLUG_INVALID_RE = re.compile(r"[^a-z0-9._-]+")
+_SLUG_MAX_LENGTH = 80
 
 
 def _timestamp() -> str:
@@ -23,6 +24,10 @@ def _yaml_double_quoted(value: str) -> str:
 def _slugify(topic: str) -> str:
     cleaned = _SLUG_INVALID_RE.sub("-", topic.lower().replace(" ", "-"))
     cleaned = cleaned.strip("._-")
+    # Cap the slug so unbounded topic strings can't blow past the
+    # filesystem's NAME_MAX when combined with the timestamp suffix.
+    if len(cleaned) > _SLUG_MAX_LENGTH:
+        cleaned = cleaned[:_SLUG_MAX_LENGTH].rstrip("._-")
     return cleaned or "untitled"
 
 

@@ -27,6 +27,10 @@ class ArtifactWorkspaceBackend:
 
     def list_dir(self, path: str) -> list[WorkspaceEntry]:
         artifact_path = self._artifact_path(path)
+        if not self.backend.exists(artifact_path):
+            raise WorkspaceNotFoundError(f"directory not found: {path}")
+        if not self.backend.is_dir(artifact_path):
+            raise WorkspaceBackendError(f"not a directory: {path}")
         entries: list[WorkspaceEntry] = []
         root = self.backend.resolve(self.root)
         for child in self.backend.list_dir(artifact_path):
@@ -44,7 +48,10 @@ class ArtifactWorkspaceBackend:
         return self.backend.read_text(target)
 
     def write_text(self, path: str, content: str) -> None:
-        self.backend.write_text(self._artifact_path(path), content)
+        target = self._artifact_path(path)
+        if self.backend.is_dir(target):
+            raise WorkspaceBackendError(f"cannot write directory: {path}")
+        self.backend.write_text(target, content)
 
     def mkdir(self, path: str) -> None:
         self.backend.mkdir(self._artifact_path(path))
@@ -64,7 +71,10 @@ class ArtifactWorkspaceBackend:
     def move(self, src: str, dst: str) -> None:
         if self._is_mount_root(src):
             raise WorkspaceBackendError("cannot move mount root")
-        self.backend.move(self._artifact_path(src), self._artifact_path(dst))
+        src_artifact = self._artifact_path(src)
+        if not self.backend.exists(src_artifact):
+            raise WorkspaceNotFoundError(f"path not found: {src}")
+        self.backend.move(src_artifact, self._artifact_path(dst))
 
     def copy(self, src: str, dst: str) -> None:
         self.write_text(dst, self.read_text(src))

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import subprocess
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,22 @@ from app.engine.backends.protocol import FilesystemBackend
 from app.engine.schema import GitVaultRequest, LocalVaultRequest, ResearchRequest
 
 MANAGED_GIT_VAULTS_DIR = Path(".vaults")
+GIT_OPERATION_TIMEOUT_SECONDS = 120.0
+
+# Per-cache-path lock to serialize concurrent git clones/fetches targeting the
+# same vault directory. Locks are tracked in this process only; cross-process
+# concurrency on the same vault is a separate concern (and rare in practice).
+_GIT_VAULT_LOCKS_GUARD = threading.Lock()
+_GIT_VAULT_LOCKS: dict[str, threading.Lock] = {}
+
+
+def _git_vault_lock(cache_key: str) -> threading.Lock:
+    with _GIT_VAULT_LOCKS_GUARD:
+        lock = _GIT_VAULT_LOCKS.get(cache_key)
+        if lock is None:
+            lock = threading.Lock()
+            _GIT_VAULT_LOCKS[cache_key] = lock
+        return lock
 
 
 class VaultResolutionError(ValueError):
@@ -80,16 +97,18 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
     _validate_git_operand("url", spec.url)
     if spec.ref is not None:
         _validate_git_operand("ref", spec.ref)
-    cache_path = (
-        settings.filesystem.base_path / MANAGED_GIT_VAULTS_DIR / _cache_key(spec)
-    )
-    if not cache_path.exists():
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        _run_git(["clone", "--", spec.url, str(cache_path)])
-    else:
-        _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
-    if spec.ref:
-        _run_git(["-C", str(cache_path), "checkout", spec.ref])
+    cache_key = _cache_key(spec)
+    cache_path = settings.filesystem.base_path / MANAGED_GIT_VAULTS_DIR / cache_key
+    # Serialize clone/fetch on the same cache path so concurrent requests
+    # don't race past an existence check into two competing `git clone`s.
+    with _git_vault_lock(cache_key):
+        if not cache_path.exists():
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            _run_git(["clone", "--", spec.url, str(cache_path)])
+        else:
+            _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
+        if spec.ref:
+            _run_git(["-C", str(cache_path), "checkout", spec.ref])
     return _local_vault(cache_path)
 
 
@@ -104,12 +123,18 @@ def _validate_git_operand(name: str, value: str) -> None:
 
 
 def _run_git(args: list[str]) -> None:
-    completed = subprocess.run(
-        ["git", *args],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=GIT_OPERATION_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise VaultResolutionError(
+            f"git vault operation timed out after {GIT_OPERATION_TIMEOUT_SECONDS:.0f}s"
+        ) from exc
     if completed.returncode != 0:
         detail = completed.stderr.strip() or completed.stdout.strip()
         raise VaultResolutionError(f"git vault operation failed: {detail}")

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.harness.fs import WorkspaceBackend, WorkspaceEntry
+from app.harness.fs import WorkspaceBackend, WorkspaceBackendError, WorkspaceEntry
 from app.harness.paths import normalize_path
 
 
@@ -35,7 +35,13 @@ class CompositeWorkspaceBackend:
             for prefix in self._mounts
             if prefix != "/" and self._parent(prefix) == normalized
         ]
-        return sorted([*entries, *mounted_children], key=lambda entry: entry.path)
+        # Mounted children win over root-backend entries at the same path so
+        # we never report `/vault` twice when the root backend also has a
+        # `vault/` directory.
+        merged: dict[str, WorkspaceEntry] = {entry.path: entry for entry in entries}
+        for child in mounted_children:
+            merged[child.path] = child
+        return sorted(merged.values(), key=lambda entry: entry.path)
 
     def read_text(self, path: str) -> str:
         backend, backend_path = self._route(path)
@@ -57,6 +63,10 @@ class CompositeWorkspaceBackend:
         src_backend, src_path = self._route(src)
         dst_backend, dst_path = self._route(dst)
         if src_backend is not dst_backend:
+            if src_backend.is_dir(src_path):
+                raise WorkspaceBackendError(
+                    "cross-mount move of directories is not supported"
+                )
             content = src_backend.read_text(src_path)
             dst_backend.write_text(dst_path, content)
             src_backend.delete(src_path)

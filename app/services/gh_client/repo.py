@@ -49,7 +49,7 @@ class GitHubRepositoryService:
             self.filesystem_backend = assets_backend()
 
         self.repo_name = repo_name
-        self.repo = self._get_repo(repo_name) if repo_name is not None else None
+        self.repo = self._get_repo(repo_name) if repo_name else None
         self._tree_cache: dict[str, Any] = {}
 
     def _get_repo(self, repo_name: str) -> "Repository | None":

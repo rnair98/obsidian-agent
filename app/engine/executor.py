@@ -7,6 +7,7 @@ handling state initialization, context setup, and graph invocation.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -28,8 +29,11 @@ from app.engine.workspace import build_workspace_session
 from app.harness.runtime import workspace_scope
 
 
-def _initial_context(request: ResearchRequest) -> ResearchContext:
-    return ResearchContext(vault=resolve_vault(request))
+async def _initial_context(request: ResearchRequest) -> ResearchContext:
+    # `resolve_vault` may invoke blocking `git` subprocesses for git-backed
+    # vaults; offload to a worker thread so it doesn't stall the event loop.
+    vault = await asyncio.to_thread(resolve_vault, request)
+    return ResearchContext(vault=vault)
 
 
 def _initial_state(
@@ -72,7 +76,7 @@ async def execute(
 
     config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
     state = _initial_state(workflow_name, request)
-    context = _initial_context(request)
+    context = await _initial_context(request)
 
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer)

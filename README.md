@@ -53,12 +53,18 @@ Registered workflows: `research` (full pipeline), `researcher`,
 
 ## What gets produced
 
+Paths below are **vault-relative**. When the request omits a vault the
+managed `.vault/` directory is used; when `vault.type=local|git` is supplied
+the same layout is written under the selected vault root
+(`{vault_root}/outputs/...`, `{vault_root}/notes/...`,
+`{vault_root}/.memories/...`).
+
 | Path | Written by | Contents |
 |---|---|---|
-| `.vault/outputs/report.md` | persist | Full research report when no vault is supplied |
-| `.vault/outputs/sources.csv` | persist | Polars-written source table |
-| `.vault/notes/*.md` | persist | Atomic Markdown notes |
-| `.vault/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
+| `{vault}/outputs/report.md` | persist | Full research report |
+| `{vault}/outputs/sources.csv` | persist | Polars-written source table |
+| `{vault}/notes/*.md` | persist | Atomic Markdown notes |
+| `{vault}/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
 

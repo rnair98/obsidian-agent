@@ -134,13 +134,19 @@ class ObsidianVaultOperations:
     ) -> list[Path]:
         target = self.resolve_note(file=file, path=path)
         target_stem = target.stem.casefold()
+        target_basename = target.name.casefold()
         target_path = target.as_posix().casefold()
         linked_from: list[Path] = []
         for note_path in self.list_notes():
             if note_path == target:
                 continue
             body = self._read_text(note_path)
-            if _body_links_to(body, target_stem=target_stem, target_path=target_path):
+            if _body_links_to(
+                body,
+                target_stem=target_stem,
+                target_basename=target_basename,
+                target_path=target_path,
+            ):
                 linked_from.append(note_path)
         return linked_from
 
@@ -261,15 +267,35 @@ def search_notes(
 
 def _walk_files(backend: FilesystemBackend, root: Path) -> list[Path]:
     files: list[Path] = []
+    visited: set[Path] = set()
+    _walk_files_into(backend, root, files, visited)
+    return sorted(files)
+
+
+def _walk_files_into(
+    backend: FilesystemBackend,
+    root: Path,
+    files: list[Path],
+    visited: set[Path],
+) -> None:
     for entry in backend.list_dir(root):
         relative = entry.relative_to(backend.base_path)
         if relative.parts and relative.parts[0] == ".obsidian":
             continue
         if entry.is_dir():
-            files.extend(_walk_files(backend, relative))
+            # Resolve symlinks so cyclic vault trees can't trigger infinite
+            # recursion. `resolve(strict=False)` returns a stable canonical
+            # path even when the target does not exist.
+            try:
+                canonical = entry.resolve(strict=False)
+            except OSError:
+                continue
+            if canonical in visited:
+                continue
+            visited.add(canonical)
+            _walk_files_into(backend, relative, files, visited)
         elif entry.is_file():
             files.append(relative)
-    return sorted(files)
 
 
 def _vault_workspace_path(path: Path) -> str:
@@ -299,7 +325,13 @@ def _clean_file_target(file: str) -> str:
     return target.strip()
 
 
-def _body_links_to(body: str, *, target_stem: str, target_path: str) -> bool:
+def _body_links_to(
+    body: str,
+    *,
+    target_stem: str,
+    target_basename: str,
+    target_path: str,
+) -> bool:
     for link in _WIKILINK_RE.findall(body):
         cleaned = _clean_file_target(link).casefold()
         if cleaned == target_stem or cleaned.endswith(f"/{target_stem}"):
@@ -307,6 +339,11 @@ def _body_links_to(body: str, *, target_stem: str, target_path: str) -> bool:
     for link in _MARKDOWN_LINK_RE.findall(body):
         cleaned = link.replace("%20", " ").split("#", maxsplit=1)[0].casefold()
         if cleaned == target_path or cleaned.endswith(f"/{target_path}"):
+            return True
+        # Relative markdown links like `(Target.md)` should also match the
+        # target's basename so they aren't missed when the link doesn't
+        # carry the full vault-relative path.
+        if cleaned == target_basename or cleaned.endswith(f"/{target_basename}"):
             return True
     return False
 
