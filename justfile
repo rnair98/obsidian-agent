@@ -20,6 +20,9 @@ fmt:
     uv run ruff format
     uv run ruff check --fix --unsafe-fixes .
 
+typecheck:
+    uv run pyright
+
 # Start Arize Phoenix for tracing
 phoenix:
     podman run --rm -it -p 6006:6006 -p 4317:4317 arizephoenix/phoenix:latest

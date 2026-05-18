@@ -99,6 +99,16 @@ When your change touches items listed in ARCHITECTURE.md §14 ("How to Keep
 This Document Honest"), update ARCHITECTURE.md in the same change. Drift is
 not acceptable.
 </rule>
+
+<rule>
+When replacing, consolidating, or removing an abstraction, API, tool, state
+field, config key, storage path, protocol, or workflow contract, you MUST do a
+backward-compatibility cleanup pass before finishing. Search for old names,
+compatibility shims, empty placeholder fields, adapter aliases, prompt wording,
+tests, README/docs, and ARCHITECTURE.md references. Remove stale compatibility
+unless the user explicitly asks to preserve it; if preservation is required,
+name the compatibility surface, its owner, and its removal condition.
+</rule>
 </codebase-preflight>
 
 ────────────────────────────────────────────────────────
