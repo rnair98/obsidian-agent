@@ -46,7 +46,7 @@ class AgentSpec(Generic[T]):
         )
         raw = (
             cfg.system_prompt
-            if cfg is not None and getattr(cfg, "system_prompt", None)
+            if cfg is not None and cfg.system_prompt
             else self.default_system_prompt
         )
         if "$output_format" in raw or "${output_format}" in raw:
