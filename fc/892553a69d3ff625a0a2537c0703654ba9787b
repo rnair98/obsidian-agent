@@ -1,0 +1,23 @@
+ARCHITECTURE.md
+  s_b2786f7953a454::t_57bf86727caad9 672-679
+  s_b2786f7953a454::t_a3a22e2e50ed3e 493
+  s_b2786f7953a454::t_2a1e6bddcac8d3 624-627,629-631,633,636-639
+  s_b2786f7953a454::t_35ad1a7c2a5d6a 368-388
+  s_b2786f7953a454::t_5c98355970bbf4 236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "fc892553a69d3ff625a0a2537c0703654ba9787b",
+  "prompts": {},
+  "sessions": {
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
