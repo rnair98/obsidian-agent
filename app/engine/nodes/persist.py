@@ -43,7 +43,7 @@ def _materialize_zettelkasten_notes(
     layout: VaultLayout | None,
 ) -> None:
     backend = layout.backend if layout is not None else artifacts_backend()
-    notes_dir = layout.notes_dir if layout is not None else settings.VAULT_DIR
+    notes_dir = layout.notes_dir if layout is not None else settings.VAULT_DIR / "notes"
     backend.mkdir(notes_dir)
     seen_ids: set[str] = set()
     for note in state["zettelkasten_notes"]:

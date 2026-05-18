@@ -36,7 +36,7 @@ class CurlCommand:
             with self._client_factory() as client:
                 response = client.get(f"https://r.jina.ai/{url}", headers=headers)
                 response.raise_for_status()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.InvalidURL) as exc:
             return CommandResult.error(
                 f"curl: error fetching {url} via Jina: {exc}\n",
             )
