@@ -1,14 +1,9 @@
 from app.core.settings import settings
 from app.engine.artifacts import CsvSourceStore, MarkdownMemoryStore
+from app.engine.artifacts.memory import _yaml_double_quoted
 from app.engine.backends import artifacts_backend
 from app.engine.schema import ResearchContext, ResearchState
 from app.engine.vaults import VaultLayout
-
-
-def _yaml_quote(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    escaped = escaped.replace("\n", " ").replace("\r", " ")
-    return f'"{escaped}"'
 
 
 def _safe_note_id(note_id: object) -> str:
@@ -30,9 +25,9 @@ def _format_zettelkasten_note(note: dict[str, object]) -> str:
         return content
     lines = ["---"]
     if title:
-        lines.append(f"title: {_yaml_quote(title)}")
+        lines.append(f"title: {_yaml_double_quoted(title)}")
     if tag_values:
-        rendered_tags = ", ".join(_yaml_quote(tag) for tag in tag_values)
+        rendered_tags = ", ".join(_yaml_double_quoted(tag) for tag in tag_values)
         lines.append(f"tags: [{rendered_tags}]")
     lines.extend(["---", "", content])
     return "\n".join(lines)
