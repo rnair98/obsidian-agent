@@ -106,9 +106,12 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             _run_git(["clone", "--", spec.url, str(cache_path)])
         else:
-            _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
+            if spec.ref is None:
+                _run_git(["-C", str(cache_path), "pull", "--ff-only"])
+            else:
+                _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
         if spec.ref:
-            _run_git(["-C", str(cache_path), "checkout", spec.ref])
+            _run_git(["-C", str(cache_path), "checkout", "--", spec.ref])
     return _local_vault(cache_path)
 
 

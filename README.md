@@ -15,7 +15,7 @@
 A single POST kicks off a full research run: the researcher gathers
 sources (web search, MCP tools, Monty-backed shell Python), the
 summarizer produces a Markdown report, the zettelkasten agent extracts
-atomic notes into `.vault/`, and the persist node writes a Polars CSV
+atomic notes into `notes/`, and the persist node writes a Polars CSV
 of sources and a frontmatter-rich memory inside the selected vault, mounted
 at `/memory` for later Unix-style archaeology.
 

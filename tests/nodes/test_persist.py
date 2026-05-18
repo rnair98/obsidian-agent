@@ -74,7 +74,7 @@ def test_persist_materializes_report_and_zettelkasten_notes(tmp_backend) -> None
 
     assert result == {}
     assert tmp_backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
-    note_body = tmp_backend.read_text("vault/typed-workspace.md")
+    note_body = tmp_backend.read_text("vault/notes/typed-workspace.md")
     assert 'title: "Typed workspace"' in note_body
     assert 'tags: ["workspace", "agent"]' in note_body
     assert "The shell writes ordinary files." in note_body
