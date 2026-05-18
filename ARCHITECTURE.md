@@ -233,6 +233,7 @@ app/
 │       ├── shell.py              # shell tool adapter over app.harness runtime
 ├── harness/
 │   ├── __init__.py               # public harness exports
+│   ├── commands.py               # CommandSpec dataclass + WorkspaceCommand Protocol + first_flag/unsupported_flag/render_help helpers
 │   ├── fs.py                     # WorkspaceBackend Protocol + in-memory backend
 │   ├── mounts.py                 # CompositeWorkspaceBackend path-prefix router
 │   ├── paths.py                  # virtual POSIX path normalization
@@ -364,6 +365,27 @@ muscle memory. Use `WorkspaceSession.scratch()` for scratch-only tests and
 session is installed per workflow run via `workspace_scope(...)` in
 `executor.execute`; it is deliberately not stored in `ResearchState`.
 
+### `ObsidianVaultOperations` (`app/engine/obsidian.py`)
+
+Headless, deterministic subset of Obsidian's behavior over a resolved
+`VaultLayout`. Reads and writes flow through a private `WorkspaceSession`
+with a single `/vault` mount, so every operation honors the same
+`FilesystemBackend` sandbox as the rest of the engine. Capabilities:
+`list_notes`, `read`, `create` (with overwrite-guarded `NoteExistsError`),
+`append`, `search` (case-folded substring with `SearchHit` results),
+`tags` (counting `#tag` references), `backlinks` (matching both
+`[[wikilinks]]` and relative `[markdown](links.md)` by stem/basename/path),
+and YAML `properties` / `set_property` for frontmatter. Symlink-cycle
+defense uses `Path.resolve(strict=False)` against a `visited` set during
+the recursive walk; `.obsidian/` config is skipped.
+
+**Status — library, not yet wired.** Currently consumed only by
+`tests/engine/test_obsidian.py`. No node, tool, or graph imports it yet.
+Treat it as the canonical entry point for any future agent-facing
+Obsidian-semantic operation (e.g., a `vault note ...` shell subcommand or
+a structured-output `materialize_notes` node). Do not duplicate its
+frontmatter or wikilink parsing logic elsewhere — extend this module.
+
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
 A frozen dataclass that bundles **schema + prompt + tools + per-agent LLM
@@ -468,6 +490,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | Code IR parsing | tree-sitter + tree-sitter-language-pack | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
+| Frontmatter (YAML) | `pyyaml` | `engine/obsidian.py` — `_split_frontmatter` / `_join_frontmatter` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
 | Config | pydantic-settings (YAML + dotenv) | `core/settings.py` |
@@ -598,12 +621,22 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
 | `tests/engine/test_artifacts.py` | `MarkdownMemoryStore`, `CsvSourceStore` formatting and write behavior |
 | `tests/engine/test_vaults.py` | default/local/Git vault request resolution and standard vault layout |
+| `tests/engine/test_obsidian.py` | `ObsidianVaultOperations` list/read/create/append/search/tags/backlinks/properties + symlink-cycle guard |
+| `tests/engine/test_parsing.py` | `parse_structured` recovery stages (strict → fence strip → balanced extract → `json_repair`) |
+| `tests/engine/test_curl_command.py` | `CurlCommand` URL → Jina Reader translation and unsupported-flag handling |
+| `tests/engine/test_git_command.py` | `GitCommand` `ls-tree` / `clone` argument parsing and `gh_client` delegation |
 | `tests/engine/test_python_command.py` | `python -c` and `python script.py` Monty-backed shell execution |
+| `tests/engine/agents/test_spec.py` | `AgentSpec.system_prompt` YAML-override resolution + `parse` delegation |
+| `tests/engine/agents/test_output_format.py` | `render_output_format` TypeScript-flavored schema descriptor |
+| `tests/engine/agents/test_structured_delta.py` | Pydantic structured-output → `ResearchState` delta merging contract |
 | `tests/nodes/test_persist.py` | `persist_artifacts` writes sources and memory artifacts end-to-end against a tmp filesystem |
+| `tests/api/test_workflows.py` | HTTP routing: unknown enum → 422, node-name workflow → 422, legacy field → 422, bad git vault → 400 |
 | `tests/harness/` | Typed workspace core, shell tool adapter, and executor/agent wiring |
 
-LangGraph executor end-to-end behavior (requires a fake LLM and
-checkpointer) is still uncovered — next high-priority gap.
+LangGraph executor end-to-end behavior with a stub LLM (full
+`researcher → summarizer → zettelkasten → persist` traversal through
+the compiled graph) is still uncovered. `tests/api/test_workflows.py`
+exercises only the request/routing surface, not graph traversal.
 
 ---
 
@@ -636,6 +669,14 @@ the filesystem and update this file.
   `engine/workspace_commands/__init__.py`, and update the shell tool
   docstring, exact grammar tests, and command-specific unsupported-flag tests
   in the same change.
+- **Obsidian-semantic operations.** `app/engine/obsidian.py`
+  (`ObsidianVaultOperations`) is a fully test-covered library for headless
+  vault reads/writes (notes, tags, backlinks, frontmatter properties), but
+  no node, tool, or graph consumes it yet. When wiring it into a future
+  shell subcommand (e.g., `vault note <op>`) or a deterministic
+  materialization node, route through this module rather than re-rolling
+  frontmatter or wikilink parsing. Remove this bullet in the PR that ships
+  the first agent-facing consumer.
 
 ---
 
