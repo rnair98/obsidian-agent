@@ -13,11 +13,11 @@
 </div>
 
 A single POST kicks off a full research run: the researcher gathers
-sources (web search, MCP tools, sandboxed code execution), the
+sources (web search, MCP tools, Monty-backed shell Python), the
 summarizer produces a Markdown report, the zettelkasten agent extracts
-atomic notes into `.vault/`, and the persist node writes a Polars CSV
-of sources and a frontmatter-rich memory that subsequent runs re-read
-to avoid re-deriving settled insights.
+atomic notes into `notes/`, and the persist node writes a Polars CSV
+of sources and a frontmatter-rich memory inside the selected vault, mounted
+at `/memory` for later Unix-style archaeology.
 
 See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
@@ -36,6 +36,16 @@ just run                                  # uvicorn with --reload
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
   -H "Content-Type: application/json" \
   -d '{"topic": "emerging patterns in retrieval-augmented generation"}'
+
+# Use a local Obsidian vault as the workspace base
+curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"zettelkasten workflows","vault":{"type":"local","path":"/path/to/Vault"}}'
+
+# Use a remote Git vault as the workspace base (cloned locally; not pushed)
+curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"zettelkasten workflows","vault":{"type":"git","url":"https://github.com/user/vault.git","ref":"main"}}'
 ```
 
 Registered workflows: `research` (full pipeline), `researcher`,
@@ -43,12 +53,18 @@ Registered workflows: `research` (full pipeline), `researcher`,
 
 ## What gets produced
 
+Paths below are **vault-relative**. When the request omits a vault the
+managed `.vault/` directory is used; when `vault.type=local|git` is supplied
+the same layout is written under the selected vault root
+(`{vault_root}/outputs/...`, `{vault_root}/notes/...`,
+`{vault_root}/.memories/...`).
+
 | Path | Written by | Contents |
 |---|---|---|
-| `outputs/report.md` | summarizer | Full research report |
-| `outputs/sources.csv` | persist | Polars-written source table |
-| `.vault/*.md` | zettelkasten | Atomic Markdown notes |
-| `.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; re-read next run |
+| `{vault}/outputs/report.md` | persist | Full research report |
+| `{vault}/outputs/sources.csv` | persist | Polars-written source table |
+| `{vault}/notes/*.md` | persist | Atomic Markdown notes |
+| `{vault}/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
 
@@ -60,7 +76,7 @@ Registered workflows: `research` (full pipeline), `researcher`,
   prompts. Loaded as a lower-precedence source behind env vars.
 - Key keys: `DATABASE_URL` (enables `AsyncPostgresSaver`; empty falls
   back to in-memory checkpointing), `OPENAI_API_KEY`,
-  `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `JINA_API_KEY`,
+  `JINA_API_KEY`,
   `GITHUB__APP_ID`, `GITHUB__PRIVATE_KEY`, `GITHUB__INSTALLATION_ID`.
 
 ## Local development
@@ -68,7 +84,7 @@ Registered workflows: `research` (full pipeline), `researcher`,
 ```bash
 uv sync                           # install deps (Python 3.13+)
 just fmt                          # ruff format + lint --fix
-uv run pytest                     # 18 tests: backends, sandbox, gh_client, nodes, api, imports
+uv run pytest                     # full test suite
 just phoenix                      # OTEL UI at http://localhost:6006
 just db-up                        # local postgres for checkpointing
 ```

@@ -6,18 +6,16 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS
-from app.engine.tools.io import save_note
-from app.engine.tools.web import fetch_url
+from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS, shell
 
 
 class Source(BaseModel):
     """A single source surfaced during research.
 
     Field names intentionally mirror the keys consumed by
-    :func:`app.engine.persistence.write_sources` and produced by the
-    search tools in :mod:`app.engine.tools.search` so structured-output
-    sources round-trip to ``sources.csv`` without key translation.
+    :class:`app.engine.artifacts.CsvSourceStore` and produced by the search
+    tools so structured-output sources
+    round-trip to ``sources.csv`` without key translation.
     """
 
     title: str = Field(..., description="Title of the source")
@@ -58,12 +56,23 @@ Conduct thorough, multi-perspective research on the user's topic. Your output wi
 </mindset>
 
 <prior_memories>
-The initial state carries a `memories` list with frontmatter-rich
-markdown from prior research runs on related topics. Treat these as
-privileged context: extract their Key Insights, note what was already
-settled, and avoid re-deriving conclusions that have already been
-captured. If no memories are present, begin fresh without comment.
+Durable prior research runs are available as markdown files under
+`/memory`. Treat these as privileged context: use `ls`, `grep`, and `cat`
+to inspect relevant history, extract Key Insights, note what was already
+settled, and avoid re-deriving conclusions that have already been captured.
+If no relevant memories are present, begin fresh without comment.
 </prior_memories>
+
+<workspace>
+Use the shell tool for Unix-style memory archaeology and scratch notes.
+During research, create any ad hoc notes as ordinary files under
+`/workspace` rather than using a special note-taking tool. For ad hoc
+calculations or analysis scripts, write a small Python file and run it with
+`python script.py`, or use `python -c "..."`; this runs through the Monty
+sandbox rather than a host subprocess. Fetch web pages as markdown with
+`curl URL`; this is a constrained workspace command backed by Jina Reader,
+not a host shell invocation.
+</workspace>
 
 <constraints>
 You are gathering raw material. Do not synthesize a final report—that comes later.
@@ -77,5 +86,5 @@ SPEC: AgentSpec[ResearcherOutput] = AgentSpec(
     name="researcher",
     output_schema=ResearcherOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(*OPENAI_TOOLS, *MCP_TOOLS, fetch_url, save_note),
+    tools=(*OPENAI_TOOLS, *MCP_TOOLS, shell),
 )

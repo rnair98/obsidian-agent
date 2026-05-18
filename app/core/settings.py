@@ -72,14 +72,6 @@ class AgentsConfig(BaseModel):
     zettelkasten: AgentPromptConfig
 
 
-class WorkflowConfig(BaseModel):
-    """Workflow execution configuration resolved from settings sources."""
-
-    search_limit: int = 15
-    exa_search_type: str = "auto"
-    fetch_code_context: bool = False
-
-
 class FilesystemConfig(BaseModel):
     """Filesystem backend configuration for local artifact persistence.
 
@@ -96,7 +88,6 @@ class FilesystemConfig(BaseModel):
 
 class Settings(BaseSettings):
     github: GithubConfig | None = None
-    workflow: WorkflowConfig = WorkflowConfig()
     filesystem: FilesystemConfig = FilesystemConfig()
 
     # Paths
@@ -115,15 +106,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
 
     # API Keys
-    BRAVE_SEARCH_API_KEY: str = ""
-    EXA_API_KEY: str = ""
     JINA_API_KEY: str = ""
-
-    # Search Config
-    BRAVE_SEARCH_URL: str = "https://api.search.brave.com/res/v1/web/search"
-    EXA_SEARCH_URL: str = "https://api.exa.ai/search"
-    EXA_CONTEXT_URL: str = "https://api.exa.ai/context"
-    DEFAULT_SEARCH_LIMIT: int = 10
 
     # LLM & Agent Config
     llm: LLMConfig | None = None

@@ -31,8 +31,8 @@ def test_tools_are_importable() -> None:
 
     A Google-style docstring regression would raise ValueError at import.
     """
-    from app.engine.tools import github, io, sandbox, search, web  # noqa: F401
-    from app.engine.tools.constants import MCP_TOOLS, OPENAI_TOOLS
+    from app.engine import artifacts  # noqa: F401
+    from app.engine.tools import MCP_TOOLS, OPENAI_TOOLS, shell  # noqa: F401
 
     assert OPENAI_TOOLS
     assert MCP_TOOLS
@@ -40,26 +40,10 @@ def test_tools_are_importable() -> None:
 
 def test_tool_schemas_describe_every_parameter() -> None:
     """Every @tool's JSON schema must cover each of its parameters."""
-    from app.engine.tools.github import get_repo_tree
-    from app.engine.tools.io import save_note, write_report, write_zettelkasten_notes
-    from app.engine.tools.sandbox import run_python_experiment
-    from app.engine.tools.search import (
-        call_brave_search,
-        call_exa_context,
-        call_exa_search,
-    )
-    from app.engine.tools.web import fetch_url
+    from app.engine.tools.shell import shell
 
     tools = [
-        get_repo_tree,
-        save_note,
-        write_report,
-        write_zettelkasten_notes,
-        run_python_experiment,
-        call_brave_search,
-        call_exa_context,
-        call_exa_search,
-        fetch_url,
+        shell,
     ]
     for t in tools:
         schema = t.args_schema.model_json_schema()

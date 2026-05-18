@@ -1,24 +1,4 @@
-"""Schema-aligned structured-output parsing with layered recovery.
-
-The primary structured-output mechanism in this codebase is OpenAI's
-Responses API + ``ProviderStrategy(...)`` which guarantees JSON matching
-the target Pydantic schema. ``parse_structured`` exists for the seams
-where we receive a raw string instead — e.g. tool arguments, persisted
-artifacts, or non-OpenAI providers added later.
-
-Recovery is layered, cheapest first:
-
-1. Strict ``model_validate_json``.
-2. Strip ``\u0060\u0060\u0060json ... \u0060\u0060\u0060`` code fences.
-3. Extract the largest balanced ``{...}`` / ``[...]`` substring (handles
-   prose prefix/suffix, a.k.a. "yapping").
-4. ``json_repair.repair_json`` for trailing commas, unquoted keys,
-   single quotes, missing brackets, comments, etc.
-
-Each attempt is tagged on an OpenTelemetry span so Phoenix can show
-which stage succeeded — recovering the pre-parse / post-parse trace
-fidelity that BAML's ``Collector`` provides natively.
-"""
+"""Schema-aligned structured-output parsing with layered recovery."""
 
 from __future__ import annotations
 
@@ -99,24 +79,13 @@ def _candidates(raw: str):
         if candidate is None:
             continue
         repaired = repair_json(candidate, return_objects=False)
-        if (
-            isinstance(repaired, str)
-            and repaired
-            and repaired != candidate
-            and repaired not in seen
-        ):
+        if isinstance(repaired, str) and repaired and repaired != candidate and repaired not in seen:
             seen.add(repaired)
             yield stage, repaired
 
 
 def _largest_balanced(s: str) -> str | None:
-    """Return the longest bracket-balanced ``{...}`` or ``[...]`` substring.
-
-    Walks the input in a single pass per opener/closer pair and tracks the
-    longest fully-closed run. Strings inside the JSON are not parsed —
-    bracket characters embedded in strings can produce false positives, but
-    those cases fall through to ``json_repair`` which handles them.
-    """
+    """Return the longest bracket-balanced ``{...}`` or ``[...]`` substring."""
     best: str | None = None
     for opener, closer in (("{", "}"), ("[", "]")):
         depth = 0

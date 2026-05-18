@@ -762,7 +762,7 @@ app/
 │       ├── fusion.py      # rrf_merge, hyde_expand, cache helpers
 │       └── impact.py      # analyze_impact, validate_commit
 └── engine/
+    ├── workspace_commands/git.py (exists — git-shaped repository access)
     └── tools/
-        ├── github.py      (exists — get_repo_tree)
         └── codesearch.py  (NEW — Step 9, @tool wrappers)
 ```
