@@ -1,6 +1,7 @@
 from app.engine.tools.shell import shell
 
 OPENAI_TOOLS = [
+    {"type": "tool_search", "execution": "server"},
     {"type": "web_search"},
     {
         "type": "code_interpreter",
