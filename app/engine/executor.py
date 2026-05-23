@@ -21,40 +21,13 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
 from app.core.settings import settings
+from app.engine.backends import get_filesystem_backend
 from app.engine.nodes.types import WorkflowName
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
 from app.engine.vaults import resolve_vault
 from app.engine.workspace import build_workspace_session
 from app.harness.runtime import workspace_scope
-
-
-async def _initial_context(request: ResearchRequest) -> ResearchContext:
-    # `resolve_vault` may invoke blocking `git` subprocesses for git-backed
-    # vaults; offload to a worker thread so it doesn't stall the event loop.
-    vault = await asyncio.to_thread(resolve_vault, request)
-    return ResearchContext(vault=vault)
-
-
-def _initial_state(
-    workflow_name: WorkflowName,
-    request: ResearchRequest,
-) -> ResearchState:
-    return {
-        "messages": [
-            SystemMessage(content=f"Starting {workflow_name} workflow."),
-            HumanMessage(content=f"Please process the topic: {request.topic}"),
-        ],
-        "topic": request.topic,
-        "research_notes": [],
-        "experiments": [],
-        "code_context": [],
-        "sources": [],
-        "report": "",
-        "zettelkasten_notes": [],
-        "reasoning": [],
-        "key_insights": [],
-    }
 
 
 @asynccontextmanager
@@ -75,12 +48,35 @@ async def execute(
     logger.info("Running workflow: {} for topic: {}", workflow_name, request.topic)
 
     config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
-    state = _initial_state(workflow_name, request)
-    context = await _initial_context(request)
+    state = ResearchState(
+        messages=[
+            SystemMessage(content=f"Starting {workflow_name} workflow."),
+            HumanMessage(content=f"Please process the topic: {request.topic}"),
+        ],
+        topic=request.topic,
+        research_notes=[],
+        experiments=[],
+        code_context=[],
+        sources=[],
+        report="",
+        zettelkasten_notes=[],
+        reasoning=[],
+        key_insights=[],
+    )
+
+    vault = await asyncio.to_thread(resolve_vault, request)
+
+    context = ResearchContext(vault=vault)
 
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer)
-        with workspace_scope(build_workspace_session(context.vault)):
+
+        with workspace_scope(
+            build_workspace_session(
+                asset_backend=get_filesystem_backend(),
+                vault=context.vault,
+            )
+        ):
             result: dict[str, object] = await graph.ainvoke(
                 input=state, config=config, context=context
             )

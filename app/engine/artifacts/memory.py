@@ -15,7 +15,7 @@ def _timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _yaml_double_quoted(value: str) -> str:
+def yaml_double_quoted(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     escaped = escaped.replace("\n", " ").replace("\r", " ")
     return f'"{escaped}"'
@@ -53,14 +53,14 @@ class MarkdownMemoryStore:
         body = "\n".join(
             [
                 "---",
-                f"topic: {_yaml_double_quoted(topic)}",
+                f"topic: {yaml_double_quoted(topic)}",
                 f"created_at: {_timestamp()}",
                 "type: research_run",
                 f"notes_count: {len(notes)}",
                 f"source_count: {len(sources)}",
                 f"insight_count: {len(insights)}",
                 f"reasoning_count: {len(reasoning)}",
-                f"report_path: {_yaml_double_quoted(report_path_str)}",
+                f"report_path: {yaml_double_quoted(report_path_str)}",
                 "---",
                 "",
                 "# Key Insights",

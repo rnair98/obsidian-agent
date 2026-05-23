@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ProviderStrategy
@@ -35,8 +35,8 @@ class AgentRunResult(TypedDict, total=False):
     zettelkasten_notes: list[dict[str, object]]
 
 
-def _extract_messages(result: Mapping[str, object]) -> list[AnyMessage]:
-    messages = result.get("messages")
+def _extract_messages(result: dict[str, Any]) -> list[AnyMessage]:
+    messages = result.get("messages", [])
     if not isinstance(messages, list):
         raise TypeError("Agent result did not include a list of messages")
     if not all(isinstance(m, BaseMessage) for m in messages):
@@ -125,7 +125,7 @@ async def run_agent_executor(
     streaming = bool(settings.llm and settings.llm.streaming)
 
     if not streaming:
-        result = await agent_executor.ainvoke(
+        result: dict[str, Any] = await agent_executor.ainvoke(
             input=state, context=runtime_context, config=config
         )
         return {

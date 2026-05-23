@@ -20,8 +20,6 @@ from app.engine.vaults import VaultLayout
 @pytest.fixture
 def tmp_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     backend = InProcessFilesystemBackend(base_path=tmp_path)
-
-    monkeypatch.setattr("app.engine.nodes.persist.artifacts_backend", lambda: backend)
     monkeypatch.setattr("app.core.settings.settings.MEMORIES_DIR", Path("memories"))
     monkeypatch.setattr("app.core.settings.settings.OUTPUT_DIR", Path("outputs"))
     monkeypatch.setattr("app.core.settings.settings.VAULT_DIR", Path("vault"))
@@ -51,7 +49,17 @@ def _state() -> ResearchState:
 
 
 def test_persist_writes_sources_and_memory(tmp_backend) -> None:
-    result = persist_artifacts(_state())
+    backend = tmp_backend
+    context = ResearchContext(
+        vault=VaultLayout(
+            backend=backend,
+            root=Path("."),
+            notes_dir=Path("notes"),
+            outputs_dir=Path("outputs"),
+            memories_dir=Path("memories"),
+        )
+    )
+    result = persist_artifacts(_state(), context)
 
     # persist_artifacts is a side-effect node — it returns an empty delta
     # so LangGraph doesn't re-checkpoint the entire state every run.
@@ -70,11 +78,21 @@ def test_persist_writes_sources_and_memory(tmp_backend) -> None:
 
 
 def test_persist_materializes_report_and_zettelkasten_notes(tmp_backend) -> None:
-    result = persist_artifacts(_state())
+    backend = tmp_backend
+    context = ResearchContext(
+        vault=VaultLayout(
+            backend=backend,
+            root=Path("."),
+            notes_dir=Path("notes"),
+            outputs_dir=Path("outputs"),
+            memories_dir=Path("memories"),
+        )
+    )
+    result = persist_artifacts(_state(), context)
 
     assert result == {}
     assert tmp_backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
-    note_body = tmp_backend.read_text("vault/notes/typed-workspace.md")
+    note_body = tmp_backend.read_text("notes/typed-workspace.md")
     assert 'title: "Typed workspace"' in note_body
     assert 'tags: ["workspace", "agent"]' in note_body
     assert "The shell writes ordinary files." in note_body
@@ -103,10 +121,20 @@ def test_persist_materializes_artifacts_inside_runtime_vault(tmp_path: Path) -> 
 
 
 def test_persist_escapes_topic_quotes_in_frontmatter(tmp_backend) -> None:
+    backend = tmp_backend
+    context = ResearchContext(
+        vault=VaultLayout(
+            backend=backend,
+            root=Path("."),
+            notes_dir=Path("notes"),
+            outputs_dir=Path("outputs"),
+            memories_dir=Path("memories"),
+        )
+    )
     state = _state()
     state["topic"] = 'risky "topic" with \\ backslash'
 
-    persist_artifacts(state)
+    persist_artifacts(state, context)
 
     memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
     body = memory_files[0].read_text()
@@ -114,8 +142,18 @@ def test_persist_escapes_topic_quotes_in_frontmatter(tmp_backend) -> None:
 
 
 def test_persist_does_not_overwrite_same_second_runs(tmp_backend) -> None:
-    persist_artifacts(_state())
-    persist_artifacts(_state())
+    backend = tmp_backend
+    context = ResearchContext(
+        vault=VaultLayout(
+            backend=backend,
+            root=Path("."),
+            notes_dir=Path("notes"),
+            outputs_dir=Path("outputs"),
+            memories_dir=Path("memories"),
+        )
+    )
+    persist_artifacts(_state(), context)
+    persist_artifacts(_state(), context)
 
     memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
     assert len(memory_files) == 2

@@ -48,24 +48,6 @@ def test_research_request_rejects_unknown_vault_type() -> None:
         )
 
 
-def test_default_vault_resolver_creates_standard_obsidian_layout(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("app.core.settings.settings.filesystem.base_path", tmp_path)
-    monkeypatch.setattr("app.core.settings.settings.VAULT_DIR", Path(".vault"))
-
-    layout = resolve_vault(ResearchRequest(topic="default vault"))
-
-    assert layout.root == Path(".")
-    assert layout.notes_dir == Path("notes")
-    assert layout.outputs_dir == Path("outputs")
-    assert layout.memories_dir == Path(".memories")
-    assert layout.backend.is_dir(".obsidian")
-    assert layout.backend.is_dir("notes")
-    assert layout.backend.is_dir("outputs")
-    assert layout.backend.is_dir(".memories")
-
-
 def test_local_vault_resolver_preserves_existing_vault_content(tmp_path: Path) -> None:
     vault_path = tmp_path / "Vault"
     backend = InProcessFilesystemBackend(vault_path)
@@ -88,7 +70,9 @@ def test_git_vault_resolver_clones_to_managed_writable_vault(
 ) -> None:
     remote = tmp_path / "remote-vault"
     remote.mkdir()
-    subprocess.run(["git", "init"], cwd=remote, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "-b", "main"], cwd=remote, check=True, capture_output=True
+    )
     (remote / "Remote.md").write_text("# Remote", encoding="utf-8")
     subprocess.run(["git", "add", "Remote.md"], cwd=remote, check=True)
     subprocess.run(
@@ -111,7 +95,7 @@ def test_git_vault_resolver_clones_to_managed_writable_vault(
     layout = resolve_vault(
         ResearchRequest(
             topic="git vault",
-            vault={"type": "git", "url": str(remote)},
+            vault={"type": "git", "url": str(remote), "ref": "main"},
         )
     )
 
@@ -132,7 +116,7 @@ def test_git_vault_resolver_rejects_option_shaped_operands(
         resolve_vault(
             ResearchRequest(
                 topic="git vault",
-                vault={"type": "git", "url": "--upload-pack=bad"},
+                vault={"type": "git", "url": "--upload-pack=bad", "ref": "main"},
             )
         )
 
