@@ -1,0 +1,54 @@
+app/engine/nodes/builders/agent.py
+  s_34c16f3d12b409::t_a92d8e553098c8 68
+app/engine/nodes/persist.py
+  s_34c16f3d12b409::t_a92d8e553098c8 1-2,8-10,62,69
+tests/harness/test_harness_wiring.py
+  s_34c16f3d12b409::t_ce6be383eb5fac 29-30,59,64
+app/core/settings.py
+  s_1407d232701b59::t_751eef481067ba 18
+  s_34c16f3d12b409::t_a92d8e553098c8 86-87
+app/engine/schema.py
+  s_34c16f3d12b409::t_a92d8e553098c8 11,47
+app/engine/agents/spec.py
+  s_34c16f3d12b409::t_a92d8e553098c8 9,21
+tests/engine/test_vaults.py
+  s_34c16f3d12b409::t_c7563ef0a95c05 44-57
+ARCHITECTURE.md
+  s_34c16f3d12b409::t_9511d2c48dd5be 23-24,146,316,324-325,330,622
+README.md
+  s_34c16f3d12b409::t_63ce471e37b8a7 38,56-57
+tests/nodes/test_persist.py
+  s_34c16f3d12b409::t_174b4396bec1ab 13,52-55,67,96,118,142,160-161
+tests/engine/agents/test_structured_delta.py
+  s_34c16f3d12b409::t_ce6be383eb5fac 3-4,7-12
+app/engine/vaults.py
+  s_34c16f3d12b409::t_a92d8e553098c8 90,95,100-101
+app/engine/executor.py
+  s_34c16f3d12b409::t_a92d8e553098c8 24,76
+tests/engine/agents/test_spec.py
+  s_34c16f3d12b409::t_c5606524a6bd8e 54-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "e57c23869ee12d7d5aaa40058dd3b2c1da5f6be3",
+  "prompts": {},
+  "sessions": {
+    "s_1407d232701b59": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "957855c7-27e0-4080-b059-5cd4b09ce0a1",
+        "model": "gpt-5-mini"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_34c16f3d12b409": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e5609-ec68-7a21-8d4b-c765fb587088",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
