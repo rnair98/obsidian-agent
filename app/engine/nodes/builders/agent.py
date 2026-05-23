@@ -65,7 +65,7 @@ class AgentRunResult(TypedDict, total=False):
 
 
 def _extract_messages(result: Mapping[str, object]) -> list[AnyMessage]:
-    messages = result.get("messages", [])
+    messages = result.get("messages")
     if not isinstance(messages, list):
         raise TypeError("Agent result did not include a list of messages")
     message_values = cast("list[object]", messages)

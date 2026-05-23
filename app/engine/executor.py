@@ -21,7 +21,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.core.logger import logger
 from app.core.settings import settings
-from app.engine.backends import get_filesystem_backend
+from app.engine.backends import assets_backend
 from app.engine.nodes.types import WorkflowName
 from app.engine.registry import get_workflow
 from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
@@ -73,7 +73,7 @@ async def execute(
 
         with workspace_scope(
             build_workspace_session(
-                asset_backend=get_filesystem_backend(),
+                asset_backend=assets_backend(),
                 vault=context.vault,
             )
         ):

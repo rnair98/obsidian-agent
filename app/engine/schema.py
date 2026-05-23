@@ -8,7 +8,7 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph.message import (  # pyright: ignore[reportMissingTypeStubs]
     add_messages,
 )
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 if TYPE_CHECKING:
     from app.engine.vaults import VaultLayout
@@ -44,7 +44,7 @@ class GitVaultRequest(BaseModel):
 
     type: Literal["git"]
     url: str = Field(..., min_length=1)
-    ref: str
+    ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 VaultRequest = Annotated[

@@ -87,17 +87,18 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
             _run_git(["clone", "--", spec.url, str(cache_path)])
         else:
             _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
-        if spec.ref:
-            _run_git(["-C", str(cache_path), "checkout", spec.ref])
+        _run_git(["-C", str(cache_path), "checkout", spec.ref])
     return _local_vault(cache_path)
 
 
 def _cache_key(spec: GitVaultRequest) -> str:
-    raw = f"{spec.url}\0{spec.ref or ''}".encode()
+    raw = f"{spec.url}\0{spec.ref}".encode()
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
 def _validate_git_operand(name: str, value: str) -> None:
+    if not value.strip():
+        raise VaultResolutionError(f"git vault {name} must not be empty")
     if value.startswith("-"):
         raise VaultResolutionError(f"git vault {name} must not start with '-'")
 

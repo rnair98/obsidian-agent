@@ -10,6 +10,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
+from langgraph.runtime import Runtime
 
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.nodes.persist import persist_artifacts
@@ -48,6 +49,10 @@ def _state() -> ResearchState:
     )
 
 
+def _runtime(context: ResearchContext) -> Runtime[ResearchContext]:
+    return Runtime(context=context)
+
+
 def test_persist_writes_sources_and_memory(tmp_backend) -> None:
     backend = tmp_backend
     context = ResearchContext(
@@ -59,7 +64,7 @@ def test_persist_writes_sources_and_memory(tmp_backend) -> None:
             memories_dir=Path("memories"),
         )
     )
-    result = persist_artifacts(_state(), context)
+    result = persist_artifacts(_state(), _runtime(context))
 
     # persist_artifacts is a side-effect node — it returns an empty delta
     # so LangGraph doesn't re-checkpoint the entire state every run.
@@ -88,7 +93,7 @@ def test_persist_materializes_report_and_zettelkasten_notes(tmp_backend) -> None
             memories_dir=Path("memories"),
         )
     )
-    result = persist_artifacts(_state(), context)
+    result = persist_artifacts(_state(), _runtime(context))
 
     assert result == {}
     assert tmp_backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
@@ -110,7 +115,7 @@ def test_persist_materializes_artifacts_inside_runtime_vault(tmp_path: Path) -> 
         )
     )
 
-    result = persist_artifacts(_state(), context=context)
+    result = persist_artifacts(_state(), _runtime(context))
 
     assert result == {}
     assert backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
@@ -134,7 +139,7 @@ def test_persist_escapes_topic_quotes_in_frontmatter(tmp_backend) -> None:
     state = _state()
     state["topic"] = 'risky "topic" with \\ backslash'
 
-    persist_artifacts(state, context)
+    persist_artifacts(state, _runtime(context))
 
     memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
     body = memory_files[0].read_text()
@@ -152,8 +157,8 @@ def test_persist_does_not_overwrite_same_second_runs(tmp_backend) -> None:
             memories_dir=Path("memories"),
         )
     )
-    persist_artifacts(_state(), context)
-    persist_artifacts(_state(), context)
+    persist_artifacts(_state(), _runtime(context))
+    persist_artifacts(_state(), _runtime(context))
 
     memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
     assert len(memory_files) == 2

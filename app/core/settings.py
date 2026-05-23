@@ -15,12 +15,11 @@ from app.core.paths import (
     DEFAULT_OUTPUT_DIR,
     DEFAULT_VAULT_DIR,
 )
+from app.engine.agents.types import AgentName
 from app.engine.backends.factory import FilesystemBackendType
 
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
-
-type AgentName = Literal["researcher", "summarizer", "zettelkasten"]
 
 
 class GithubConfig(BaseModel):
@@ -84,6 +83,8 @@ class AgentsConfig(BaseModel):
                 return self.summarizer
             case "zettelkasten":
                 return self.zettelkasten
+            case _:
+                raise ValueError(f"unknown agent name: {name}")
 
 
 class FilesystemConfig(BaseModel):

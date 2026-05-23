@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from string import Template
 from types import MappingProxyType
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast, get_args
 
 from pydantic import BaseModel
 
@@ -18,9 +18,7 @@ from app.engine.parsing import parse_structured
 T = TypeVar("T", bound=BaseModel)
 
 _EMPTY_OVERRIDES: Mapping[str, Any] = MappingProxyType({})
-_AGENT_NAMES: frozenset[AgentName] = frozenset(
-    ("researcher", "summarizer", "zettelkasten")
-)
+_AGENT_NAMES = frozenset(cast("tuple[AgentName, ...]", get_args(AgentName)))
 
 
 @dataclass(frozen=True, slots=True)

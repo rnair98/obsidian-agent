@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 from app.engine.agents.summarizer import SummarizerOutput
 from app.engine.agents.zettelkasten import ZettelkastenNote, ZettelkastenOutput
-from app.engine.nodes.builders.agent import structured_response_delta
+from app.engine.nodes.builders.agent import _extract_messages, structured_response_delta
+
+
+def test_extract_messages_requires_agent_messages_key() -> None:
+    with pytest.raises(TypeError, match="did not include a list of messages"):
+        _extract_messages({})
 
 
 def test_structured_response_delta_maps_summarizer_output_to_report_state() -> None:

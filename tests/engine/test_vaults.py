@@ -41,6 +41,20 @@ def test_research_request_accepts_git_vault_object() -> None:
     assert request.vault.ref == "main"
 
 
+def test_research_request_rejects_blank_git_ref() -> None:
+    with pytest.raises(ValueError):
+        ResearchRequest.model_validate(
+            {
+                "topic": "remote vault",
+                "vault": {
+                    "type": "git",
+                    "url": "https://github.com/example/vault.git",
+                    "ref": "   ",
+                },
+            }
+        )
+
+
 def test_research_request_rejects_unknown_vault_type() -> None:
     with pytest.raises(ValueError):
         ResearchRequest.model_validate(

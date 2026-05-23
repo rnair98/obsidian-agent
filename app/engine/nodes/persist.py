@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
 from app.engine.artifacts import CsvSourceStore, MarkdownMemoryStore
 from app.engine.artifacts.memory import yaml_double_quoted
 from app.engine.schema import ResearchContext, ResearchState, ZettelNote
 from app.engine.vaults import VaultLayout, ensure_vault_layout
+
+if TYPE_CHECKING:
+    from langgraph.runtime import Runtime
 
 
 def _safe_note_id(note_id: object) -> str:
@@ -54,14 +59,14 @@ def _materialize_zettelkasten_notes(
 
 
 def persist_artifacts(
-    state: ResearchState, context: ResearchContext
+    state: ResearchState, runtime: "Runtime[ResearchContext]"
 ) -> dict[str, object]:
     """Side-effect node: materialize durable run artifacts.
 
     Returns an empty delta — LangGraph merges this with the existing state,
     so there's no need to echo every field back through the checkpointer.
     """
-    layout = ensure_vault_layout(context.vault)
+    layout = ensure_vault_layout(runtime.context.vault)
     backend = layout.backend
     report_path = layout.outputs_dir / "report.md"
     sources_dir = layout.outputs_dir

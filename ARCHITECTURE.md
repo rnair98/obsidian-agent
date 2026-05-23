@@ -20,8 +20,8 @@
 over FastAPI. A client POSTs a research topic; a sequence of LLM agents
 (Researcher → Summarizer → Zettelkasten → Persist) produces a markdown report,
 atomic Zettel notes, a Polars CSV of sources, and durable memory files that
-seed future runs. Each request may provide a local or Git-backed Obsidian vault
-as the workspace base; otherwise a managed `.vault/` is created. Each run also
+seed future runs. Each request must provide a local or Git-backed Obsidian vault
+as the workspace base. Each run also
 installs a typed agent workspace harness that surfaces a constrained shell-like
 tool backed by virtual workspace mounts; durable research memories are mounted
 at `/memory` for Unix-style archaeology.
@@ -143,7 +143,7 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
              ┌─────────────────────────────────────────────┐
              │  executor.execute(workflow_name, request)   │
              │  • AsyncPostgresSaver checkpointer          │
-             │  • resolve request vault or managed .vault │
+             │  • resolve required request vault          │
              │  • mount vault at /vault, cwd=/vault       │
              │  • build initial ResearchState + Context    │
              │  • get_workflow(name, checkpointer)         │
@@ -276,7 +276,6 @@ app/
 
 | Dir | Owner | Contents |
 |---|---|---|
-| `.vault/` | executor/workspace | Default managed Obsidian vault when request omits `vault` |
 | `<vault>/notes/` | persist node | Atomic markdown notes (`{slug}.md`) |
 | `<vault>/.memories/` | persist node + workspace mount | Frontmatter-rich run logs; mounted at `/memory` |
 | `<vault>/outputs/` | persist node + workspace mount | `report.md`, `sources.csv` (Polars) |
@@ -314,7 +313,7 @@ are *not* carried in state.
 ### `ResearchContext` (frozen dataclass)
 
 Immutable per-run config surfaced into nodes via `Runtime[ResearchContext]`.
-It currently carries `vault: object | None`, populated by
+It currently carries `vault: VaultLayout`, populated by
 `executor._initial_context()` with the resolved `VaultLayout` for artifact
 materialization and workspace mount assembly. **Never mutate.** If a node needs
 runtime context, add the field at the executor/request boundary and document
@@ -322,13 +321,13 @@ the consumer.
 
 ### `ResearchRequest` (Pydantic, `extra="forbid"`)
 
-HTTP request body. Strict: unknown fields raise 422. Fields: `topic` (≥3
-chars) and optional `vault`.
+HTTP request body. Strict: unknown fields raise 422. Fields: `topic` (>=3
+chars) and required `vault`.
 
 `vault={"type":"local","path":"/path/to/Vault"}` uses or creates a local
 Obsidian vault. `vault={"type":"git","url":"https://...","ref":"main"}`
 clones/fetches a remote vault into `.vaults/<hash>/` for local read-write use;
-this code does not commit or push.
+`ref` is required and must be non-blank. This code does not commit or push.
 
 ### `FilesystemBackend` (Protocol)
 
@@ -620,7 +619,7 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
 | `tests/test_settings.py` | `FilesystemConfig.backend_type` defaults to a supported enum value |
 | `tests/test_imports.py` | Import-chain smoke: `app.main` loads, registry populates, tools importable |
 | `tests/engine/test_artifacts.py` | `MarkdownMemoryStore`, `CsvSourceStore` formatting and write behavior |
-| `tests/engine/test_vaults.py` | default/local/Git vault request resolution and standard vault layout |
+| `tests/engine/test_vaults.py` | local/Git vault request resolution and standard vault layout |
 | `tests/engine/test_obsidian.py` | `ObsidianVaultOperations` list/read/create/append/search/tags/backlinks/properties + symlink-cycle guard |
 | `tests/engine/test_parsing.py` | `parse_structured` recovery stages (strict → fence strip → balanced extract → `json_repair`) |
 | `tests/engine/test_curl_command.py` | `CurlCommand` URL → Jina Reader translation and unsupported-flag handling |

@@ -26,6 +26,8 @@ def test_researcher_spec_exposes_shell_tool() -> None:
 async def test_executor_installs_workspace_scope(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    assets_marker = object()
+
     class FakeGraph:
         async def ainvoke(
             self,
@@ -54,10 +56,12 @@ async def test_executor_installs_workspace_scope(
         return fake_layout
 
     monkeypatch.setattr("app.engine.executor.resolve_vault", fake_resolve_vault)
+    monkeypatch.setattr("app.engine.executor.assets_backend", lambda: assets_marker)
 
     def fake_workspace_session(
         asset_backend: object, vault: object
     ) -> WorkspaceSession:
+        assert asset_backend is assets_marker
         return WorkspaceSession.scratch()
 
     monkeypatch.setattr(
