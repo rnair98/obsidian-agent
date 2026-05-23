@@ -12,6 +12,9 @@ llm:
   model_kwargs:
     parallel_tool_calls: true
     tool_choice: auto
+    context_management:
+      - type: compaction
+        compact_threshold: 100000
 
 agents:
   researcher:
