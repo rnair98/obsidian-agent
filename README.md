@@ -35,7 +35,7 @@ just run                                  # uvicorn with --reload
 # Fire a research run
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
   -H "Content-Type: application/json" \
-  -d '{"topic": "emerging patterns in retrieval-augmented generation"}'
+  -d '{"topic":"emerging patterns in retrieval-augmented generation","vault":{"type":"local","path":"/path/to/Vault"}}'
 
 # Use a local Obsidian vault as the workspace base
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
@@ -53,9 +53,8 @@ Registered workflows: `research` (full pipeline), `researcher`,
 
 ## What gets produced
 
-Paths below are **vault-relative**. When the request omits a vault the
-managed `.vault/` directory is used; when `vault.type=local|git` is supplied
-the same layout is written under the selected vault root
+Paths below are **vault-relative**. Every request must provide
+`vault.type=local|git`; the layout is written under the selected vault root
 (`{vault_root}/outputs/...`, `{vault_root}/notes/...`,
 `{vault_root}/.memories/...`).
 

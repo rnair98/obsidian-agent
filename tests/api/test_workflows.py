@@ -61,7 +61,11 @@ def test_inaccessible_git_vault_returns_400() -> None:
         "/api/v1/workflows/run/research",
         json={
             "topic": "bad git vault",
-            "vault": {"type": "git", "url": "/definitely/not/a/git/repo"},
+            "vault": {
+                "type": "git",
+                "url": "/definitely/not/a/git/repo",
+                "ref": "main",
+            },
         },
     )
 

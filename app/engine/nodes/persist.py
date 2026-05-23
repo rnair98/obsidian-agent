@@ -1,9 +1,12 @@
-from app.core.settings import settings
+from typing import TYPE_CHECKING
+
 from app.engine.artifacts import CsvSourceStore, MarkdownMemoryStore
-from app.engine.artifacts.memory import _yaml_double_quoted
-from app.engine.backends import artifacts_backend
-from app.engine.schema import ResearchContext, ResearchState
-from app.engine.vaults import VaultLayout
+from app.engine.artifacts.memory import yaml_double_quoted
+from app.engine.schema import ResearchContext, ResearchState, ZettelNote
+from app.engine.vaults import VaultLayout, ensure_vault_layout
+
+if TYPE_CHECKING:
+    from langgraph.runtime import Runtime
 
 
 def _safe_note_id(note_id: object) -> str:
@@ -15,19 +18,18 @@ def _safe_note_id(note_id: object) -> str:
     return cleaned or "untitled"
 
 
-def _format_zettelkasten_note(note: dict[str, object]) -> str:
-    title = str(note.get("title") or "")
-    content = str(note.get("content") or "")
+def _format_zettelkasten_note(note: ZettelNote) -> str:
+    title = note.get("title")
+    content = note.get("content", "")
     tags = note.get("tags")
-    tag_values = [str(tag) for tag in tags] if isinstance(tags, list) else []
 
-    if not title and not tag_values:
+    if not title and not tags:
         return content
     lines = ["---"]
     if title:
-        lines.append(f"title: {_yaml_double_quoted(title)}")
-    if tag_values:
-        rendered_tags = ", ".join(_yaml_double_quoted(tag) for tag in tag_values)
+        lines.append(f"title: {yaml_double_quoted(title)}")
+    if tags:
+        rendered_tags = ", ".join(yaml_double_quoted(tag) for tag in tags)
         lines.append(f"tags: [{rendered_tags}]")
     lines.extend(["---", "", content])
     return "\n".join(lines)
@@ -35,10 +37,10 @@ def _format_zettelkasten_note(note: dict[str, object]) -> str:
 
 def _materialize_zettelkasten_notes(
     state: ResearchState,
-    layout: VaultLayout | None,
+    layout: VaultLayout,
 ) -> None:
-    backend = layout.backend if layout is not None else artifacts_backend()
-    notes_dir = layout.notes_dir if layout is not None else settings.VAULT_DIR / "notes"
+    backend = layout.backend
+    notes_dir = layout.notes_dir
     backend.mkdir(notes_dir)
     seen_ids: set[str] = set()
     for note in state["zettelkasten_notes"]:
@@ -57,36 +59,20 @@ def _materialize_zettelkasten_notes(
 
 
 def persist_artifacts(
-    state: ResearchState,
-    runtime: object | None = None,
-    context: ResearchContext | None = None,
-) -> dict:
+    state: ResearchState, runtime: "Runtime[ResearchContext]"
+) -> dict[str, object]:
     """Side-effect node: materialize durable run artifacts.
 
     Returns an empty delta — LangGraph merges this with the existing state,
     so there's no need to echo every field back through the checkpointer.
     """
-    effective_context = context or getattr(runtime, "context", None)
-    layout = effective_context.vault if effective_context is not None else None
-    backend = layout.backend if isinstance(layout, VaultLayout) else artifacts_backend()
-    report_path = (
-        layout.outputs_dir / "report.md"
-        if isinstance(layout, VaultLayout)
-        else settings.OUTPUT_DIR / "report.md"
-    )
-    sources_dir = (
-        layout.outputs_dir if isinstance(layout, VaultLayout) else settings.OUTPUT_DIR
-    )
-    memories_dir = (
-        layout.memories_dir
-        if isinstance(layout, VaultLayout)
-        else settings.MEMORIES_DIR
-    )
+    layout = ensure_vault_layout(runtime.context.vault)
+    backend = layout.backend
+    report_path = layout.outputs_dir / "report.md"
+    sources_dir = layout.outputs_dir
+    memories_dir = layout.memories_dir
     backend.write_text(report_path, state["report"], encoding="utf-8")
-    _materialize_zettelkasten_notes(
-        state,
-        layout if isinstance(layout, VaultLayout) else None,
-    )
+    _materialize_zettelkasten_notes(state, layout)
     CsvSourceStore(backend, sources_dir).write(state["sources"])
     MarkdownMemoryStore(backend, memories_dir).write_run(
         topic=state["topic"],

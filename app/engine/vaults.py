@@ -45,13 +45,10 @@ class VaultLayout:
 
 def resolve_vault(request: ResearchRequest) -> VaultLayout:
     spec = request.vault
-    if spec is None:
-        return _default_vault()
     if isinstance(spec, LocalVaultRequest):
         return _local_vault(spec.path)
-    if isinstance(spec, GitVaultRequest):
-        return _git_vault(spec)
-    raise TypeError(f"unsupported vault request: {type(spec)!r}")
+
+    return _git_vault(spec)
 
 
 def ensure_vault_layout(layout: VaultLayout) -> VaultLayout:
@@ -63,22 +60,6 @@ def ensure_vault_layout(layout: VaultLayout) -> VaultLayout:
     ):
         layout.backend.mkdir(directory)
     return layout
-
-
-def _default_vault() -> VaultLayout:
-    base_path = settings.filesystem.base_path / settings.VAULT_DIR
-    return ensure_vault_layout(
-        VaultLayout(
-            backend=get_filesystem_backend(
-                backend_type=settings.filesystem.backend_type,
-                base_path=base_path,
-            ),
-            root=Path("."),
-            notes_dir=Path("notes"),
-            outputs_dir=Path("outputs"),
-            memories_dir=Path(".memories"),
-        )
-    )
 
 
 def _local_vault(path: Path) -> VaultLayout:
@@ -95,8 +76,7 @@ def _local_vault(path: Path) -> VaultLayout:
 
 def _git_vault(spec: GitVaultRequest) -> VaultLayout:
     _validate_git_operand("url", spec.url)
-    if spec.ref is not None:
-        _validate_git_operand("ref", spec.ref)
+    _validate_git_operand("ref", spec.ref)
     cache_key = _cache_key(spec)
     cache_path = settings.filesystem.base_path / MANAGED_GIT_VAULTS_DIR / cache_key
     # Serialize clone/fetch on the same cache path so concurrent requests
@@ -106,21 +86,19 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             _run_git(["clone", "--", spec.url, str(cache_path)])
         else:
-            if spec.ref is None:
-                _run_git(["-C", str(cache_path), "pull", "--ff-only"])
-            else:
-                _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
-        if spec.ref:
-            _run_git(["-C", str(cache_path), "checkout", "--", spec.ref])
+            _run_git(["-C", str(cache_path), "fetch", "--all", "--prune"])
+        _run_git(["-C", str(cache_path), "checkout", spec.ref])
     return _local_vault(cache_path)
 
 
 def _cache_key(spec: GitVaultRequest) -> str:
-    raw = f"{spec.url}\0{spec.ref or ''}".encode()
+    raw = f"{spec.url}\0{spec.ref}".encode()
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
 def _validate_git_operand(name: str, value: str) -> None:
+    if not value.strip():
+        raise VaultResolutionError(f"git vault {name} must not be empty")
     if value.startswith("-"):
         raise VaultResolutionError(f"git vault {name} must not start with '-'")
 

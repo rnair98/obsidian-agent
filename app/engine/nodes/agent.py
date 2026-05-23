@@ -9,7 +9,9 @@ and reused across invocations of the returned coroutine.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from langgraph.types import StreamMode
 
 from app.core.logger import logger
 from app.core.settings import settings
@@ -29,10 +31,10 @@ if TYPE_CHECKING:
 
 
 def make_agent_node(
-    spec: AgentSpec,
+    spec: AgentSpec[Any],
     *,
     log_streams: bool = False,
-    stream_mode: Sequence[str] | None = None,
+    stream_mode: Sequence[StreamMode] | None = None,
 ) -> AgentNode:
     """Create a LangGraph node bound to an :class:`AgentSpec`.
 
@@ -47,7 +49,7 @@ def make_agent_node(
             ``["messages", "updates"]`` when ``log_streams`` is true.
     """
     executor = build_agent_executor_from_spec(spec)
-    effective_modes = (
+    effective_modes: list[StreamMode] | None = (
         list(stream_mode)
         if stream_mode is not None
         else (["messages", "updates"] if log_streams else None)

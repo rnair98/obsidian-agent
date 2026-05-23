@@ -9,7 +9,7 @@ from app.engine.agents.researcher import SPEC as RESEARCHER_SPEC
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.executor import execute
 from app.engine.nodes.types import WorkflowName
-from app.engine.schema import ResearchRequest
+from app.engine.schema import LocalVaultRequest, ResearchRequest
 from app.engine.tools.shell import run_shell_command
 from app.engine.vaults import VaultLayout
 from app.engine.workspace import build_workspace_session
@@ -26,6 +26,8 @@ def test_researcher_spec_exposes_shell_tool() -> None:
 async def test_executor_installs_workspace_scope(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    assets_marker = object()
+
     class FakeGraph:
         async def ainvoke(
             self,
@@ -40,35 +42,61 @@ async def test_executor_installs_workspace_scope(
         return FakeGraph()
 
     monkeypatch.setattr("app.engine.executor.get_workflow", fake_get_workflow)
-    monkeypatch.setattr("app.engine.executor.resolve_vault", lambda request: None)
 
-    def fake_workspace_session(vault: object = None) -> WorkspaceSession:
+    fake_layout = VaultLayout(
+        backend=InProcessFilesystemBackend(base_path=Path("/")),
+        root=Path("."),
+        notes_dir=Path("notes"),
+        outputs_dir=Path("outputs"),
+        memories_dir=Path(".memories"),
+    )
+
+    def fake_resolve_vault(request: ResearchRequest) -> VaultLayout:
+        _ = request
+        return fake_layout
+
+    monkeypatch.setattr("app.engine.executor.resolve_vault", fake_resolve_vault)
+    monkeypatch.setattr("app.engine.executor.assets_backend", lambda: assets_marker)
+
+    def fake_workspace_session(
+        asset_backend: object, vault: object
+    ) -> WorkspaceSession:
+        assert asset_backend is assets_marker
         return WorkspaceSession.scratch()
 
     monkeypatch.setattr(
-        "app.engine.executor.build_workspace_session",
-        fake_workspace_session,
+        "app.engine.executor.build_workspace_session", fake_workspace_session
     )
 
     result: dict[str, Any] = await execute(
         WorkflowName.RESEARCH,
-        ResearchRequest(topic="typed workspace harness"),
+        ResearchRequest(
+            topic="typed workspace harness",
+            vault=LocalVaultRequest(type="local", path=Path("/tmp/vault")),
+        ),
     )
 
     assert result["pwd"] == "/workspace\n"
 
 
 def test_workspace_memory_mount_uses_artifact_memories(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
     backend.write_text("memories/prior.md", "settled fact\n")
 
-    monkeypatch.setattr("app.engine.workspace.artifacts_backend", lambda: backend)
     monkeypatch.setattr("app.core.settings.settings.MEMORIES_DIR", Path("memories"))
     monkeypatch.setattr("app.core.settings.settings.VAULT_DIR", Path("vault"))
 
-    session = build_workspace_session()
+    layout = VaultLayout(
+        backend=backend,
+        root=Path("."),
+        notes_dir=Path("notes"),
+        outputs_dir=Path("outputs"),
+        memories_dir=Path("memories"),
+    )
+
+    session = build_workspace_session(asset_backend=backend, vault=layout)
 
     assert session.run("ls /memory").stdout == "prior.md\n"
     assert session.run("grep settled /memory/prior.md").stdout == "settled fact\n"
@@ -77,22 +105,29 @@ def test_workspace_memory_mount_uses_artifact_memories(
 
 
 def test_workspace_mounts_outputs_and_vault_as_writable_artifacts(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
 
-    monkeypatch.setattr("app.engine.workspace.artifacts_backend", lambda: backend)
     monkeypatch.setattr("app.core.settings.settings.MEMORIES_DIR", Path("memories"))
     monkeypatch.setattr("app.core.settings.settings.OUTPUT_DIR", Path("outputs"))
     monkeypatch.setattr("app.core.settings.settings.VAULT_DIR", Path("vault"))
 
-    session = build_workspace_session()
+    layout = VaultLayout(
+        backend=backend,
+        root=Path("."),
+        notes_dir=Path("notes"),
+        outputs_dir=Path("outputs"),
+        memories_dir=Path("memories"),
+    )
+
+    session = build_workspace_session(asset_backend=backend, vault=layout)
 
     assert session.run('write /outputs/report.md -- "# Report"').exit_code == 0
     note_result = session.run('write /vault/note.md -- "---\ntitle: Note\n---\nBody"')
     assert note_result.exit_code == 0
     assert backend.read_text("outputs/report.md") == "# Report"
-    assert backend.read_text("vault/note.md") == "---\ntitle: Note\n---\nBody"
+    assert backend.read_text("note.md") == "---\ntitle: Note\n---\nBody"
 
 
 def test_workspace_uses_resolved_vault_as_cwd_and_artifact_base(tmp_path: Path) -> None:
@@ -105,7 +140,7 @@ def test_workspace_uses_resolved_vault_as_cwd_and_artifact_base(tmp_path: Path) 
         memories_dir=Path(".memories"),
     )
 
-    session = build_workspace_session(layout)
+    session = build_workspace_session(asset_backend=backend, vault=layout)
 
     assert session.run("pwd").stdout == "/vault\n"
     assert session.run("write note.md hello").exit_code == 0
@@ -117,13 +152,14 @@ def test_workspace_uses_resolved_vault_as_cwd_and_artifact_base(tmp_path: Path) 
 def test_workspace_registers_runtime_command_specs(tmp_path: Path) -> None:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
     session = build_workspace_session(
-        VaultLayout(
+        asset_backend=backend,
+        vault=VaultLayout(
             backend=backend,
             root=Path("."),
             notes_dir=Path("notes"),
             outputs_dir=Path("outputs"),
             memories_dir=Path(".memories"),
-        )
+        ),
     )
 
     help_text = session.run("help").stdout

@@ -15,7 +15,11 @@ from app.core.paths import (
     DEFAULT_OUTPUT_DIR,
     DEFAULT_VAULT_DIR,
 )
+from app.engine.agents.types import AgentName
 from app.engine.backends.factory import FilesystemBackendType
+
+type JsonScalar = str | int | float | bool | None
+type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 
 class GithubConfig(BaseModel):
@@ -51,7 +55,7 @@ class LLMConfig(BaseModel):
     stream_usage: bool = False
     timeout: int | None = None
     temperature: float = 1.0
-    model_kwargs: dict = Field(default_factory=dict)
+    model_kwargs: dict[str, JsonValue] = Field(default_factory=dict)
     api_key: str | None = None
     model_config = ConfigDict(extra="allow")
 
@@ -70,6 +74,17 @@ class AgentsConfig(BaseModel):
     researcher: AgentPromptConfig
     summarizer: AgentPromptConfig
     zettelkasten: AgentPromptConfig
+
+    def prompt_for(self, name: AgentName) -> AgentPromptConfig:
+        match name:
+            case "researcher":
+                return self.researcher
+            case "summarizer":
+                return self.summarizer
+            case "zettelkasten":
+                return self.zettelkasten
+            case _:
+                raise ValueError(f"unknown agent name: {name}")
 
 
 class FilesystemConfig(BaseModel):
