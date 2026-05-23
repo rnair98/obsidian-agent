@@ -1,0 +1,40 @@
+app/engine/artifacts/memory.py
+  s_b2786f7953a454::t_b1081a45ccc087 18,56,63
+tests/engine/test_vaults.py
+  s_b2786f7953a454::t_b1081a45ccc087 73-75,98,119
+app/engine/workspace.py
+  s_b2786f7953a454::t_b1081a45ccc087 6,14-17,19-23,43
+tests/api/test_workflows.py
+  s_b2786f7953a454::t_b1081a45ccc087 64-68
+app/engine/schema.py
+  s_b2786f7953a454::t_b1081a45ccc087 5,11-13,17,28,45,58-65
+app/engine/executor.py
+  s_b2786f7953a454::t_b1081a45ccc087 51-69,73-79
+  ai_agent 24
+app/engine/nodes/persist.py
+  s_b2786f7953a454::t_b1081a45ccc087 2-4,16-18,21,25-27,35,37-38,57-58,64-68,70
+tests/harness/test_harness_wiring.py
+  s_b2786f7953a454::t_b1081a45ccc087 44-57,61,66-69,84-92,109-117,123,136,148-149,155
+tests/nodes/test_persist.py
+  s_b2786f7953a454::t_b1081a45ccc087 52-62,81-91,95,124-133,137,145-156
+app/engine/vaults.py
+  s_b2786f7953a454::t_b1081a45ccc087 51,79,89,91
+app/engine/nodes/builders/agent.py
+  s_b2786f7953a454::t_b1081a45ccc087 4,38-39,128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "dfca4546784989d7b110331d41591d88c9d163d1",
+  "prompts": {},
+  "sessions": {
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
