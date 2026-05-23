@@ -1,0 +1,62 @@
+app/engine/nodes/agent.py
+  s_b2786f7953a454::t_238acda38db8f0 12-14,34,37,52
+app/harness/session.py
+  s_df4fec743bca13::t_b6d953f7677b4a 44-45,48-49,52-53,56-57,60-62,68-72,75-76,79-80,83-84,151,157,172,185,197,210,229,242,258,274
+  s_df4fec743bca13::t_8031656ad74469 4,26,36,39
+  s_df4fec743bca13::t_58afdab9b3395f 46-47,50-51,54-55,58-59,74,77-78,81-82
+  s_df4fec743bca13::t_608b977d67d247 29-30,94
+app/engine/nodes/builders/agent.py
+  s_df4fec743bca13::t_e1344798747c23 23,25,61,64,110-139,231-232,234,237-238,240-246
+  s_b2786f7953a454::t_238acda38db8f0 6-8,13,24,26-47,67,71-72,74,142,149-152,154-158,169-175,184,187-188,190,194,200,206,213,223
+  s_df4fec743bca13::t_608b977d67d247 153
+  s_df4fec743bca13::t_54ab969a553075 3-4,18,20-21,78-109
+app/harness/commands.py
+  s_df4fec743bca13::t_b6d953f7677b4a 27-28
+app/engine/workspace_commands/git.py
+  s_df4fec743bca13::t_8031656ad74469 32
+app/engine/schema.py
+  s_df4fec743bca13::t_e1344798747c23 28,68-74
+  s_df4fec743bca13::t_6ad9cb62299899 8-10
+app/engine/parsing.py
+  s_df4fec743bca13::t_abd7aef740a1b9 82-87
+app/engine/agents/spec.py
+  s_df4fec743bca13::t_8031656ad74469 15,21-23,36,39,42-45
+  s_df4fec743bca13::t_9a85a8b152d2b6 51
+tests/harness/test_harness_wiring.py
+  s_df4fec743bca13::t_9076db87896cc5 12,51-56,71,79,104
+app/core/settings.py
+  s_df4fec743bca13::t_8031656ad74469 20-24,59,79-86
+app/engine/tools/__init__.py
+  s_df4fec743bca13::t_8031656ad74469 1,4,11,13,36
+tests/engine/agents/test_spec.py
+  s_df4fec743bca13::t_b2fd41dc9c7a88 45-53
+  s_df4fec743bca13::t_1bfc931a21fb5a 8,33-40
+app/engine/agents/types.py
+  s_df4fec743bca13::t_58afdab9b3395f 46
+  s_df4fec743bca13::t_b6d953f7677b4a 3,9
+  s_df4fec743bca13::t_8031656ad74469 1-2,4-8,10-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "8149522f02a5cab162de6dd376a6bd0680a4dd81",
+  "prompts": {},
+  "sessions": {
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_df4fec743bca13": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "ba873e28-24c8-4c4a-83d1-7d63b84a7a11",
+        "model": "gpt-5-mini"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
