@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shlex
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 
 from app.harness.commands import (
@@ -23,35 +23,66 @@ from app.harness.policy import PermissionPolicy, PolicyAction
 from app.harness.results import AuditEvent, CommandResult
 
 _UNSUPPORTED_TOKENS = {"|", "&&", "||", ";", ">", "<"}
+type SessionCommandHandler = Callable[["WorkspaceSession", list[str]], CommandResult]
+
+
+def _empty_command_map() -> dict[str, WorkspaceCommand]:
+    return {}
 
 
 @dataclass(frozen=True, slots=True)
 class _SessionCommand:
     spec: CommandSpec
-    method_name: str
+    handler: SessionCommandHandler
 
     def __call__(self, session: "WorkspaceSession", args: list[str]) -> CommandResult:
-        method = getattr(session, self.method_name)
-        return method(args)
+        return self.handler(session, args)
 
 
 _CORE_COMMANDS: tuple[WorkspaceCommand, ...] = (
-    _SessionCommand(CommandSpec(name="pwd", forms=("pwd",)), "_pwd"),
-    _SessionCommand(CommandSpec(name="cd", forms=("cd [path]",)), "_cd"),
-    _SessionCommand(CommandSpec(name="ls", forms=("ls [path]",)), "_ls"),
-    _SessionCommand(CommandSpec(name="cat", forms=("cat path",)), "_cat"),
-    _SessionCommand(CommandSpec(name="mkdir", forms=("mkdir path",)), "_mkdir"),
+    _SessionCommand(
+        CommandSpec(name="pwd", forms=("pwd",)),
+        lambda session, args: session.run_pwd_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="cd", forms=("cd [path]",)),
+        lambda session, args: session.run_cd_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="ls", forms=("ls [path]",)),
+        lambda session, args: session.run_ls_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="cat", forms=("cat path",)),
+        lambda session, args: session.run_cat_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="mkdir", forms=("mkdir path",)),
+        lambda session, args: session.run_mkdir_command(args),
+    ),
     _SessionCommand(
         CommandSpec(
             name="write",
             forms=("write path content", "write path -- content"),
         ),
-        "_write",
+        lambda session, args: session.run_write_command(args),
     ),
-    _SessionCommand(CommandSpec(name="rm", forms=("rm path",)), "_rm"),
-    _SessionCommand(CommandSpec(name="mv", forms=("mv src dst",)), "_mv"),
-    _SessionCommand(CommandSpec(name="cp", forms=("cp src dst",)), "_cp"),
-    _SessionCommand(CommandSpec(name="grep", forms=("grep pattern path",)), "_grep"),
+    _SessionCommand(
+        CommandSpec(name="rm", forms=("rm path",)),
+        lambda session, args: session.run_rm_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="mv", forms=("mv src dst",)),
+        lambda session, args: session.run_mv_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="cp", forms=("cp src dst",)),
+        lambda session, args: session.run_cp_command(args),
+    ),
+    _SessionCommand(
+        CommandSpec(name="grep", forms=("grep pattern path",)),
+        lambda session, args: session.run_grep_command(args),
+    ),
 )
 
 
@@ -60,7 +91,7 @@ class WorkspaceSession:
     backend: CompositeWorkspaceBackend
     policy: PermissionPolicy
     cwd: str = "/workspace"
-    commands: Mapping[str, WorkspaceCommand] = field(default_factory=dict)
+    commands: Mapping[str, WorkspaceCommand] = field(default_factory=_empty_command_map)
 
     @classmethod
     def scratch(cls) -> "WorkspaceSession":
@@ -117,13 +148,13 @@ class WorkspaceSession:
         except (PathEscapeError, WorkspaceBackendError, ValueError) as exc:
             return CommandResult.error(f"{exc}\n")
 
-    def _pwd(self, args: list[str]) -> CommandResult:
+    def run_pwd_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["pwd"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
         return CommandResult.ok(f"{self.cwd}\n")
 
-    def _cd(self, args: list[str]) -> CommandResult:
+    def run_cd_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["cd"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -138,7 +169,7 @@ class WorkspaceSession:
         self.cwd = target
         return CommandResult.ok(events=(event,))
 
-    def _ls(self, args: list[str]) -> CommandResult:
+    def run_ls_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["ls"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -151,7 +182,7 @@ class WorkspaceSession:
         entries = self.backend.list_dir(target)
         return CommandResult.ok(format_entries(entries), events=(event,))
 
-    def _cat(self, args: list[str]) -> CommandResult:
+    def run_cat_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["cat"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -163,7 +194,7 @@ class WorkspaceSession:
             return CommandResult.error("cat: permission denied\n", events=(event,))
         return CommandResult.ok(self.backend.read_text(target), events=(event,))
 
-    def _mkdir(self, args: list[str]) -> CommandResult:
+    def run_mkdir_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["mkdir"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -176,7 +207,7 @@ class WorkspaceSession:
         self.backend.mkdir(target)
         return CommandResult.ok(events=(event,))
 
-    def _write(self, args: list[str]) -> CommandResult:
+    def run_write_command(self, args: list[str]) -> CommandResult:
         if len(args) < 2:
             return CommandResult.error(
                 "write: expected path and content\n", exit_code=2
@@ -195,7 +226,7 @@ class WorkspaceSession:
         self.backend.write_text(target, " ".join(content_args))
         return CommandResult.ok(events=(event,))
 
-    def _rm(self, args: list[str]) -> CommandResult:
+    def run_rm_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["rm"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -208,7 +239,7 @@ class WorkspaceSession:
         self.backend.delete(target)
         return CommandResult.ok(events=(event,))
 
-    def _mv(self, args: list[str]) -> CommandResult:
+    def run_mv_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["mv"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -224,7 +255,7 @@ class WorkspaceSession:
         self.backend.move(src, dst)
         return CommandResult.ok(events=events)
 
-    def _cp(self, args: list[str]) -> CommandResult:
+    def run_cp_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["cp"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)
@@ -240,7 +271,7 @@ class WorkspaceSession:
         self.backend.copy(src, dst)
         return CommandResult.ok(events=events)
 
-    def _grep(self, args: list[str]) -> CommandResult:
+    def run_grep_command(self, args: list[str]) -> CommandResult:
         spec = self.commands["grep"].spec
         if flag := first_flag(args):
             return unsupported_flag(spec, flag)

@@ -79,7 +79,12 @@ def _candidates(raw: str):
         if candidate is None:
             continue
         repaired = repair_json(candidate, return_objects=False)
-        if isinstance(repaired, str) and repaired and repaired != candidate and repaired not in seen:
+        if (
+            isinstance(repaired, str)
+            and repaired
+            and repaired != candidate
+            and repaired not in seen
+        ):
             seen.add(repaired)
             yield stage, repaired
 

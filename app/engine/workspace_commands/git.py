@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 from app.harness.commands import CommandSpec
 from app.harness.results import CommandResult
@@ -30,7 +29,7 @@ class GitCommand:
 
     def __init__(
         self,
-        service_factory: Callable[[str], Any] = _default_service_factory,
+        service_factory: GitHubServiceFactory = _default_service_factory,
     ) -> None:
         self._service_factory = service_factory
 

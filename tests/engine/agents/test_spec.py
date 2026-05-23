@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel
 
+from app.core.settings import AgentPromptConfig, AgentsConfig
 from app.engine.agents.spec import AgentSpec
 
 
@@ -29,15 +30,25 @@ def test_uses_default_prompt_when_yaml_override_absent(
 
 
 def test_yaml_override_wins_over_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Cfg:
-        system_prompt = "yaml override wins"
-
-    class _Agents:
-        researcher = _Cfg()
-
-    monkeypatch.setattr("app.engine.agents.spec.settings.agents", _Agents())
+    monkeypatch.setattr(
+        "app.engine.agents.spec.settings.agents",
+        AgentsConfig(
+            researcher=AgentPromptConfig(system_prompt="yaml override wins"),
+            summarizer=AgentPromptConfig(),
+            zettelkasten=AgentPromptConfig(),
+        ),
+    )
     spec = _make_spec("default body")
     assert spec.system_prompt() == "yaml override wins"
+
+
+def test_rejects_unknown_agent_name() -> None:
+    with pytest.raises(ValueError, match="unknown agent name"):
+        AgentSpec(
+            name="typo",  # type: ignore[arg-type]
+            output_schema=_Out,
+            default_system_prompt="x",
+        )
 
 
 def test_interpolates_output_format_placeholder(

@@ -24,7 +24,8 @@ class CommandSpec:
 
 
 class WorkspaceCommand(Protocol):
-    spec: CommandSpec
+    @property
+    def spec(self) -> CommandSpec: ...
 
     def __call__(
         self,

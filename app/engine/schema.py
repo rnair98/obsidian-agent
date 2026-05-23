@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
 
 from langchain_core.messages import AnyMessage
-from langgraph.graph.message import add_messages
+from langgraph.graph.message import (  # pyright: ignore[reportMissingTypeStubs]
+    add_messages,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
@@ -23,7 +25,7 @@ class ResearchState(TypedDict):
     research_notes: list[str]
     experiments: list[str]
     code_context: list[str]
-    sources: list[dict[str, str]]
+    sources: list["SourceState"]
     report: str
     zettelkasten_notes: list["ZettelNote"]
     reasoning: list[str]
@@ -63,3 +65,10 @@ class ZettelNote(TypedDict):
     title: str
     content: str
     tags: list[str]
+
+
+class SourceState(TypedDict):
+    title: str
+    url: str
+    notes: str
+    score: int

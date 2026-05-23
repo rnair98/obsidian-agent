@@ -9,7 +9,7 @@ from app.engine.agents.researcher import SPEC as RESEARCHER_SPEC
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.executor import execute
 from app.engine.nodes.types import WorkflowName
-from app.engine.schema import ResearchRequest
+from app.engine.schema import LocalVaultRequest, ResearchRequest
 from app.engine.tools.shell import run_shell_command
 from app.engine.vaults import VaultLayout
 from app.engine.workspace import build_workspace_session
@@ -48,9 +48,12 @@ async def test_executor_installs_workspace_scope(
         outputs_dir=Path("outputs"),
         memories_dir=Path(".memories"),
     )
-    monkeypatch.setattr(
-        "app.engine.executor.resolve_vault", lambda request: fake_layout
-    )
+
+    def fake_resolve_vault(request: ResearchRequest) -> VaultLayout:
+        _ = request
+        return fake_layout
+
+    monkeypatch.setattr("app.engine.executor.resolve_vault", fake_resolve_vault)
 
     def fake_workspace_session(
         asset_backend: object, vault: object
@@ -65,7 +68,7 @@ async def test_executor_installs_workspace_scope(
         WorkflowName.RESEARCH,
         ResearchRequest(
             topic="typed workspace harness",
-            vault={"type": "local", "path": Path("/tmp/vault")},
+            vault=LocalVaultRequest(type="local", path=Path("/tmp/vault")),
         ),
     )
 
@@ -73,7 +76,7 @@ async def test_executor_installs_workspace_scope(
 
 
 def test_workspace_memory_mount_uses_artifact_memories(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
     backend.write_text("memories/prior.md", "settled fact\n")
@@ -98,7 +101,7 @@ def test_workspace_memory_mount_uses_artifact_memories(
 
 
 def test_workspace_mounts_outputs_and_vault_as_writable_artifacts(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
 

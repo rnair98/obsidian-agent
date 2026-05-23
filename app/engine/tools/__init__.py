@@ -1,15 +1,16 @@
+from app.engine.agents.types import McpToolSpec, OpenAIToolSpec
 from app.engine.tools.shell import shell
 
-OPENAI_TOOLS = [
+OPENAI_TOOLS: tuple[OpenAIToolSpec, ...] = (
     {"type": "tool_search", "execution": "server"},
     {"type": "web_search"},
     {
         "type": "code_interpreter",
         "container": {"type": "auto", "memory_limit": "4g"},
     },
-]
+)
 
-MCP_TOOLS = [
+MCP_TOOLS: tuple[McpToolSpec, ...] = (
     {
         "type": "mcp",
         "server_label": "deepwiki",
@@ -32,7 +33,7 @@ MCP_TOOLS = [
             }
         },
     },
-]
+)
 
 __all__ = [
     "MCP_TOOLS",
