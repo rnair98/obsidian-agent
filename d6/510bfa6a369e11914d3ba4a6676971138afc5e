@@ -1,0 +1,19 @@
+app/engine/tools/__init__.py
+  s_b2786f7953a454::t_5118b596a0b082 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "d6510bfa6a369e11914d3ba4a6676971138afc5e",
+  "prompts": {},
+  "sessions": {
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
