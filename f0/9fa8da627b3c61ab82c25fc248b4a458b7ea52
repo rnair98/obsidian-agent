@@ -1,0 +1,19 @@
+app/core/resources/agent_config.yaml
+  s_b2786f7953a454::t_2c9521d09c581b 15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "f09fa8da627b3c61ab82c25fc248b4a458b7ea52",
+  "prompts": {},
+  "sessions": {
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
