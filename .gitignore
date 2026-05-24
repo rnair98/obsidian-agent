@@ -43,3 +43,4 @@ node_modules/
 
 .demongrep.db/
 .fastembed_cache/
+.antigravitycli/

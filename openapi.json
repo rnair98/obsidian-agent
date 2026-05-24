@@ -1,0 +1,221 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/workflows/run/{workflow_name}": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Run Workflow",
+        "operationId": "run_workflow_api_v1_workflows_run__workflow_name__post",
+        "parameters": [
+          {
+            "name": "workflow_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/WorkflowName"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Run Workflow Api V1 Workflows Run  Workflow Name  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Read Root",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GitVaultRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "git",
+            "title": "Type"
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Url"
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Ref"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "url",
+          "ref"
+        ],
+        "title": "GitVaultRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LocalVaultRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "local",
+            "title": "Type"
+          },
+          "path": {
+            "type": "string",
+            "format": "path",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "path"
+        ],
+        "title": "LocalVaultRequest"
+      },
+      "ResearchRequest": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Topic"
+          },
+          "vault": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LocalVaultRequest"
+              },
+              {
+                "$ref": "#/components/schemas/GitVaultRequest"
+              }
+            ],
+            "title": "Vault",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "git": "#/components/schemas/GitVaultRequest",
+                "local": "#/components/schemas/LocalVaultRequest"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "topic",
+          "vault"
+        ],
+        "title": "ResearchRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkflowName": {
+        "type": "string",
+        "enum": [
+          "research",
+          "researcher",
+          "summarizer",
+          "zettelkasten"
+        ],
+        "title": "WorkflowName",
+        "description": "Identifier for an HTTP-invocable workflow.\n\nDistinct from :class:`NodeName` so the FastAPI route layer can reject\nbare-node identifiers (``persist``) at request validation rather than\nsurfacing a 404 from the registry."
+      }
+    }
+  }
+}
