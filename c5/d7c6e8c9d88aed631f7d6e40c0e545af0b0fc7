@@ -1,0 +1,63 @@
+ARCHITECTURE.md
+  s_a0ce0849f8cae4::t_82715c472ed604 42-44,47-56
+  s_69063502e2bf48::t_22826d9b502c02 345-374
+app/engine/nodes/persist.py
+  s_0c1739389c23d3::t_26e1bd1d053598 12-17,26-29,56
+app/api/v1/workflows.py
+  s_0c1739389c23d3::t_26e1bd1d053598 5,14,18-27
+tests/engine/test_executor_response.py
+  s_8fc1e2f442a4d7::t_fcc6935dd44c74 1-139
+app/engine/executor.py
+  s_7cf423813063b2::t_0ae532005ac049 165-167
+  s_0c1739389c23d3::t_26e1bd1d053598 12,14,26,29-38,98-164,168-199,202,206-207,235-239,252-260
+app/engine/schema.py
+  s_0c1739389c23d3::t_26e1bd1d053598 79-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "c5d7c6e8c9d88aed631f7d6e40c0e545af0b0fc7",
+  "prompts": {},
+  "sessions": {
+    "s_0c1739389c23d3": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033M0YCftAJxZFrP6P56H6",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_69063502e2bf48": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033M0Ysai1EkDOL4uRxblT",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_7cf423813063b2": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033M0arPSuAMOx9a3Fihq7",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_8fc1e2f442a4d7": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033M0ZkBo1VuqBcpxU6kIc",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_a0ce0849f8cae4": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033M0YIeJRiOWNQm4iJL2q",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
