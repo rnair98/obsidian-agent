@@ -7,7 +7,7 @@ from langchain_core.runnables import Runnable
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 WorkflowFactory = Callable[
-    [BaseCheckpointSaver[Any]],
+    ...,
     Runnable[Any, Any],
 ]
 
@@ -41,8 +41,15 @@ def list_workflows() -> list[str]:
 def get_workflow(
     name: str,
     checkpointer: BaseCheckpointSaver[Any],
+    **factory_kwargs: Any,
 ) -> Runnable[Any, Any]:
-    """Retrieve a compiled workflow graph by name."""
+    """Retrieve a compiled workflow graph by name.
+
+    Additional keyword arguments are forwarded to the registered factory.
+    Workflows are built per-request, so passing per-request context here
+    (e.g. ``prompt_context={"prior_memories": ...}``) is the supported
+    seam for injecting request-scoped data into agent prompts.
+    """
     if name not in _WORKFLOW_REGISTRY:
         raise ValueError(f"Workflow '{name}' not found. Available: {list_workflows()}")
-    return _WORKFLOW_REGISTRY[name](checkpointer)
+    return _WORKFLOW_REGISTRY[name](checkpointer, **factory_kwargs)

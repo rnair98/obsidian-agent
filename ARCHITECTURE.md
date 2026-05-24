@@ -601,6 +601,37 @@ compose), `just phoenix`, `just db-up`, `just fmt`, `just clean`.
   hand-written schema descriptions into prompts — they will silently
   drift from the Pydantic model. `AgentSpec.system_prompt()` interpolates
   the placeholder via `render_output_format()`.
+- **Per-request prompt placeholders flow through `get_workflow(..., prompt_context=...)`.**
+  `AgentSpec.system_prompt(context)` uses `Template.safe_substitute`, so
+  any `$placeholder` in a prompt can be filled by per-run context plumbed
+  through `executor.execute → get_workflow → create_research_workflow →
+  make_agent_node → build_agent_executor_from_spec`. Current placeholders
+  beyond `$output_format`:
+  - `$prior_memories` — `executor._render_prior_memories(vault)` emits a
+    cold-vs warm-vault hint so the researcher doesn't probe `/memory` via
+    shell on every run.
+  - `$vault_profile` — `executor._profile_vault(vault, context)` returns
+    deterministic vault stats plus a qualitative summary inferred by the
+    `vault_profiler` nano-class agent (one-shot pre-pass, cached at
+    `<vault>/.memories/.vault_profile.json` keyed by note count). All
+    three downstream agents (researcher/summarizer/zettelkasten) consume
+    it so persisted artifacts match the vault's naming/structure/style
+    conventions.
+
+  Unknown `$placeholders` are intentionally left intact by
+  `safe_substitute`; add a new one by (a) extending the renderer in the
+  executor and (b) referencing it in the agent's prompt — no spec changes
+  required.
+- **Pre-graph agents are invoked directly from the executor.** The
+  `vault_profiler` agent does NOT live in the research graph. It is
+  invoked once per request from `executor._profile_vault` via
+  `build_agent_executor_from_spec(VAULT_PROFILER_SPEC).ainvoke(...)`
+  because its output is request-scoped pre-computation consumed by every
+  graph agent, not a node in the workflow itself. Adding more pre-pass
+  agents follows the same shape: a `SPEC` in `app/engine/agents/<name>.py`,
+  a name added to `AgentName` (`agents/types.py`), a case in
+  `AgentsConfig.prompt_for` (`core/settings.py`), and a `_render_*`
+  helper in `executor.py`.
 - **`ProviderStrategy(...)` is the primary structured-output mechanism.**
   `parse_structured()` exists as a fallback for seams that receive a raw
   string (tool args, persisted artifacts, non-OpenAI providers). Do not

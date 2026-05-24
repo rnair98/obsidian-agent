@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.27.0",
     "arize-phoenix>=12.28.1",
     "langgraph>=1.0.5",
-    "openai>=2.15.0",
+    "openai>=2.38.0",
     "polars>=1.33.1",
     "scipy>=1.17.0",
     "pydantic-settings>=2.7.0",
@@ -27,6 +27,8 @@ dependencies = [
     "json-repair>=0.30",
     "psycopg[binary]>=3.2",
     "pydantic-monty>=0.0.17",
+    "wrapt<2",
+    "langchain-groq>=1.1.2",
 ]
 
 [tool.uv]
