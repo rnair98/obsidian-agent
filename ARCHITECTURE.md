@@ -39,8 +39,21 @@ POST /api/v1/workflows/run/{workflow_name}
       ├─ summarizer  → writes: report.md
       ├─ zettelkasten → writes: zettelkasten_notes state
       └─ persist     → writes: vault notes, outputs, .memories
-  ← final ResearchState
+  → app.engine.executor._project_run_response (ResearchState → WorkflowRunResponse)
+  ← WorkflowRunResponse  (run_id, vault, artifacts.{report, sources_csv,
+                          zettels, memories}, summary)
 ```
+
+The raw ``ResearchState`` is intentionally NOT exposed to clients — it
+carries internal LangGraph plumbing (full message history, per-node
+reasoning accumulators) and would be a brittle public contract. The HTTP
+boundary returns a typed ``WorkflowRunResponse`` (see ``app/engine/schema.py``)
+that points clients at every artifact the workflow materialized in the vault
+plus the LangGraph ``thread_id`` they can use for checkpoint replay. Artifact
+references are populated by inspecting the vault's filesystem backend after
+``graph.ainvoke`` returns; only files that actually exist are emitted, so
+standalone agent workflows (researcher/summarizer/zettelkasten) legitimately
+return empty artifact slots.
 
 **Entry points in order of likely relevance:**
 
@@ -328,6 +341,36 @@ chars) and required `vault`.
 Obsidian vault. `vault={"type":"git","url":"https://...","ref":"main"}`
 clones/fetches a remote vault into `.vaults/<hash>/` for local read-write use;
 `ref` is required and must be non-blank. This code does not commit or push.
+
+### `WorkflowRunResponse` (Pydantic, `extra="forbid"`)
+
+The 200 OK body for ``POST /api/v1/workflows/run/{workflow_name}``. Built
+by ``executor._project_run_response`` from the final ``ResearchState`` plus
+the resolved ``VaultLayout`` plus the LangGraph ``thread_id``. Fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `run_id` | `str` | LangGraph ``thread_id`` for checkpoint replay |
+| `workflow` | `str` | Mirror of the path param |
+| `topic` | `str` | Echo of ``request.topic`` |
+| `vault` | `VaultRequest` | Echo of the request's vault descriptor |
+| `artifacts.report` | `ArtifactRef \| None` | ``outputs/report.md`` if written |
+| `artifacts.sources_csv` | `ArtifactRef \| None` | ``outputs/sources.csv`` if written |
+| `artifacts.zettels` | `list[ZettelArtifactRef]` | Per-note ``notes/<id>.md`` |
+| `artifacts.memories` | `list[ArtifactRef]` | ``.memories/*.md`` newly written this run |
+| `summary.key_insights` | `list[str]` | From ``state["key_insights"]`` |
+| `summary.research_notes_count` | `int` | ``len(state["research_notes"])`` |
+| `summary.sources_count` | `int` | ``len(state["sources"])`` |
+| `summary.zettel_count` | `int` | ``len(state["zettelkasten_notes"])`` |
+
+``ArtifactRef`` carries both the vault-relative POSIX path (``path``) and
+the backend-resolved absolute path (``absolute_path``). Refs are only
+emitted if the file actually exists on the backend, so standalone agent
+workflows (researcher/summarizer/zettelkasten) that don't run the persist
+node legitimately return empty artifact slots. Memory files are identified
+by diffing the pre- and post-run listings of ``.memories/``; the
+timestamped filename produced by ``MarkdownMemoryStore`` is not
+predictable from state alone.
 
 ### `FilesystemBackend` (Protocol)
 

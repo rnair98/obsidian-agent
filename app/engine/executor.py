@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -22,9 +23,19 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.backends import assets_backend
+from app.engine.nodes.persist import safe_note_id
 from app.engine.nodes.types import WorkflowName
 from app.engine.registry import get_workflow
-from app.engine.schema import ResearchContext, ResearchRequest, ResearchState
+from app.engine.schema import (
+    ArtifactRef,
+    ResearchContext,
+    ResearchRequest,
+    ResearchState,
+    RunArtifacts,
+    RunSummary,
+    WorkflowRunResponse,
+    ZettelArtifactRef,
+)
 from app.engine.vaults import VaultLayout, resolve_vault
 from app.engine.workspace import build_workspace_session
 from app.harness.runtime import workspace_scope
@@ -84,13 +95,116 @@ async def _checkpointer() -> AsyncIterator[BaseCheckpointSaver[Any]]:
         yield MemorySaver()
 
 
+def _snapshot_memories(vault: VaultLayout) -> set[Path]:
+    """Take a pre-run listing of ``.memories/`` for after-the-fact diffing.
+
+    ``persist_artifacts`` writes a timestamped memory file but does not echo
+    the written path through the LangGraph state delta. Comparing this
+    snapshot against a post-run listing is the cheapest reliable way to
+    surface "what did this run write" without expanding ``ResearchState``.
+    """
+    try:
+        return set(vault.backend.list_dir(vault.memories_dir))
+    except Exception:  # noqa: BLE001  -- backend may raise on missing dir
+        return set()
+
+
+def _project_run_response(
+    *,
+    run_id: str,
+    workflow_name: WorkflowName,
+    request: ResearchRequest,
+    state: Mapping[str, Any],
+    vault: VaultLayout,
+    memories_before: set[Path],
+) -> WorkflowRunResponse:
+    """Project the final ``ResearchState`` into the public response shape.
+
+    Only emits artifact references for files that actually exist on the
+    backend. Standalone agent workflows (researcher/summarizer/zettelkasten)
+    don't run the persist node, so most fields are legitimately empty there.
+    """
+    backend = vault.backend
+
+    def _ref(rel_path: Path) -> ArtifactRef | None:
+        if not backend.exists(rel_path):
+            return None
+        return ArtifactRef(
+            path=rel_path.as_posix(),
+            absolute_path=str(backend.resolve(rel_path)),
+        )
+
+    report_ref = _ref(vault.outputs_dir / "report.md")
+    sources_ref = _ref(vault.outputs_dir / "sources.csv")
+
+    zettel_refs: list[ZettelArtifactRef] = []
+    seen_ids: set[str] = set()
+    for note in state.get("zettelkasten_notes") or []:
+        base_id = safe_note_id(note.get("id"))
+        safe_id = base_id
+        suffix = 2
+        # Mirror persist's collision-suffixing so reported paths match disk.
+        while safe_id in seen_ids:
+            safe_id = f"{base_id}-{suffix}"
+            suffix += 1
+        seen_ids.add(safe_id)
+        rel = vault.notes_dir / f"{safe_id}.md"
+        if not backend.exists(rel):
+            continue
+        zettel_refs.append(
+            ZettelArtifactRef(
+                id=str(note.get("id") or ""),
+                title=str(note.get("title") or ""),
+                tags=list(note.get("tags") or []),
+                path=rel.as_posix(),
+                absolute_path=str(backend.resolve(rel)),
+            )
+        )
+
+    memories_after = _snapshot_memories(vault)
+    new_memories = sorted(
+        p for p in memories_after - memories_before if p.suffix == ".md"
+    )
+    memory_refs = [
+        ArtifactRef(
+            path=(vault.memories_dir / m.name).as_posix(),
+            absolute_path=str(m),
+        )
+        for m in new_memories
+    ]
+
+    sources_state = state.get("sources") or []
+    notes_state = state.get("research_notes") or []
+    zettels_state = state.get("zettelkasten_notes") or []
+
+    return WorkflowRunResponse(
+        run_id=run_id,
+        workflow=str(workflow_name),
+        topic=str(state.get("topic") or request.topic),
+        vault=request.vault,
+        artifacts=RunArtifacts(
+            report=report_ref,
+            sources_csv=sources_ref,
+            zettels=zettel_refs,
+            memories=memory_refs,
+        ),
+        summary=RunSummary(
+            key_insights=list(state.get("key_insights") or []),
+            research_notes_count=len(notes_state),
+            sources_count=len(sources_state),
+            zettel_count=len(zettels_state),
+        ),
+    )
+
+
 async def execute(
     workflow_name: WorkflowName, request: ResearchRequest
-) -> dict[str, object]:
+) -> WorkflowRunResponse:
     """Execute a registered workflow with the given request."""
     logger.info("Running workflow: {} for topic: {}", workflow_name, request.topic)
 
-    config: RunnableConfig = {"configurable": {"thread_id": str(uuid.uuid4())}}
+    run_id = str(uuid.uuid4())
+    config: RunnableConfig = {"configurable": {"thread_id": run_id}}
     state = ResearchState(
         messages=[
             SystemMessage(content=f"Starting {workflow_name} workflow."),
@@ -118,6 +232,11 @@ async def execute(
     # prompt at compile time (researcher's ``$prior_memories``).
     prompt_context = {"prior_memories": _render_prior_memories(vault)}
 
+    # Snapshot ``.memories/`` BEFORE the graph runs so we can identify the
+    # specific memory file the persist node materializes (its filename
+    # encodes a timestamp we don't know up front).
+    memories_before = _snapshot_memories(vault)
+
     async with _checkpointer() as checkpointer:
         graph = get_workflow(workflow_name, checkpointer, prompt_context=prompt_context)
 
@@ -130,4 +249,12 @@ async def execute(
             result: dict[str, object] = await graph.ainvoke(
                 input=state, config=config, context=context
             )
-            return result
+
+    return _project_run_response(
+        run_id=run_id,
+        workflow_name=workflow_name,
+        request=request,
+        state=result,
+        vault=vault,
+        memories_before=memories_before,
+    )
