@@ -1,0 +1,511 @@
+uv.lock
+  ai_agent 5,11-21,25,27,29,132,139,141,162-180,183,188,190,247,265-267,271,282-283,286,290-291,299,301,306,317,319,324,337,339,344,356,358,385,387,389,394,396,398,403,407,409,411,416-425,427,429,462-489,492,494,496,500-501,503,505-545,550,552,554,613-665,670,675,677,700,705,707,712,717-760,782,784,786,825-833,856-864,876,883,885,887,899-925,928,930,932,1017-1068,1071,1076,1078,1083,1085,1087,1092-1170,1187,1192-1213,1330,1332,1334,1339,1341,1343,1357,1374,1376,1381,1391,1396,1398,1434-1466,1479-1487,1502-1551,1556,1558,1560,1572-1583,1586,1588,1590,1595,1597,1599,1616,1618,1620,1625,1627,1629,1703,1715,1717,1722,1727,1729,1734,1756,1758,1776,1793,1795,1825-1841,1844,1851,1853,1858,1862,1871,1873-1886,1891,1898,1900-1912,1917,1927,1929,1934,1940,1942,1947,1955,1957,1962,1968,1970,1975,1981,1983,1988,1998,2001,2003,2028-2029,2031,2033,2103,2108,2110,2115,2122,2130,2132,2138,2140,2145,2147,2149,2154,2159,2161,2218,2223,2225,2230,2248,2250,2264,2266,2268,2273,2290-2299,2301,2306-2333,2419,2421,2423,2443,2461,2463,2513-2558,2571,2589,2615,2622,2633,2654,2666,2668,2673,2681,2683,2688,2698,2700,2705-2720,2724,2727-2728,2731,2733,2738,2740,2742,2747,2752,2754,2759,2765,2767,2772,2777,2779,2784,2795,2797,2802,2813,2815,2820,2828,2830,2835,2840,2842,2847,2854,2856,2861,2867,2869,2874-2907,2912-2937,2942,2944,2946,2951,2956-2990,3004,3006,3008,3025,3027,3029,3043,3048,3050,3055,3057,3059-3066,3071,3080,3082,3087,3089,3091,3108-3180,3185,3187,3189-3195,3200-3223,3228,3233,3235,3245-3269,3274,3279,3281,3302-3326,3329-3360,3365-3374,3376-3379,3381,3386,3388,3390,3395,3403-3426,3428-3449,3454,3459-3520,3560,3567,3569,3574,3583,3585,3590,3592,3594,3599,3601,3603,3613,3619,3621,3683,3692,3694,3722-3723,3725-3729,3731,3735-3736,3738,3740,3744-3745,3747,3749,3753-3754,3756,3758,3774-3782,3785,3787,3789-3796,3893-3960,3965,3973,3975,4025,4031,4033,4104-4136,4179,4184-4238,4252,4254,4256,4288,4294-4322,4334-4337,4344-4363,4366,4372,4374,4393,4398,4400,4405,4408,4414,4416,4433,4435,4437,4465,4471-4500,4526,4528,4530,4535,4537,4539-4547,4552,4557,4559,4564,4566,4568,4595,4600,4602-4607,4621,4623,4625,4651,4653,4655,4669,4671,4673,4678,4680-4737,4742,4748,4750,4792,4798,4800,4802,4807,4812-4874,4879,4881,4883,4999-5088,5093,5100-5153
+app/core/settings.py
+  s_4b11a28d4da15d::t_0a438f182b0459 83,93-94
+  s_c84c817b537f21::t_9fd1ea09b3e756 134
+  s_c85edbf338821d::t_c713cc12c6a2f1 64-72,76
+app/engine/agents/types.py
+  s_1a7ced1576826e::t_1552f4868517c8 43
+  s_ca85626f040215::t_d67753797b9724 8-10
+app/engine/registry.py
+  s_83df6fdff2a492::t_5ee3a48239ccb4 10
+  s_7297a940f745bb::t_6f4ffceeebd74a 44,46-52,55
+app/engine/schema.py
+  s_f29cd2f045509e::t_0679a8d2c4a70d 33-36
+app/engine/nodes/builders/middleware.py
+  s_e5115cde28e55f::t_088ada4e32f6f6 3,11-26
+app/core/resources/agent_config.yaml
+  s_4c9183717f317d::t_cc49308169e12b 33-35,42,45-46
+  s_632358011a0b90::t_d3b1f557fbcb60 36-41,43-44
+  s_318b5c7a317b63::t_9975491943f9a8 12-14
+  s_ebd04b8f5793c0::t_edb46a0050caf6 22-26
+app/engine/nodes/types.py
+  s_fe4f9ece135f20::t_5a31f76bf11e6a 18
+app/engine/agents/vault_profiler.py
+  s_2676a79d4c18bd::t_bf1771ff584124 2-12,14-83
+app/engine/nodes/builders/agent.py
+  s_2b418ecd129739::t_8685f90a7e2b1f 314,316
+  s_f915ea58d2d115::t_67cdc424aea857 183-189,192-194
+  s_99eabdcb10c694::t_903f66409d9a9e 196-198
+  s_f5919607cc40f5::t_5c9a2691bae3c8 201-205,212
+  s_34b31ea5c1088e::t_947caa55346442 303,308-309,315
+  s_b222004a928cf3::t_38977dda204a36 237,239,255-259
+  s_c06928067f93d9::t_d16a50b1feb66c 287
+  s_f2f2f3c49275f8::t_176061fdd75a62 241-242
+  ai_agent 168,206,238,246-247
+  s_69a0b6e6977236::t_1d46aace7b29a0 243
+  s_c3274ad5d643bf::t_2fec3bfffc88b8 190-191
+  s_d12d390cb878fe::t_b2585ae00d3dcf 240,244-245
+  s_00cfdd9aecaaa9::t_1e077c3cb39d4f 144-152,160-167,169-182,195,199,210
+app/engine/agents/researcher.py
+  s_939df04f69c431::t_4515fc55968e56 58
+  s_c48ea540c1587f::t_21b28312231481 60-95
+ARCHITECTURE.md
+  s_ed6fc7741ecdc3::t_1c689605004752 608-620,625-634
+  s_df5b4f130727fc::t_823b254a0368ba 604-607,621-624
+pyproject.toml
+  s_88488148294d7e::t_c1e4229f2935ae 12
+  s_7e928f76add80e::t_c94897db6c6a19 30
+app/engine/agents/zettelkasten.py
+  s_22eff378de67fd::t_af0b9112a73aa5 54
+  s_ad3be8a2f42d72::t_1f52131a3acff6 55-60,70
+  s_956b6eb389128d::t_8d5a07efe3144f 44-53
+app/engine/graphs/research.py
+  s_307be695dfacce::t_3aa528c56dc901 6,14-17,20,25,28-30,41-46,55,63,66-67,73-113
+  s_e5ddbc35170713::t_785c9a3b088a45 34-40,47,57-60
+  s_e278bbc56453b7::t_592fdd69fe4cba 3
+app/engine/agents/summarizer.py
+  s_34c466d082d06f::t_f7a6e75d66e9ae 62
+  s_3ca840252c353f::t_f4fddf31a0bf40 50-51
+app/engine/executor.py
+  s_bb416d8ab0ed93::t_0ce5a374bda95e 28,32-73
+  s_94a6ab429e7e4f::t_ea9fb0898cdbe1 108,114-119
+  ai_agent 122
+app/engine/agents/spec.py
+  s_229e5fd2d9ed24::t_155c73805b1a3e 72-78,80-81
+  s_1a9dc12002cc45::t_4043343e0775f5 47-55,66-69
+justfile
+  s_b2786f7953a454::t_88dabbcb6a68ed 26-30
+app/engine/nodes/agent.py
+  s_d022f92464502e::t_871f049d5227af 12,14-15,22,27
+  s_42a88e83f94ddc::t_fbe144ac26dc35 61-64
+  s_9bc55fa1c3cb9a::t_067eccb5b90f47 11
+app/engine/nodes/vault_profiler.py
+  s_beeb419503a3a9::t_76527f94e33d1c 1-60,62-106,108-111,113-143,145-155,157-173,179-181,186-212,222-225,227-234,236-237,239-245,247-248,252,254-257,259
+  s_06e9a3b72e74bb::t_96be012d7e1a13 174-178,182-184
+  ai_agent 61,107,112,144,156,185
+  s_b1c609554b1334::t_ea04a3a0b7f8a0 213-221,226,235,238,246,253,258
+  s_6fa1bc555b3521::t_596a587fe38a5a 249-251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "3e4eba2e5eb9c8f38de276cabdd77c9b4e738b15",
+  "prompts": {},
+  "sessions": {
+    "s_00cfdd9aecaaa9": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxuGc8HOjq9rZ4d5FIw",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_06e9a3b72e74bb": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxXcbAxyNRaKCh94yDv",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_1a7ced1576826e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LqSoNpEPmQ4ysymSBjz",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_1a9dc12002cc45": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvucWQx2ubZzU4VIZMT",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_229e5fd2d9ed24": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxCcdAQWo41oCvVXUQl",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_22eff378de67fd": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwWgOQ7CTChDiFMMsa5",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_2676a79d4c18bd": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwUhtSBIVnFJYFsnQ9Y",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_2b418ecd129739": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LuefdgstszPraimvAce",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_307be695dfacce": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxUuTQzksNMf36JavhA",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_318b5c7a317b63": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwWTwHVOOnXBgcMjS3q",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_34b31ea5c1088e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LuhGfzgfp74Dlt5xGDW",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_34c466d082d06f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvX9K0lS1Z794JpXlbr",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_3ca840252c353f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvX8bkuCPb454juWA8Z",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_42a88e83f94ddc": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LqQTNQg9wQd0oOYDV9y",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_4b11a28d4da15d": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwYBv1gRrjUQ5eSjEg1",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_4c9183717f317d": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxIq6MjG0zHUGynls2g",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_632358011a0b90": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lxug4Em4OByCVZXs5fY",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_69a0b6e6977236": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LuldPmBnSQuOVAOjFR4",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_6fa1bc555b3521": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxXgRuEIkcItGqTNllc",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_7297a940f745bb": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvvHSKMWK7Fh25MXmPP",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_7e928f76add80e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LtqY04AUlruQmshfmmF",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_83df6fdff2a492": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvvDNev41Vc5dym8ao6",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_88488148294d7e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LqVbva1EdcYVRb9bjd3",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_939df04f69c431": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvvogxXsVDLSCNdZm1j",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_94a6ab429e7e4f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxWcpNTYRqGKzHBxxu3",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_956b6eb389128d": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxUln9KcXsFfv8bJ8JJ",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_99eabdcb10c694": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxvFG8TAWEIQleIP3C7",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_9bc55fa1c3cb9a": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lvuu1NySimdfK9eS9wE",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_ad3be8a2f42d72": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Luqa2pjDj1GcrADjZOj",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_b1c609554b1334": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LzUR43eIYVspZrQDKlE",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_b222004a928cf3": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lugn7Gr7Us2ByFU49uD",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_b2786f7953a454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f834dc6f-6f03-4034-9278-a67d5c5a95d8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_bb416d8ab0ed93": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvvZn8nstIrEs2XdZ7n",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_beeb419503a3a9": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxTiJagwfWhyBETYFvZ",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_c06928067f93d9": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Luh6bF5NHWoD6Ltt2QS",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_c3274ad5d643bf": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LyyEhTFnWq6I7SC8rwF",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_c48ea540c1587f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lx7yngCfnq633ifpMF0",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_c84c817b537f21": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LyxzyB4wmCTX6DNUGc4",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_c85edbf338821d": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxCViXytJORHyedzYUY",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_ca85626f040215": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwUgYz9AomJl2ibcXc8",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_d022f92464502e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LqQHbOtfCX8Q6QV7aLw",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_d12d390cb878fe": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LueCsybCgA0ZtimkWCw",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_df5b4f130727fc": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lvw6HfKYQPKr1komGja",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_e278bbc56453b7": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvvBMaogKHrv7yKyPo4",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_e5115cde28e55f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwByStcBqNquQ1BdUmi",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_e5ddbc35170713": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lvv3GBFSZ9C8FW31RY3",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_ebd04b8f5793c0": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxCgeKEYdiwMHfWFhrM",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_ed6fc7741ecdc3": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LwZ3sReAtZJ8bgzL30A",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_f29cd2f045509e": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxUShw8lCLf6zZPuY4f",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_f2f2f3c49275f8": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LujjSKeHD5SdC48dljD",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_f5919607cc40f5": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LvujpWJXNAO4lOzZYVx",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_f915ea58d2d115": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033Lz8XCpAG1D5nenghKb7",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_fe4f9ece135f20": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033LxUbD6ihcobjBpMUi5c",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
