@@ -1,0 +1,9 @@
+openapi.json
+  ai_agent 1-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "460b106634f35ecc6479adff98e51ab9a894f3dc",
+  "prompts": {}
+}
