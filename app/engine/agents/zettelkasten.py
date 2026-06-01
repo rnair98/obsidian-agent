@@ -6,7 +6,6 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import shell
 
 
 class ZettelkastenNote(BaseModel):
@@ -42,11 +41,23 @@ Extract atomic, evergreen insights from the research and report. Each note shoul
 Focus on quality over quantity. 5 excellent notes are better than 20 shallow ones.
 </constraints>
 
-<workspace>
-Atomic notes are materialized as ordinary markdown files under `/vault`.
-Use the shell tool only when you need to inspect or create supporting files;
-do not rely on bespoke artifact-writing tools.
-</workspace>
+<vault_conventions>
+The first system message in this conversation will contain a
+`<vault_profile>` block describing the target vault's naming,
+structural, and style conventions. Honor those conventions literally
+when producing `id`, `title`, `tags`, and `content` below — the
+runtime uses your `id` as the slug verbatim, so kebab-case /
+date-prefix / casing decisions must be made here, not at persist time.
+If no `<vault_profile>` block is present, fall back to kebab-case
+slugs, YAML frontmatter with `tags`, and wikilinks for cross-refs.
+</vault_conventions>
+
+<persistence>
+Do NOT write files yourself. Return the structured output below; the
+runtime persists each note as a markdown file under the vault's `notes/`
+directory with YAML frontmatter rendered from your `title` and `tags`.
+Any side-channel file writes will be duplicates with broken formatting.
+</persistence>
 
 $output_format
 """
@@ -56,5 +67,5 @@ SPEC: AgentSpec[ZettelkastenOutput] = AgentSpec(
     name="zettelkasten",
     output_schema=ZettelkastenOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(shell,),
+    tools=(),
 )

@@ -5,13 +5,10 @@ from typing import Any, Literal, TypeAlias, TypedDict
 
 from langchain_core.tools import BaseTool
 
-AgentName: TypeAlias = Literal["researcher", "summarizer", "zettelkasten"]
+AgentName: TypeAlias = Literal[
+    "researcher", "summarizer", "zettelkasten", "vault_profiler"
+]
 AgentTool: TypeAlias = BaseTool | Callable[..., Any] | dict[str, Any]
-
-
-class ToolSearchSpec(TypedDict):
-    type: Literal["tool_search"]
-    execution: Literal["server"]
 
 
 class WebSearchSpec(TypedDict):
@@ -43,4 +40,4 @@ class McpToolSpec(TypedDict):
     require_approval: McpApprovalSpec
 
 
-OpenAIToolSpec: TypeAlias = ToolSearchSpec | WebSearchSpec | CodeInterpreterSpec
+OpenAIToolSpec: TypeAlias = WebSearchSpec | CodeInterpreterSpec

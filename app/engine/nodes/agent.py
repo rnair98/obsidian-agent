@@ -8,26 +8,23 @@ and reused across invocations of the returned coroutine.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from collections.abc import Mapping, Sequence
+from typing import Any
 
+from langchain_core.runnables import RunnableConfig
+from langgraph.runtime import Runtime
 from langgraph.types import StreamMode
 
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.agents.spec import AgentSpec
 from app.engine.nodes.builders.agent import (
+    AgentRunResult,
     build_agent_executor_from_spec,
     run_agent_executor,
 )
 from app.engine.nodes.types import AgentNode
-
-if TYPE_CHECKING:
-    from langchain_core.runnables import RunnableConfig
-    from langgraph.runtime import Runtime
-
-    from app.engine.nodes.builders.agent import AgentRunResult
-    from app.engine.schema import ResearchContext, ResearchState
+from app.engine.schema import ResearchContext, ResearchState
 
 
 def make_agent_node(
@@ -35,6 +32,7 @@ def make_agent_node(
     *,
     log_streams: bool = False,
     stream_mode: Sequence[StreamMode] | None = None,
+    prompt_context: Mapping[str, str] | None = None,
 ) -> AgentNode:
     """Create a LangGraph node bound to an :class:`AgentSpec`.
 
@@ -47,8 +45,12 @@ def make_agent_node(
             chunks at debug level.
         stream_mode: LangGraph stream modes; defaults to
             ``["messages", "updates"]`` when ``log_streams`` is true.
+        prompt_context: Optional per-request placeholder values forwarded
+            to :meth:`AgentSpec.system_prompt` (e.g. ``{"prior_memories":
+            ...}``). Because the executor is built once per request from
+            the workflow factory, the rendered prompt is request-scoped.
     """
-    executor = build_agent_executor_from_spec(spec)
+    executor = build_agent_executor_from_spec(spec, prompt_context=prompt_context)
     effective_modes: list[StreamMode] | None = (
         list(stream_mode)
         if stream_mode is not None
@@ -56,10 +58,10 @@ def make_agent_node(
     )
 
     async def node(
-        state: "ResearchState",
-        runtime: "Runtime[ResearchContext]",
-        config: "RunnableConfig",
-    ) -> "AgentRunResult":
+        state: ResearchState,
+        runtime: Runtime[ResearchContext],
+        config: RunnableConfig,
+    ) -> AgentRunResult:
         logger.debug(
             "[{}] use_responses_api={} model={}",
             spec.name.upper(),

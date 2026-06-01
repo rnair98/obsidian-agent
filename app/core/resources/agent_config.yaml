@@ -9,19 +9,38 @@ llm:
   timeout: 600
   use_responses_api: true
   stream_usage: true
+  context_management:
+    - type: compaction
+      compact_threshold: 100000
   model_kwargs:
     parallel_tool_calls: true
     tool_choice: auto
-    context_management:
-      - type: compaction
-        compact_threshold: 100000
 
 agents:
   researcher:
     system_prompt: ""
+    # Lower than the global 0.8 to reduce run-to-run variance and curb
+    # the over-exploration we saw in Phoenix traces (extra reasoning
+    # turns, redundant tool calls).
+    llm:
+      temperature: 0.3
 
   summarizer:
     system_prompt: ""
 
   zettelkasten:
     system_prompt: ""
+
+  vault_profiler:
+    system_prompt: ""
+    # Cheap, deterministic pre-pass: small open model on Groq's fast
+    # inference. Low temp for stable structured output, no streaming.
+    # ``provider: groq`` switches the chat-model factory off ChatOpenAI;
+    # OpenAI-only knobs (use_responses_api, reasoning, verbosity,
+    # stream_usage) inherited from the global ``llm:`` block are
+    # filtered out automatically. Auth: GROQ_API_KEY env var.
+    llm:
+      provider: groq
+      model: "openai/gpt-oss-20b"
+      temperature: 0.2
+      streaming: false

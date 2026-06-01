@@ -2,7 +2,6 @@ from app.engine.agents.types import McpToolSpec, OpenAIToolSpec
 from app.engine.tools.shell import shell
 
 OPENAI_TOOLS: tuple[OpenAIToolSpec, ...] = (
-    {"type": "tool_search", "execution": "server"},
     {"type": "web_search"},
     {
         "type": "code_interpreter",

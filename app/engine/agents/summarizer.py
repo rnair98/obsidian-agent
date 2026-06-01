@@ -6,7 +6,6 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
-from app.engine.tools import shell
 
 
 class SummarizerOutput(BaseModel):
@@ -48,9 +47,8 @@ Write for a technical audience who values clarity and depth.
 </audience>
 
 <workspace>
-The final report is materialized as an ordinary file under `/outputs`.
-Use the shell tool only when you need to inspect or create supporting files;
-do not rely on bespoke artifact-writing tools.
+Return the report exclusively via the structured output below. Do not attempt
+to write files — the runtime persists `/outputs/report.md` deterministically.
 </workspace>
 
 $output_format
@@ -61,5 +59,5 @@ SPEC: AgentSpec[SummarizerOutput] = AgentSpec(
     name="summarizer",
     output_schema=SummarizerOutput,
     default_system_prompt=DEFAULT_PROMPT,
-    tools=(shell,),
+    tools=(),
 )

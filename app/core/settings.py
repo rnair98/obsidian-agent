@@ -61,19 +61,26 @@ class LLMConfig(BaseModel):
 
 
 class AgentPromptConfig(BaseModel):
-    """Per-agent runtime override for the system prompt.
+    """Per-agent runtime overrides (prompt + LLM params).
 
-    Empty string (or omission) falls through to the default defined on
-    the corresponding ``AgentSpec`` in ``app/engine/agents/<name>.py``.
+    Empty ``system_prompt`` (or omission) falls through to the default
+    defined on the corresponding ``AgentSpec`` in
+    ``app/engine/agents/<name>.py``. ``llm`` keys layer on top of the
+    global ``llm:`` block and the spec's ``llm_overrides`` (spec wins
+    over YAML; YAML wins over global). Use this to tune e.g.
+    ``temperature``, ``reasoning``, or ``verbosity`` per agent without
+    touching code.
     """
 
     system_prompt: str = ""
+    llm: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class AgentsConfig(BaseModel):
     researcher: AgentPromptConfig
     summarizer: AgentPromptConfig
     zettelkasten: AgentPromptConfig
+    vault_profiler: AgentPromptConfig = Field(default_factory=AgentPromptConfig)
 
     def prompt_for(self, name: AgentName) -> AgentPromptConfig:
         match name:
@@ -83,6 +90,8 @@ class AgentsConfig(BaseModel):
                 return self.summarizer
             case "zettelkasten":
                 return self.zettelkasten
+            case "vault_profiler":
+                return self.vault_profiler
             case _:
                 raise ValueError(f"unknown agent name: {name}")
 
@@ -122,6 +131,7 @@ class Settings(BaseSettings):
 
     # API Keys
     JINA_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
 
     # LLM & Agent Config
     llm: LLMConfig | None = None

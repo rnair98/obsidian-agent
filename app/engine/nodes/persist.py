@@ -9,13 +9,22 @@ if TYPE_CHECKING:
     from langgraph.runtime import Runtime
 
 
-def _safe_note_id(note_id: object) -> str:
+def safe_note_id(note_id: object) -> str:
+    """Sanitize an agent-supplied note id into a filesystem-safe slug.
+
+    Public so the response projector in ``app.engine.executor`` can mirror
+    persist's filename generation when reporting Zettel artifact paths.
+    """
     raw = str(note_id or "untitled")
     cleaned = "".join(
         character if character.isalnum() or character in "._-" else "-"
         for character in raw
     ).strip("._-")
     return cleaned or "untitled"
+
+
+# Back-compat alias for callers that imported the previous private name.
+_safe_note_id = safe_note_id
 
 
 def _format_zettelkasten_note(note: ZettelNote) -> str:
@@ -44,7 +53,7 @@ def _materialize_zettelkasten_notes(
     backend.mkdir(notes_dir)
     seen_ids: set[str] = set()
     for note in state["zettelkasten_notes"]:
-        base_id = _safe_note_id(note.get("id"))
+        base_id = safe_note_id(note.get("id"))
         safe_id = base_id
         suffix = 2
         while safe_id in seen_ids:

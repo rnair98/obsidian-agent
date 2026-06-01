@@ -23,6 +23,11 @@ fmt:
 typecheck:
     uv run pyright
 
+# Generate openapi.json from the FastAPI app
+openapi:
+    uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
+    @echo "wrote openapi.json"
+
 # Start Arize Phoenix for tracing
 phoenix:
     podman run --rm -it -p 6006:6006 -p 4317:4317 arizephoenix/phoenix:latest
