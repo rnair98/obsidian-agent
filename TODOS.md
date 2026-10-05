@@ -108,7 +108,7 @@ Entry: T08, T11, and T15. Publishing the note also needs T19.
 - [ ] **T26 — Run one bounded trial.** Depends on T25. Pick BAML, Jev, or DSPy/GEPA from a measured gap. Add independent reviewers or parallel researchers only when that gap calls for them, under the shared budget and with no worker writes to the vault. Adopt it with a rollback path, or remove the trial.
 - **T27 — Distillation** stays in the roadmap research section. It blocks nothing here.
 - [ ] **T28 — Name retained workflows and data.** Fill this at any time. For each workflow in the roadmap M7 matrix, record required or waived, the acceptance scenario, and the data to preserve.
-- [ ] **T29 — Import retained research.** Depends on T28 and the stores those workflows need. Import read-only. Preserve original identities, hashes, provenance, and Git history, including uncommitted work. Back up live SQLite consistently, exclude credentials, and restore to a temporary location before changing originals.
+- [ ] **T29 — Import retained research.** Depends on T28 and the stores those workflows need. Import read-only. Preserve original identities, hashes, provenance, and Git history; separately capture uncommitted and untracked work. Back up live SQLite consistently, exclude credentials, and restore to a temporary location before changing originals.
 - [ ] **T30 — Prove the old CLIs are unnecessary, then remove them on request.** Depends on T29 and every milestone T28 retained. Compare representative tasks, run where `feynman` and `orx` are absent, and test restore from backup. Uninstall only after that passes and the user asks. Stop or transfer active jobs first. Leave research data and shared runtimes in place.
 
 ## Completion rules

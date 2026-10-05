@@ -328,7 +328,7 @@ by merging node return values.
 
 | Field | Type | Producer | Consumer |
 |---|---|---|---|
-| `messages` | `Annotated[list[AnyMessage], add_messages]` | researcher, summarizer, zettelkasten | subsequent research agents |
+| `messages` | `Annotated[list[AnyMessage], add_messages]` | executor (initial messages), researcher, summarizer, zettelkasten | subsequent research agents |
 | `topic` | `str` | executor (from request) | researcher |
 | `research_notes` | `list[str]` | researcher | summarizer, persist |
 | `experiments` | `list[str]` | initialized empty; no structured-output producer | — |
@@ -715,14 +715,14 @@ offered it.
 
 | Primitive | Adapter | Job |
 |---|---|---|
-| `StateGraph`, `START`, `END`, `compile` | `app/engine/graphs/`, `app/engine/workflows/compose.py` | Static nodes and edges. `compose_graphs` compiles one graph as itself, or several as nodes of a parent |
+| `StateGraph`, `CompiledStateGraph`, `START`, `END`, `compile` | `app/engine/graphs/`, `app/engine/workflows/compose.py` | Static nodes and edges. `compose_graphs` compiles one graph as itself, or several as nodes of a parent |
 | `BaseCheckpointSaver`, `MemorySaver`, `AsyncPostgresSaver` | `app/engine/executor.py`, `app/engine/workflows/` | `thread_id` checkpoints. Postgres when configured, otherwise one memory saver per run |
 | `add_messages` | `app/engine/schema.py` | Append `messages` on `ResearchState` |
 | `Runtime` | `app/engine/nodes/` | Inject frozen `ResearchContext` into a node |
-| `HumanMessage`, `SystemMessage`, `AnyMessage` | `app/engine/executor.py`, `app/engine/graphs/research.py`, `app/engine/schema.py` | The conversation channel |
+| `HumanMessage`, `SystemMessage`, `AnyMessage`, `BaseMessage` | `app/engine/executor.py`, `app/engine/graphs/research.py`, `app/engine/schema.py`, `app/engine/nodes/builders/agent.py` | The conversation channel |
 | `create_agent`, `ProviderStrategy` | `app/engine/nodes/builders/agent.py` | Build one executor from an `AgentSpec`; provider-side structured output |
 | `tool`, `BaseTool` | `app/engine/tools/shell.py`, `app/engine/agents/types.py` | Schema for the shell tool |
-| `ChatOpenAI`, `ChatGroq` | `app/engine/nodes/builders/agent.py` | The two chat adapters |
+| `ChatOpenAI`, `ChatGroq`, `BaseChatModel` | `app/engine/nodes/builders/agent.py` | The two chat adapters and their shared type |
 | `ContextEditingMiddleware`, `ClearToolUsesEdit`, `ToolRetryMiddleware` | `app/engine/nodes/builders/middleware.py` | Trim old tool results; retry once on HTTP timeout |
 | `Runnable`, `RunnableConfig`, `StreamMode` | `app/engine/registry.py`, `app/engine/nodes/`, `app/engine/executor.py` | Invoke and stream the executor this table already builds |
 
@@ -991,10 +991,10 @@ The review is not a `just check` step.
 | `tests/test_gh_client_repo.py` | `get_tree` caches per commit SHA; `shallow_clone` skips when snapshot dir is populated |
 | `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
 | `tests/test_imports.py` | `app.main` loads; `WorkflowName` equals the registered workflows; tools import |  
-| `tests/engine/test_compose_graphs.py` | One graph keeps its nodes; several graphs share one state; an empty composition is rejected |  
-| `tests/engine/test_framework_boundary.py` | LangChain / LangGraph imports stay in the §9 adapter files |
+| `tests/engine/test_compose_graphs.py` | One graph keeps its nodes; several graphs share one state; an empty composition is rejected; every registered workflow accepts the executor's `prompt_context` and keeps `ResearchState` channels |  
+| `tests/engine/test_framework_boundary.py` | LangChain / LangGraph imports, including literal `import_module`/`__import__`, stay in the §9 adapter files |
 | `tests/hooks/test_complexity_hook.py` | complexipy cognitive gate: a nested canary is sent back; a straight function is quiet |
-| `tests/support/test_sensors.py` | direct writes in nodes/tools, `@workflow` only on imported workflow modules, graphs do not register |
+| `tests/support/test_sensors.py` | direct writes (`open`, write-mode `.open`, `write_text`/`write_bytes`) in nodes/tools, `@workflow` modules imported at the top level of the package, graphs do not register |
 | `tests/engine/test_artifacts.py` | `MarkdownMemoryStore`, `CsvSourceStore` formatting and write behavior |
 | `tests/engine/test_executor_response.py` | Persisted artifact response projection and path handling |
 | `tests/engine/test_vaults.py` | local/Git vault approval, transport/config isolation and standard vault layout |

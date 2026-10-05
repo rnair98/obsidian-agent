@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 _WRITE_ATTRS = {"write_text", "write_bytes"}
+_WRITE_MODES = set("wax+")
 
 
 def _via_backend(expr: ast.AST) -> bool:
@@ -10,6 +11,18 @@ def _via_backend(expr: ast.AST) -> bool:
     if isinstance(expr, ast.Attribute):
         return expr.attr == "backend" or _via_backend(expr.value)
     return False
+
+
+def _writes(call: ast.Call) -> bool:
+    mode = call.args[0] if call.args else None
+    for keyword in call.keywords:
+        if keyword.arg == "mode":
+            mode = keyword.value
+    if mode is None:
+        return False
+    if isinstance(mode, ast.Constant) and isinstance(mode.value, str):
+        return bool(_WRITE_MODES & set(mode.value))
+    return True  # a computed mode may write
 
 
 def _call_name(node: ast.AST) -> str | None:
@@ -24,6 +37,13 @@ def _call_name(node: ast.AST) -> str | None:
         and not _via_backend(func.value)
     ):
         return f"{func.attr}()"
+    if (
+        isinstance(func, ast.Attribute)
+        and func.attr == "open"
+        and not _via_backend(func.value)
+        and _writes(node)
+    ):
+        return "open()"
     return None
 
 
@@ -68,7 +88,8 @@ def _defines_workflow(path: Path) -> bool:
 def _imported_names(init_path: Path) -> set[str]:
     tree = ast.parse(init_path.read_text(), filename=str(init_path))
     names: set[str] = set()
-    for node in ast.walk(tree):
+    # Only unconditional top-level imports run at package initialization.
+    for node in tree.body:
         if isinstance(node, ast.ImportFrom) and node.module:
             names.add(node.module.rsplit(".", 1)[-1])
             for alias in node.names:

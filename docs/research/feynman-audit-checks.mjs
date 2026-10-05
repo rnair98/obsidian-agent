@@ -1,6 +1,7 @@
 // Offline characterization of the reviewed Feynman snapshot, not model-quality tests.
 // Run: node docs/research/feynman-audit-checks.mjs [path/to/feynman]
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -8,6 +9,10 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 
 const root = resolve(process.argv[2] ?? 'feynman');
+// The audit names one snapshot, and this script runs its code in-process.
+const PINNED = 'fe3fd94943df8c5b519fed14c8485215b206aba8';
+const head = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+assert.equal(head, PINNED, `Feynman checkout is ${head}, audit pins ${PINNED}`);
 const source = fs.readFileSync(join(root, 'evals/run.mjs'), 'utf8');
 function between(start, end) {
   const first = source.indexOf(start);

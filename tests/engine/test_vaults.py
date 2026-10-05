@@ -90,23 +90,30 @@ def test_git_vault_resolver_clones_to_managed_writable_vault(
     calls = []
     from app.engine.vaults import _run_git
 
+    # A local stand-in for the remote. Clone, fetch and checkout run real git
+    # against it, so the test sees whatever they do to the worktree.
+    source = tmp_path / "source"
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
+    subprocess.run([*git, "init", "-b", "main", str(source)], check=True)
+    (source / "Remote.md").write_text("# Remote")
+    subprocess.run([*git, "-C", str(source), "add", "."], check=True)
+    subprocess.run([*git, "-C", str(source), "commit", "-m", "init"], check=True)
+
     def simulated_git(args: list[str]) -> str:
         calls.append(args)
         if args[0] == "config":
             return _run_git(args)
         if args[0] == "clone":
-            target = Path(args[-1])
+            target = args[-1]
             subprocess.run(
-                ["git", "init", "-b", "main", str(target)],
-                check=True,
-                capture_output=True,
+                [*git, "clone", "--no-checkout", str(source), target], check=True
             )
             subprocess.run(
-                ["git", "-C", str(target), "remote", "add", "origin", url],
-                check=True,
-                capture_output=True,
+                [*git, "-C", target, "remote", "set-url", "origin", url], check=True
             )
-            (target / "Remote.md").write_text("# Remote")
+            return ""
+        local = [str(source) if arg == url else arg for arg in args]
+        subprocess.run([*git, *local], check=True, capture_output=True)
         return ""
 
     monkeypatch.setattr("app.core.settings.settings.filesystem.base_path", tmp_path)
@@ -245,6 +252,20 @@ def test_git_worker_does_not_inherit_network_or_credential_environment(
     assert not {"HTTPS_PROXY", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND"} & env.keys()
     assert "http.followRedirects=false" in observed["command"]
     assert "http.sslVerify=true" in observed["command"]
+
+
+@pytest.mark.parametrize("ref", ["main@{1}", "a..b", "a//b"])
+def test_git_ref_outside_the_grammar_is_rejected(
+    ref: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = "https://github.com/example/vault.git"
+    monkeypatch.setattr(settings.security, "git_repositories", [url])
+    with pytest.raises(VaultResolutionError, match="Invalid git ref"):
+        resolve_vault(
+            ResearchRequest(
+                topic="git vault", vault={"type": "git", "url": url, "ref": ref}
+            )
+        )
 
 
 def test_git_option_shaped_ref_is_rejected() -> None:

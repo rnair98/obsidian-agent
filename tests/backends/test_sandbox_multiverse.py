@@ -122,7 +122,7 @@ def _candidate(world: World, base: Path, outside: Path) -> str:
     if shape == "parents":
         return "notes/../../outside.txt"
     if shape == "return_inside":
-        return "notes/../../notes/a.md"
+        return f"notes/../../{base.name}/notes/a.md"
     if shape == "absolute_inside":
         return str(base / "notes" / "a.md")
     if shape == "absolute_outside":

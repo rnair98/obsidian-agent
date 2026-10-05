@@ -3,6 +3,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
 _FRAMEWORK = ("langchain", "langgraph")
+_DYNAMIC_IMPORTS = frozenset({"import_module", "__import__"})
 _ADAPTERS = frozenset(
     {
         "app/engine/agents/types.py",
@@ -34,6 +35,8 @@ def _framework_imports(path: Path) -> list[str]:
             modules = [alias.name for alias in node.names]
         elif isinstance(node, ast.ImportFrom) and node.module:
             modules = [node.module]
+        elif _is_dynamic_import(node):
+            modules = [node.args[0].value]
         for module in modules:
             root = module.split(".", 1)[0]
             if root.startswith(_FRAMEWORK):
@@ -41,6 +44,19 @@ def _framework_imports(path: Path) -> list[str]:
                     f"{path.relative_to(_REPO)}:{node.lineno} imports {module}"
                 )
     return found
+
+
+def _is_dynamic_import(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call) or not node.args:
+        return False
+    func = node.func
+    name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+    first = node.args[0]
+    return (
+        name in _DYNAMIC_IMPORTS
+        and isinstance(first, ast.Constant)
+        and isinstance(first.value, str)
+    )
 
 
 def test_framework_imports_stay_in_the_kept_adapters() -> None:

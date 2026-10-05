@@ -33,7 +33,7 @@ Configure workflow authentication and approved vault paths first; see
 fail closed. Container vault paths require explicit writable mounts.
 
 ```bash
-# Prerequisites: podman (or docker) + provider keys + configured workflow access
+# Prerequisites: podman + provider keys + configured workflow access
 # Compose also requires an exported, generated POSTGRES_PASSWORD.
 
 just up                                   # app + postgres + phoenix

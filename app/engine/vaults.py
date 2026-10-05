@@ -9,6 +9,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.backends import get_filesystem_backend
 from app.engine.backends.protocol import FilesystemBackend
@@ -97,9 +98,9 @@ def _git_vault(spec: GitVaultRequest) -> VaultLayout:
         or spec.url not in settings.security.git_repositories
     ):
         raise VaultResolutionError("Git repository is not approved")
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,255}", spec.ref):
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/@-]{0,255}", spec.ref):
         raise VaultResolutionError("Invalid git ref")
-    if ".." in spec.ref or "//" in spec.ref:
+    if ".." in spec.ref or "//" in spec.ref or "@{" in spec.ref:
         raise VaultResolutionError("Invalid git ref")
     cache_key = _cache_key(spec)
     base = settings.filesystem.base_path.resolve()
@@ -222,5 +223,12 @@ def _run_git(args: list[str]) -> str:
     except OSError as exc:
         raise VaultResolutionError("git vault worker unavailable") from exc
     if completed.returncode != 0:
+        # Server-side only: the API maps this error to a generic 400.
+        logger.warning(
+            "git {} exited {}: {}",
+            args[0] if args[0] != "-C" else args[2],
+            completed.returncode,
+            (completed.stderr or "").strip()[-2000:],
+        )
         raise VaultResolutionError("git vault operation failed")
     return completed.stdout or ""

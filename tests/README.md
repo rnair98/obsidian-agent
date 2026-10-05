@@ -42,7 +42,7 @@ Prefer, in this order:
 1. Write a `Proof` for the §10 invariant or the caller-visible outcome. If you cannot name the seam, the fault model, and the axes, do not add the test.
 2. Check it with `check_always` or `check_sometimes`. A new module of the same kind must be an axis value the existing proof already covers, or the proof is too narrow.
 3. Put the test next to the seam it protects. Update [ARCHITECTURE.md §11](../ARCHITECTURE.md) in the same change.
-4. Run the focused file, then `just check` when the contract is shared. A failure prints `seed=` and the axis assignment. Replay that seed. Do not delete the world to make it pass.
+4. Run the focused file, then `just check` when the contract is shared. A `check_always` failure prints the counterexample assignment; `check_sometimes` only prints the seed and world count. Replay with the same axes and seed. Do not delete the world to make it pass.
 
 ## Removed
 

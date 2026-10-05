@@ -36,15 +36,15 @@ different outcomes. None should stand in for the others.
 | Literature primitives | Separate keyword, embedding, OpenAlex, bioRxiv-through-OpenAlex and PubMed commands; user-disabled sources rejected on both discovery and paper reads | Adopt independent acquisition and per-source control. |
 | Evidence-aware presentation | Run/file links and a prompt requiring actual log inspection; bounded log-window API | Adopt resolvable citations, with artifact validation behind them. |
 
-Source: [compute](../../OpenResearch/src/compute.rs),
-[store](../../OpenResearch/src/store.rs),
-[supervisor](../../OpenResearch/src/commands/supervise.rs),
-[dashboard startup](../../OpenResearch/src/commands/up.rs),
-[session worktrees](../../OpenResearch/src/local/git.rs),
-[harness contract](../../OpenResearch/src/local/harness/mod.rs),
-[discovery](../../OpenResearch/src/commands/discover.rs),
-[paper reads](../../OpenResearch/src/commands/paper.rs),
-[playbook](../../OpenResearch/SYSTEM_PROMPT.md).
+Source: [compute](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/compute.rs),
+[store](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/store.rs),
+[supervisor](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/supervise.rs),
+[dashboard startup](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/up.rs),
+[session worktrees](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/git.rs),
+[harness contract](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/harness/mod.rs),
+[discovery](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/discover.rs),
+[paper reads](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/paper.rs),
+[playbook](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/SYSTEM_PROMPT.md).
 
 ## Gaps and assumptions to leave behind
 
@@ -65,9 +65,9 @@ data/model hashes or unavailable identities, environment specification, evaluato
 version and uncertainty. Distinguish repeatable source, repeatable execution,
 and statistically reproducible findings.
 
-Source: [SourceSnapshot and snapshot_script](../../OpenResearch/src/compute.rs),
-[local controller](../../OpenResearch/src/local/localrun.rs),
-[environment policy](../../OpenResearch/SYSTEM_PROMPT.md).
+Source: [SourceSnapshot and snapshot_script](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/compute.rs),
+[local controller](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/localrun.rs),
+[environment policy](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/SYSTEM_PROMPT.md).
 
 ### O2. The local log collector can lose evidence and grows with total log size
 
@@ -85,9 +85,9 @@ explicit truncation/rotation detection, and visible persistence errors. Preserve
 raw bytes where necessary. Do not silently equate missing evidence with an empty
 log.
 
-Source: [local collector](../../OpenResearch/src/jobs/localbox.rs),
-[tail_logs_local](../../OpenResearch/src/commands/supervise.rs),
-[ComputeBackend::logs](../../OpenResearch/src/compute.rs).
+Source: [local collector](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/jobs/localbox.rs),
+[tail_logs_local](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/supervise.rs),
+[ComputeBackend::logs](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/compute.rs).
 The first two failure cases are reproduced by the offline checks below.
 
 ### O3. Process completion precedes evidence readiness
@@ -104,9 +104,9 @@ evidence finalizing/complete/partial, assessment pending/supported/inconclusive.
 Bind assessments to exact evidence digests. A completion event must describe
 which guarantee is available; it must not imply all three.
 
-Source: [exit_code_state](../../OpenResearch/src/jobs/localbox.rs),
-[run and run_local](../../OpenResearch/src/commands/supervise.rs),
-[RunStatus](../../OpenResearch/src/store.rs). Zero-exit behavior is characterized
+Source: [exit_code_state](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/jobs/localbox.rs),
+[run and run_local](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/supervise.rs),
+[RunStatus](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/store.rs). Zero-exit behavior is characterized
 offline; the timing window is source-derived, not a reproduced live race.
 
 ### O4. Local cancellation and limits are weaker than a supervised sandbox
@@ -130,10 +130,10 @@ record cancellation request/acknowledgement/confirmed termination separately,
 and test child cleanup. No promotion of today's fake shell to arbitrary host
 execution.
 
-Source: [terminate_group](../../OpenResearch/src/jobs/localbox.rs),
-[cancel_local](../../OpenResearch/src/commands/supervise.rs),
-[argument validation](../../OpenResearch/src/compute.rs),
-[local launch](../../OpenResearch/src/local/localrun.rs).
+Source: [terminate_group](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/jobs/localbox.rs),
+[cancel_local](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/supervise.rs),
+[argument validation](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/compute.rs),
+[local launch](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/localrun.rs).
 
 ### O5. Submission recovery is strong but does not make launch exactly once
 
@@ -150,9 +150,9 @@ be established. A failed HTTP response is not permission to launch another paid
 job. There is no general cross-filesystem/provider transaction to buy with more
 engineering.
 
-Source: [submit, reserve_run, record_submission_handle](../../OpenResearch/src/compute.rs),
-[supervisor recovery](../../OpenResearch/src/commands/supervise.rs),
-[run_job](../../OpenResearch/src/jobs/localbox.rs). Failure windows are static
+Source: [submit, reserve_run, record_submission_handle](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/compute.rs),
+[supervisor recovery](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/supervise.rs),
+[run_job](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/jobs/localbox.rs). Failure windows are static
 analysis, not fault-injected provider experiments.
 
 ### O6. The experiment tree encodes one optimization strategy as a general rule
@@ -173,9 +173,9 @@ split, seeds and comparison conditions before execution. A comparison can be
 invalid or inconclusive even when both jobs succeed. Allow a simple tree view;
 do not require research to have one tree shape.
 
-Source: [experiment-tree policy](../../OpenResearch/agent-skills/orx-experiment-tree/SKILL.md),
-[LocalExperiment](../../OpenResearch/src/local/model.rs),
-[creation and command inheritance](../../OpenResearch/src/local/experiments.rs).
+Source: [experiment-tree policy](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/agent-skills/orx-experiment-tree/SKILL.md),
+[LocalExperiment](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/model.rs),
+[creation and command inheritance](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/local/experiments.rs).
 
 ### O7. Literature policy improves on Feynman, but still has arbitrary ceilings
 
@@ -192,7 +192,7 @@ action. A private design document, repository issue or newly released manual
 may be the best evidence even after scholarly search succeeded. Figures are
 valuable when useful, not a universal admission requirement for an answer.
 
-Source: [literature policy](../../OpenResearch/agent-skills/orx-lit-review/SKILL.md).
+Source: [literature policy](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/agent-skills/orx-lit-review/SKILL.md).
 
 ### O8. Retrieval output is not a durable claim/evidence model
 
@@ -211,9 +211,9 @@ identity. The arXiv paper parser preserves explicit versions; do not mistakenly
 report that all paper reads strip versions because a separate `versionless_id`
 helper exists. Treat reports as navigation aids, never unlabelled originals.
 
-Source: [discover](../../OpenResearch/src/commands/discover.rs),
-[paper routing and parser](../../OpenResearch/src/commands/paper.rs),
-[client](../../OpenResearch/src/client.rs).
+Source: [discover](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/discover.rs),
+[paper routing and parser](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/paper.rs),
+[client](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/client.rs).
 
 ### O9. Local ownership is useful, but not complete policy control
 
@@ -237,13 +237,22 @@ action with preview. Make outbound source/model/compute policy visible and
 enforced; an offline mode must not silently fall back to a hosted service.
 Uninstalling a CLI and eliminating all external services are separate goals.
 
-Source: [README](../../OpenResearch/README.md),
-[dashboard modes](../../OpenResearch/src/commands/up.rs),
-[telemetry](../../OpenResearch/src/telemetry.rs),
-[feedback implementation](../../OpenResearch/src/commands/feedback.rs),
-[feedback policy](../../OpenResearch/agent-skills/orx-feedback/SKILL.md).
+Source: [README](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/README.md),
+[dashboard modes](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/up.rs),
+[telemetry](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/telemetry.rs),
+[feedback implementation](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/src/commands/feedback.rs),
+[feedback policy](https://github.com/alphaXiv/OpenResearch/blob/27cb34200fe82957d33d37c143adf086408281d0/agent-skills/orx-feedback/SKILL.md).
 
 ## Verification and scope
+
+To reproduce, check out the pinned snapshot at the obsidian-agent root
+(the script refuses any other revision; `rustc` is required):
+
+```sh
+git clone https://github.com/alphaXiv/OpenResearch.git
+git -C OpenResearch checkout 27cb34200fe82957d33d37c143adf086408281d0
+python3 docs/research/openresearch-audit-checks.py
+```
 
 Ran `python3 docs/research/openresearch-audit-checks.py` successfully. It extracts
 the actual `stream_logs` and `exit_code_state` definitions, compiles them with
@@ -253,7 +262,7 @@ success semantics. This is characterization, not a full upstream test suite.
 It will intentionally fail if the characterized behavior changes.
 
 Also reran the five [Feynman checks](feynman-audit-checks.mjs), all passed.
-No app/provider/model execution, installation, account access, cloud spend,
+No app/provider/model execution (beyond the extracted definitions of the pinned snapshots), installation, account access, cloud spend,
 uninstallation, or upstream modification occurred. Full Rust tests and dashboard
 QA were not run. Graph coverage reported no recorded gaps for the cited files;
 source was read directly, and absence of graph errors is not exhaustive coverage.

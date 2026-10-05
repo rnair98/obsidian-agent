@@ -468,7 +468,7 @@ Prefer, in order:
 3. A functional test of a public seam (route, command, persist, vault)
    that asserts the world afterward.
 
-Do not assert a helper's current return value, patch the unit under test,
+Do not assert a value that only restates a helper's implementation, patch the unit under test,
 or compare free-form model prose with `assertEqual`. Model behavior is an
 eval fixture (`TODOS.md`, `ROADMAP.md`), not a pytest equality. Update
 ARCHITECTURE.md §11 in the same change. Run `just check` (§11.2), then

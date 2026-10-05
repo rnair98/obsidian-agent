@@ -69,3 +69,14 @@ async def test_several_graphs_share_one_state() -> None:
     )
     assert out["n"] == 11
     assert out["trail"] == ["a", "b"]
+
+
+def test_every_workflow_builds_with_the_executor_kwargs() -> None:
+    # execute() always forwards prompt_context; a factory that rejects it
+    # fails every request. Each workflow must also keep ResearchState channels.
+    import app.engine.workflows  # noqa: F401  registers the factories
+    from app.engine.registry import get_workflow, list_workflows
+
+    for name in list_workflows():
+        graph = get_workflow(name, MemorySaver(), prompt_context={"prior_memories": ""})
+        assert {"messages", "topic"} <= set(graph.channels), name

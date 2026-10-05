@@ -27,8 +27,13 @@ Feynman's command catalog, agent count, or artifact count.
 Reproduce the five checks from the obsidian-agent root (Node 24.21.0 used):
 
 ```sh
+git clone https://github.com/Companion-Inc/feynman.git
+git -C feynman checkout fe3fd94943df8c5b519fed14c8485215b206aba8
 node docs/research/feynman-audit-checks.mjs
 ```
+
+The script refuses any other revision. It loads code from that checkout
+in-process, so run it only against the pinned, trusted snapshot.
 
 The script accepts an alternative Feynman checkout path. It intentionally
 characterizes weaknesses in the reviewed snapshot; if upstream fixes one,
@@ -49,10 +54,10 @@ These are worth retaining as principles. The gap is between a good instruction
 and an enforced, measurable research contract. More agents, citations, or files
 do not automatically close that gap.
 
-Sources: [runtime](../../feynman/src/pi/runtime.ts),
-[research tools](../../feynman/extensions/research-tools.ts),
-[science adapters](../../feynman/extensions/research-tools/science-databases.ts),
-[eval documentation](../../feynman/evals/README.md).
+Sources: [runtime](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/src/pi/runtime.ts),
+[research tools](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools.ts),
+[science adapters](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/science-databases.ts),
+[eval documentation](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/README.md).
 
 ## Findings and architectural consequences
 
@@ -75,9 +80,9 @@ completeness, answer correctness, and usefulness separately. Store the exact
 passage and locator behind decisive claims. Human-calibrated semantic judgments
 can assess support but must remain fallible, with an uncertain outcome.
 
-Sources: [scorer](../../feynman/evals/run.mjs) (`scoreCitations`, `keyRecall`),
-[verifier](../../feynman/.feynman/agents/verifier.md),
-[0.5.3 release](../../feynman/RELEASES.md).
+Sources: [scorer](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/run.mjs) (`scoreCitations`, `keyRecall`),
+[verifier](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/.feynman/agents/verifier.md),
+[0.5.3 release](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/RELEASES.md).
 External corroboration: the [ALCE paper](https://arxiv.org/abs/2305.14627v2)
 separates correctness and citation quality in evaluation. Only its abstract
 was inspected here; no ALCE numeric result is used as a product target.
@@ -104,10 +109,10 @@ A partial deliverable is useful but cannot masquerade as verified completion.
 When workers are eventually introduced, the supervisor must join/cancel them
 and collect artifact receipts; a prompt reminder is insufficient.
 
-Sources: [scorer](../../feynman/evals/run.mjs),
-[telemetry](../../feynman/extensions/research-tools/telemetry.ts),
-[launch](../../feynman/src/pi/launch.ts),
-[pre-wait report](../../feynman/evals/results/2026-09-24-lit-0.5.3-pre-wait-ferrylane-openai_gpt-5.6-terra.md).
+Sources: [scorer](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/run.mjs),
+[telemetry](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/telemetry.ts),
+[launch](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/src/pi/launch.ts),
+[pre-wait report](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/results/2026-09-24-lit-0.5.3-pre-wait-ferrylane-openai_gpt-5.6-terra.md).
 
 ### F3 — Some evidence rules create false certainty or selection bias
 
@@ -124,9 +129,9 @@ sources, and accept vault/file/commit locators. Use question-specific evidence
 requirements. Absence claims need a stated search boundary and uncertainty.
 Paper-review rubrics should be optional task criteria, not universal gates.
 
-Sources: [researcher](../../feynman/.feynman/agents/researcher.md),
-[reviewer](../../feynman/.feynman/agents/reviewer.md),
-[literature workflow](../../feynman/prompts/lit.md).
+Sources: [researcher](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/.feynman/agents/researcher.md),
+[reviewer](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/.feynman/agents/reviewer.md),
+[literature workflow](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/prompts/lit.md).
 
 ### F4 — Retrieval policy favors seminal-paper recall by default
 
@@ -144,8 +149,8 @@ time. Group preprint/venue/mirror records as one evidence family. Test recent,
 contradictory, negative, and unanswerable cases; do not add a universal ranking
 model before measuring these failures.
 
-Sources: [science adapters](../../feynman/extensions/research-tools/science-databases.ts)
-(`searchSemanticScholar`), [questions](../../feynman/evals/questions.jsonl).
+Sources: [science adapters](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/science-databases.ts)
+(`searchSemanticScholar`), [questions](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/questions.jsonl).
 
 ### F5 — Post-hoc citation editing can hide how a conclusion was reached
 
@@ -162,8 +167,8 @@ Distinguish identity, accessibility, support, contradiction, and uncertainty.
 Unavailable content should remain recorded as unavailable, not silently become
 false or disappear from the research history.
 
-Sources: [deep research](../../feynman/prompts/deepresearch.md),
-[verifier](../../feynman/.feynman/agents/verifier.md).
+Sources: [deep research](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/prompts/deepresearch.md),
+[verifier](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/.feynman/agents/verifier.md).
 
 ### F6 — Fixed workflow ceremony is not adaptive research
 
@@ -183,9 +188,9 @@ and approval for consequential actions—not for routine authorized reading.
 Keep an explicit `budget_exhausted` outcome; do not dress it up as sufficient
 coverage. A learned stopping rule is later work, after calibration.
 
-Sources: [deep research](../../feynman/prompts/deepresearch.md),
-[literature](../../feynman/prompts/lit.md),
-[autoresearch](../../feynman/prompts/autoresearch.md).
+Sources: [deep research](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/prompts/deepresearch.md),
+[literature](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/prompts/lit.md),
+[autoresearch](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/prompts/autoresearch.md).
 
 ### F7 — Compact tool output does not imply bounded runtime memory
 
@@ -201,9 +206,9 @@ limits before materializing large inputs; persist bounded extracts and return
 references. Preserve truncation and continuation metadata. Do not read a whole
 paper/corpus into memory merely to return a small excerpt.
 
-Source: [Hugging Face adapter](../../feynman/extensions/research-tools/huggingface.ts)
+Source: [Hugging Face adapter](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/huggingface.ts)
 (`fetchJson`, `repoFiles`, `readRepoFile`),
-[science adapter](../../feynman/extensions/research-tools/science-databases.ts).
+[science adapter](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/science-databases.ts).
 
 ### F8 — Extraction and service failures can masquerade as evidence gaps
 
@@ -220,10 +225,10 @@ quietly implying that the paper lacks a section. Pin paper/code versions and
 record extraction method; alphaXiv's AI report is derived material, not raw paper
 text (the tool already exposes a `fullText` option).
 
-Sources: [section parser](../../feynman/extensions/research-tools/alpha-sections.ts),
-[alpha tools](../../feynman/extensions/research-tools/alpha.ts),
-[DOI scorer](../../feynman/evals/run.mjs). Existing
-[section tests](../../feynman/tests/alpha-sections.test.ts) cover simple headings,
+Sources: [section parser](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/alpha-sections.ts),
+[alpha tools](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/alpha.ts),
+[DOI scorer](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/run.mjs). Existing
+[section tests](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/tests/alpha-sections.test.ts) cover simple headings,
 not the reproduced unpunctuated-prose case.
 
 ### F9 — Report artifacts are not a durable knowledge-update model
@@ -241,9 +246,9 @@ retain provenance, and detect changed evidence. Use a run ID for isolation and
 content hashes for conflict detection. The model proposes changes; one controlled
 writer applies them. This needs local integration tests, not a new graph database.
 
-Sources: [artifact conventions](../../feynman/AGENTS.md),
-[optional memory packages](../../feynman/src/pi/packages.ts),
-[alpha annotations](../../feynman/extensions/research-tools/alpha.ts).
+Sources: [artifact conventions](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/AGENTS.md),
+[optional memory packages](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/src/pi/packages.ts),
+[alpha annotations](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/alpha.ts).
 
 ### F10 — Telemetry does not automatically provide safe or complete evaluation
 
@@ -260,9 +265,9 @@ breakdowns. Phoenix can remain an optional observer rather than a correctness
 dependency; observability must not become another production data store to keep
 consistent with research state.
 
-Sources: [telemetry](../../feynman/extensions/research-tools/telemetry.ts)
-(`errorText`, `finishRun`), [eval usage](../../feynman/evals/run.mjs),
-[eval docs](../../feynman/evals/README.md).
+Sources: [telemetry](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/extensions/research-tools/telemetry.ts)
+(`errorText`, `finishRun`), [eval usage](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/run.mjs),
+[eval docs](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/README.md).
 
 ### F11 — Published runs demonstrate progress, not superiority
 
@@ -283,9 +288,9 @@ single-agent baseline on equal budgets. Separate frozen-evidence experiments,
 frozen-corpus search experiments, and live canaries. Publish per-case failures,
 uncertainty, and operational outcomes, not just successful-run averages.
 
-Sources: [final report](../../feynman/evals/results/2026-09-24-lit-0.5.3-ferrylane-openai_gpt-5.6-terra.md),
-[pre-wait report](../../feynman/evals/results/2026-09-24-lit-0.5.3-pre-wait-ferrylane-openai_gpt-5.6-terra.md),
-[scorer](../../feynman/evals/run.mjs).
+Sources: [final report](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/results/2026-09-24-lit-0.5.3-ferrylane-openai_gpt-5.6-terra.md),
+[pre-wait report](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/results/2026-09-24-lit-0.5.3-pre-wait-ferrylane-openai_gpt-5.6-terra.md),
+[scorer](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/evals/run.mjs).
 
 ### F12 — Its history already argues against copying the whole product
 
@@ -302,9 +307,9 @@ No terminal clone, scheduler, GPU fleet, generic plugin platform, or extra
 production model-call runtime is required for the initial research product.
 Do not describe removed features as current bugs.
 
-Sources: [release history](../../feynman/RELEASES.md) §§0.4.0–0.5.4,
-[current launch](../../feynman/src/pi/launch.ts),
-[current package loading](../../feynman/src/pi/runtime.ts).
+Sources: [release history](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/RELEASES.md) §§0.4.0–0.5.4,
+[current launch](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/src/pi/launch.ts),
+[current package loading](https://github.com/Companion-Inc/feynman/blob/fe3fd94943df8c5b519fed14c8485215b206aba8/src/pi/runtime.ts).
 
 ## Obsidian-agent must fix its own baseline first
 

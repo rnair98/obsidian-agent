@@ -11,6 +11,13 @@ import sys
 import tempfile
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "OpenResearch")
+PINNED = "27cb34200fe82957d33d37c143adf086408281d0"
+head = subprocess.run(
+    ["git", "-C", str(root), "rev-parse", "HEAD"],
+    check=True, capture_output=True, text=True,
+).stdout.strip()
+if head != PINNED:
+    sys.exit(f"OpenResearch checkout is {head}, audit pins {PINNED}")
 source = (root / "src/jobs/localbox.rs").read_text()
 start = source.index("pub fn stream_logs(")
 end = source.index("/// TERM the process group", start)

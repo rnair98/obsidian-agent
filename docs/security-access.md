@@ -3,7 +3,7 @@
 Workflow requests require `Authorization: Bearer <token>`. Configure one
 high-entropy `SECURITY__WORKFLOW_TOKEN` for this single-user service. Missing
 server configuration returns 503; missing or incorrect credentials return 401.
-No unauthenticated development bypass exists. Health and OpenAPI remain public.
+No unauthenticated development bypass exists. OpenAPI remains public.
 For access beyond localhost, terminate TLS and enforce access at the deployment
 boundary. This shared token does not provide separate tenant identities.
 

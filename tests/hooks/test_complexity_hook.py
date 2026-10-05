@@ -2,7 +2,10 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+import pytest
 
 _HOOK = Path(__file__).resolve().parents[2] / ".cursor" / "hooks" / "complexity.py"
 _SPEC = importlib.util.spec_from_file_location("complexity_hook", _HOOK)
@@ -13,6 +16,12 @@ _SPEC.loader.exec_module(_hook)
 _FIXTURES = Path(__file__).resolve().parents[1] / "support" / "sensors" / "fixtures"
 _COMPLEX = _FIXTURES / "too_complex.py"
 _SIMPLE = _FIXTURES / "simple_fn.py"
+
+
+@pytest.fixture(autouse=True)
+def _isolated_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Hook state lives under gettempdir(); keep each test's conversation private.
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
 
 
 def test_cognitive_gate_flags_the_canary() -> None:
@@ -34,7 +43,6 @@ def test_post_edit_context_names_the_gate() -> None:
     context = result["additional_context"]
     assert "§9 complexity" in context
     assert "nested" in context
-    _hook._state_file("complexity-canary").unlink(missing_ok=True)
 
 
 def test_stop_followup_replays_a_recorded_edit() -> None:
@@ -58,7 +66,6 @@ def test_stop_followup_replays_a_recorded_edit() -> None:
         }
     )
     assert "nested" in result["followup_message"]
-    _hook._state_file(conversation_id).unlink(missing_ok=True)
 
 
 def test_stop_is_quiet_when_the_edit_is_under_the_gate() -> None:
@@ -81,7 +88,6 @@ def test_stop_is_quiet_when_the_edit_is_under_the_gate() -> None:
         )
         == {}
     )
-    _hook._state_file(conversation_id).unlink(missing_ok=True)
 
 
 def test_hook_script_emits_json() -> None:

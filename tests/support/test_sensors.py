@@ -12,7 +12,7 @@ _FIXTURES = Path(__file__).resolve().parent / "sensors" / "fixtures"
 
 def test_direct_write_sensor_flags_the_fixture() -> None:
     text = "\n".join(direct_write_violations(_FIXTURES / "direct_write.py"))
-    assert "calls open()" in text
+    assert text.count("calls open()") == 2  # builtin open and Path.open("w")
     assert "calls write_text()" in text
     assert "calls write_bytes()" in text
     assert "§10" in text
