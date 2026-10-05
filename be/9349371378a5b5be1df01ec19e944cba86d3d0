@@ -1,0 +1,38 @@
+AGENTS.md
+  s_07542399ba903c::t_1833218454926d 105-110
+ARCHITECTURE.md
+  s_07542399ba903c::t_2cac5e69788d43 1036-1047
+ROADMAP.md
+  s_07542399ba903c::t_0c5871780b51da 467-468
+  s_07542399ba903c::t_55fc90c584b88e 434-435
+  s_07542399ba903c::t_462e55215cbb11 582
+  s_07542399ba903c::t_e8af4e30f7c0ca 227-234
+  s_07542399ba903c::t_7dce0b75153d80 598-600
+  s_07542399ba903c::t_655d3f70f3edd2 153-154
+  s_07542399ba903c::t_f25cae3d1df6c9 284-287
+  s_07542399ba903c::t_426f006a184f45 583-585
+  s_07542399ba903c::t_fc1c4c6d08d8fc 207-209
+  s_07542399ba903c::t_4b4659ec8ea595 174-182
+  s_07542399ba903c::t_0aaf31b7a2330f 126-152,155-173,183-192,195-206,210-226,235
+  s_07542399ba903c::t_4e1267393b8231 93-94
+  s_07542399ba903c::t_c02a1bd0c75388 251-252
+  s_07542399ba903c::t_dc2702b3f952b8 193-194
+docs/cross-project/swe-term.md
+  s_07542399ba903c::t_da0fdc024c0117 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be9349371378a5b5be1df01ec19e944cba86d3d0",
+  "prompts": {},
+  "sessions": {
+    "s_07542399ba903c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7830cde-fd37-4ff0-be40-0cbf7e827048",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
