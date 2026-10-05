@@ -1,0 +1,299 @@
+app/engine/nodes/agent.py
+  s_986fa48c2175ba::t_5ba750691da5c4 12
+  s_986fa48c2175ba::t_d3ff42372b44a0 43-45
+  s_986fa48c2175ba::t_2efbb536c5a4e1 54,56-58,70
+  s_986fa48c2175ba::t_9efd70ac39430f 22
+tests/support/test_multiverse.py
+  s_287c2d0827c656::t_0a41fbc5d000c4 15,18
+  s_287c2d0827c656::t_1ca2e4a90e8e8b 5-12
+  s_287c2d0827c656::t_17654248e35f89 3,16-17,19-23,26-29,32-35,37-39,42-49,52-54
+tests/support/sensors/fixtures/unregistered_workflow/side.py
+  s_287c2d0827c656::t_e86eef841165f4 1-10
+.cursor/hooks/complexity.py
+  s_287c2d0827c656::t_f3415aba0cc047 1-10,12-54,58,79-143
+  s_287c2d0827c656::t_512b71218c3109 11,55-57,59-78
+app/engine/graphs/research.py
+  s_287c2d0827c656::t_9548c7cdb5f397 19,30,33
+  s_287c2d0827c656::t_4d33f39d128037 58
+TODOS.md
+  s_986fa48c2175ba::t_727fea870efcdc 119
+  s_b8b3cdfc47e029::t_9764863d2e1b3a 1-2,4,6,8,10-11,15-16,20-21,25-26,30-31,35-36
+  s_986fa48c2175ba::t_d1cb6516090a43 3,5,7,9,12-14,17-19,22-24,27-29,32-34,37-118
+tests/backends/test_sandbox_multiverse.py
+  s_287c2d0827c656::t_77d6949f183fa0 1-151
+app/engine/workflows/agents.py
+  s_287c2d0827c656::t_1c0ea8ec1ce38d 1-48
+tests/support/multiverse.py
+  s_287c2d0827c656::t_e314a84fe60dc3 33-37
+  s_287c2d0827c656::t_9b212369502f5a 105-106
+  s_287c2d0827c656::t_9716579bca8b35 1-32,38-104,107-137,141-150
+  s_287c2d0827c656::t_a787b9795fe460 138-140
+tests/engine/test_compose_graphs.py
+  s_287c2d0827c656::t_04f9120110b995 1-71
+app/engine/registry.py
+  s_287c2d0827c656::t_365353c16e48be 46
+docs/research/feynman-audit-checks.mjs
+  s_9171ba00127552::t_8c8bde29c39ad3 1-61
+docs/research/feynman-audit.md
+  s_b8b3cdfc47e029::t_65d8bafdff926a 361
+  s_9171ba00127552::t_41f8beda6f8d9d 360
+  s_9171ba00127552::t_4f8edfcd52cd9d 1-359,362
+docs/research/openresearch-audit-checks.py
+  s_b8b3cdfc47e029::t_20dfcd0b6177e0 1-55
+tests/README.md
+  s_287c2d0827c656::t_81978012ba70c9 45
+  s_287c2d0827c656::t_a2d890f4aa1a0e 26,28
+  s_287c2d0827c656::t_fa366b30f3c5ab 42-43
+  s_287c2d0827c656::t_c10730c06ce75c 1-2,4-8,10-18,21-25,27,29-41,44,46-49
+  s_287c2d0827c656::t_33e1e334817f63 3
+  s_287c2d0827c656::t_6a5398ce877db7 9
+  s_287c2d0827c656::t_e3bef28e7c6dd4 19
+  s_287c2d0827c656::t_c064afaff0822e 20
+AGENTS.md
+  s_287c2d0827c656::t_11724c0e45793f 97-99
+  s_287c2d0827c656::t_309f2022397188 462,465-466,468
+  s_287c2d0827c656::t_78aa33de9fbaf5 54-55,59-60
+  s_287c2d0827c656::t_d5074e865b2d07 88-91
+  s_287c2d0827c656::t_45958a09e4c808 459-461
+  s_287c2d0827c656::t_5c49eef80229b7 504,508
+  s_287c2d0827c656::t_a3de7f1faf3c01 56-58
+  s_287c2d0827c656::t_6a87c9035a88c3 509-511
+  s_287c2d0827c656::t_331d31c69a92d3 85-87
+  s_287c2d0827c656::t_164ab39ba3f9cd 92-93
+  s_287c2d0827c656::t_6a975f9d414654 138
+  s_287c2d0827c656::t_0ce3d013c90455 474-475
+  s_287c2d0827c656::t_c552bcb8e98f2d 96
+  s_287c2d0827c656::t_1d118f8f63e9e1 94-95
+  s_287c2d0827c656::t_2bc3bda875e6dc 139-141
+  s_287c2d0827c656::t_8a1f55fc57da5e 524-526
+  s_287c2d0827c656::t_f1a79ffb381a02 450-458,463-464,467,469-473,476-479
+app/engine/workflows/compose.py
+  s_287c2d0827c656::t_03a2ab1cabb8ee 1-28
+tests/test_imports.py
+  s_287c2d0827c656::t_69cfc7d7e6e9c2 17-19,22-28
+tests/hooks/test_complexity_hook.py
+  s_287c2d0827c656::t_b260fb850378cb 1-2,5-17,19,21,23-35,38-41,52-59,61-88,90-98
+  s_287c2d0827c656::t_dfbc58236c2713 3-4,18,20,22,36-37,42-51,60,89
+.cursor/hooks.json
+  s_287c2d0827c656::t_5f9468f12a7a95 1-25
+justfile
+  s_287c2d0827c656::t_4f6f6d71d424d9 20
+  s_287c2d0827c656::t_a223945775f3d2 18-19,21-24
+  s_287c2d0827c656::t_92017534e8a964 25-31
+  s_287c2d0827c656::t_cdad74533b3661 47,54-55
+tests/support/sensors.py
+  s_287c2d0827c656::t_3ceaea172f93e7 49-57,61-63
+  s_287c2d0827c656::t_d0499017cba7f5 1-48,58-60,64-107
+tests/support/test_sensors.py
+  s_287c2d0827c656::t_1f3d8da0b7b1f7 1-26,32-46
+  s_287c2d0827c656::t_588667ec5261fe 27-31
+tests/support/sensors/fixtures/unregistered_workflow/__init__.py
+  s_287c2d0827c656::t_0c75821d32f369 1-3
+tests/support/sensors/fixtures/unregistered_workflow/bar.py
+  s_287c2d0827c656::t_e2e1163879c0ff 1-2
+.cursor/skills/adversarial-qa/SKILL.md
+  s_287c2d0827c656::t_eb26fd217cf3c0 7,12-16,19-32,34
+  s_287c2d0827c656::t_724cf4dfdc2ea1 1-6,8-11,17-18,33,35
+tests/support/sensors/fixtures/legal_write.py
+  s_287c2d0827c656::t_b7dc3beea9c4e5 1-7
+tests/engine/test_framework_boundary.py
+  s_287c2d0827c656::t_4abd54d5ec4b4c 40-42
+  s_287c2d0827c656::t_7f3f96d6f28cb9 1-39,43-58
+tests/support/sensors/fixtures/direct_write.py
+  s_287c2d0827c656::t_8967451119a888 1-7
+ROADMAP.md
+  s_0b979b9bd9ebed::t_acf296dcde9bdb 2,6-7,394,434-437,440
+  s_b8b3cdfc47e029::t_9764863d2e1b3a 3-5
+  s_9171ba00127552::t_41f8beda6f8d9d 1,8-393,395-433,438-439,441-477
+app/engine/workflows/research.py
+  s_287c2d0827c656::t_75b09c65af6e7c 1-20
+ARCHITECTURE.md
+  s_287c2d0827c656::t_28a22a6370a6f7 145
+  s_287c2d0827c656::t_53b14240c54263 997
+  s_287c2d0827c656::t_30da3d1cef9b06 1099-1100
+  s_287c2d0827c656::t_450b0bc99da793 222
+  s_287c2d0827c656::t_fc2e77a036fd31 298
+  s_287c2d0827c656::t_ef8399fdc3f41b 693-694
+  s_287c2d0827c656::t_d7091c4c7f031c 70-71
+  s_b8b3cdfc47e029::t_9764863d2e1b3a 290-291
+  s_287c2d0827c656::t_8d6b450f8bfdb8 828-831
+  s_287c2d0827c656::t_f492a71c42790c 1007
+  s_287c2d0827c656::t_56f32f4dff48e2 610
+  s_287c2d0827c656::t_37f32a9fa67f3a 676-685,691-692
+  s_287c2d0827c656::t_8c101389ca4f05 869-870
+  s_287c2d0827c656::t_c43ad664fd6638 616-628,633,638,658,661-663
+  s_b8b3cdfc47e029::t_1fb7bb88a5e42b 42,331,1023-1024,1047-1048
+  s_9171ba00127552::t_1717abb3f91106 22,29-30,40,55-56,58-60,133-139,170,178-187,233-234,254,258-259,313,334-336,338-339,351,365-370,380,384-385,476-479,495-496,501-506,534-535,538-541,543-548,551,555-556,592,742-744,844-848,852-853,868,871-882,999,1015,1036-1046,1049,1051,1072-1073
+  s_287c2d0827c656::t_39c0d8c9a0a101 581-584
+  s_287c2d0827c656::t_7fe1670c080de9 132
+  s_287c2d0827c656::t_d5b0f3d95e182e 659-660,664-675,702-705,707,709-712,714-728
+  s_287c2d0827c656::t_cba1bbff2aec18 893-895,898-931
+  s_287c2d0827c656::t_ec33a805637d65 932,990
+  s_287c2d0827c656::t_66470309c54ee2 782-789,792-803
+  s_287c2d0827c656::t_ccc7f91c0d3b49 629-632,634-637,639-657
+  s_287c2d0827c656::t_b325e123a34f19 988-989
+  s_b8b3cdfc47e029::t_65d8bafdff926a 1026-1028,1030-1035
+  s_287c2d0827c656::t_96c0e7c7649bc0 1081-1083
+  s_9171ba00127552::t_41f8beda6f8d9d 1029
+  s_287c2d0827c656::t_91953f4db86877 935-938
+  s_287c2d0827c656::t_cf6b9e85beea28 933-934,939-960,983-984
+  s_287c2d0827c656::t_bb7749f4b98b4c 153
+  s_287c2d0827c656::t_207a523e0cd0df 1095-1098
+  s_287c2d0827c656::t_8cceba10bd220c 140
+  s_287c2d0827c656::t_cece757a47523a 609
+  s_287c2d0827c656::t_effb2b64a2b7f5 739-741,745-749
+  s_287c2d0827c656::t_f8d0c3d4dd14ac 970-979
+  s_287c2d0827c656::t_1a3b229f6ea2db 1077-1078
+  s_287c2d0827c656::t_40b481266d946f 896-897
+  s_287c2d0827c656::t_9294e75e26f2a1 305
+  s_287c2d0827c656::t_1c805c36f79f95 393-406
+  s_287c2d0827c656::t_90d4f41bcd948e 245-251
+  s_287c2d0827c656::t_7e32748b8ce7fc 862-863
+  s_287c2d0827c656::t_5cdd05ee538b47 961-969,980-982
+  s_287c2d0827c656::t_119911dde06324 686-690,701,706,708,713
+  s_287c2d0827c656::t_8cba74566aa51f 111-114,117-123,126-131
+  s_287c2d0827c656::t_a67e11b2bd9c29 299
+  s_287c2d0827c656::t_5a9ab419e31486 993-995
+  s_287c2d0827c656::t_ce1c9b87145199 996
+  s_287c2d0827c656::t_b8e6989011deef 115-116
+  s_287c2d0827c656::t_762a83dee6fd07 695-700
+  s_287c2d0827c656::t_0d9391eca37872 593
+  s_287c2d0827c656::t_a2b8637e6cbd33 1067-1069
+  s_287c2d0827c656::t_ccb49c373358e1 1076
+  s_9171ba00127552::t_e34bab4c45d6c8 20-21
+  s_287c2d0827c656::t_5bdbb359ffeb43 578-580
+  s_9171ba00127552::t_390a4d7c2c1727 1000
+  s_b8b3cdfc47e029::t_9359807941f59b 1025
+  s_287c2d0827c656::t_58c52e1e6c1f68 209,568-577,602,809-820,1010-1011
+app/main.py
+  s_287c2d0827c656::t_d5450e7e679da8 5
+.gitignore
+  s_287c2d0827c656::t_87a98dfe7309f9 35-39
+tests/engine/agents/test_schema_prompt.py
+  s_287c2d0827c656::t_33a33a738e060e 1-55
+tests/support/sensors/fixtures/too_complex.py
+  s_287c2d0827c656::t_a3ea70f9a8e0c8 1-10
+docs/research/openresearch-audit.md
+  s_b8b3cdfc47e029::t_4d61394be584d7 1-261
+  s_9171ba00127552::t_41f8beda6f8d9d 262
+tests/backends/test_factory.py
+  s_287c2d0827c656::t_7233479ee3a9cf 10-12
+  s_287c2d0827c656::t_5475a22f903765 1-3,5-6,9,13-14
+.cursor/skills/testing/SKILL.md
+  s_287c2d0827c656::t_8493e5fdf74f07 15
+  s_287c2d0827c656::t_35d1cb49baf2aa 11
+  s_287c2d0827c656::t_5cfed4b1ef689a 3
+  s_287c2d0827c656::t_fb000ac2025eb3 1-2,4-6,8-10,16-18,20
+  s_287c2d0827c656::t_a6e7e9a2106e8f 7,14,19
+  s_287c2d0827c656::t_5f9bfde0016b2a 12-13
+app/engine/workflows/__init__.py
+  s_287c2d0827c656::t_483d63f289ed66 1-4
+README.md
+  s_0b979b9bd9ebed::t_acf296dcde9bdb 26-28
+  s_287c2d0827c656::t_8b653b5a87b186 96
+  s_287c2d0827c656::t_842a893550c166 102-103
+  s_287c2d0827c656::t_0e87d199386ec6 31-34,36-37,45,51,55,57
+tests/support/sensors/fixtures/simple_fn.py
+  s_287c2d0827c656::t_0b4f0a27c0c9e0 1-2
+app/engine/graphs/agents.py
+  s_986fa48c2175ba::t_fca23eb2a040db 11
+  h_f55e8856ec8c19 16,18-21
+  s_287c2d0827c656::t_78865da73a7649 3,10,14,24
+app/engine/nodes/types.py
+  s_986fa48c2175ba::t_33bbc1b168334b 3,5
+  s_287c2d0827c656::t_d9bdf6b47554ff 30-31
+  s_986fa48c2175ba::t_2187b8337b59af 40-54
+pyproject.toml
+  s_287c2d0827c656::t_673ce5dea14dd4 44
+  s_287c2d0827c656::t_a956a5594212d9 82-127
+  s_287c2d0827c656::t_e45eb482e9bf4b 42-43
+app/api/security.py
+  s_b3c73c745e10ea::t_af8546f7ce2b52 1-25
+app/api/v1/workflows.py
+  s_b3c73c745e10ea::t_442f8e6725dec2 1,3,12
+app/core/settings.py
+  s_b3c73c745e10ea::t_05d44e26b0b280 113-121,125
+app/engine/vaults.py
+  s_b3c73c745e10ea::t_b4b3dfb9e94459 4-5,7,52,80-89,93-103,105-108,113-126,140-178,181,183-217,222-223,225-226
+app/services/codesearch/parser.py
+  s_b3c73c745e10ea::t_3287e636b6764f 8-9,61
+docker-compose.yaml
+  s_b3c73c745e10ea::t_8c1d53181133d9 7,11-14,27,34
+docs/security-access.md
+  s_b3c73c745e10ea::t_bf69a5d425cc5d 1-90
+openapi.json
+  s_b3c73c745e10ea::t_235a75f49e2b82 14,16-20,47,84-105,201-276,300-306,327-427
+tests/api/test_security_config.py
+  s_b3c73c745e10ea::t_7a55923b4de0f0 1-37
+tests/api/test_workflows.py
+  s_b3c73c745e10ea::t_b770e72b2bdda9 5,7,9,12-22,28,37,45,53,69,84-128
+tests/engine/test_vaults.py
+  s_b3c73c745e10ea::t_2dc830c6e0a2b2 8,66-68,72,89-111,113-114,119,129-136,152-250,262-312
+tests/harness/test_harness_wiring.py
+  s_b3c73c745e10ea::t_96ca89c4c345e2 11,27,39-46,52,76,80,84-85
+tests/services/test_codesearch_parser.py
+  s_b3c73c745e10ea::t_f9b6dcc23840dc 77,80
+uv.lock
+  s_287c2d0827c656::t_2be388eac55530 698-741,1200-1264,1437-1505,1524-1538,2787-2789,2834-2836,3215,4432-4433,4476-4484
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e38ccaef1da5c2d3ac293282ff1f680570bf6a41",
+  "prompts": {},
+  "humans": {
+    "h_f55e8856ec8c19": {
+      "author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_0b979b9bd9ebed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e56f-8ea2-7b02-a21b-ddfffc8c8bee",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_287c2d0827c656": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1a3bf748-8843-4b6f-a2fb-3017a099166d",
+        "model": "grok-4.7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_9171ba00127552": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0e10e-2193-7c83-b0aa-f3b6adf62fa8",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_986fa48c2175ba": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "50c9a5e4-fbaa-4038-aa44-24603770da5c",
+        "model": "grok-4.7"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_b3c73c745e10ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a1079e-3c40-7a71-9920-296018d141c6",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_b8b3cdfc47e029": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e10e-2193-7c83-b0aa-f3b6adf62fa8",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
