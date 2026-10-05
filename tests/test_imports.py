@@ -14,16 +14,18 @@ def test_app_main_imports() -> None:
     assert app is not None
 
 
-def test_workflow_registry_populates_on_graph_import() -> None:
-    import app.engine.graphs  # noqa: F401
+def test_workflow_registry_populates_on_workflow_import() -> None:
+    import app.engine.workflows  # noqa: F401
+    from app.engine.nodes.types import WorkflowName
     from app.engine.registry import list_workflows
 
-    assert set(list_workflows()) == {
-        "research",
-        "researcher",
-        "summarizer",
-        "zettelkasten",
-    }
+    registered = set(list_workflows())
+    named = {name.value for name in WorkflowName}
+    assert registered == named, (
+        "§9 workflow: WorkflowName and the @workflow registry disagree "
+        f"(registered={sorted(registered)}, named={sorted(named)}). "
+        "ARCHITECTURE.md §9 and §10."
+    )
 
 
 def test_tools_are_importable() -> None:

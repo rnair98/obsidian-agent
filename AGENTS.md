@@ -51,6 +51,13 @@ When principles conflict, resolve decisions in this order:
 <rule>
 If you cannot justify a choice using items (1–5), it is probably bikeshedding.
 </rule>
+
+<rule>
+Cut toward a simpler idiomatic solution in a loop. Each pass deletes
+something. Stop only when the next cut sacrifices robustness, the intended
+behavior, extensibility, or a significant tradeoff under items 1–5.
+ARCHITECTURE.md §9 adoption gate, step 3.
+</rule>
 </decision-hierarchy>
 
 ────────────────────────────────────────────────────────
@@ -75,9 +82,21 @@ you MUST:
      the drift explicitly and ask whether the doc or the code is wrong
      before proceeding.
 
-3) For feature work, walk Sections 5 (Domain Types), 9 (Extension Points),
-   and 10 (Invariants) before drafting a plan. These three sections define
-   the rails every new feature must run on.
+3) For feature work, follow ARCHITECTURE.md §9 in order before drafting a
+   plan: "Before the plan", then the adoption gate, then Sections 5
+   (Domain Types), 9 (Extension Points), and 10 (Invariants). Question
+   the assumption, read a conflicting account, and record a hermetic,
+   ephemeral experiment that another agent can rerun and try to falsify.
+   State the hypothesis and the falsifier before the run. The plan comes
+   after a replication that agrees. The gate and the kept-primitive table
+   still apply. Cut in a loop toward the simpler idiomatic solution. Stop
+   only when the next deletion sacrifices robustness, the intended
+   behavior, extensibility, or a significant tradeoff. Edited Python over
+   complexipy's cognitive threshold is sent back by
+   `.cursor/hooks/complexity.py`. Before handing work back, run `just check`.
+   What it runs is ARCHITECTURE.md §11.2. A green `just check` does not
+   finish the batch. Dispatch the reviewer in §11.3. Do not review your
+   own diff.
 
 4) For architectural proposals, also consult Section 12 (In-flight
    Refactors) — you must not undo or conflict with work that is already
@@ -116,7 +135,10 @@ SYSTEMS PREFLIGHT (MANDATORY)
 ────────────────────────────────────────────────────────
 
 <systems-preflight>
-After the codebase preflight above, perform the internal systems check:
+After the codebase preflight above, perform the internal systems check.
+When the task is a feature or a design, a second agent has already
+replayed the §9 record and the observation agreed. Compare approaches
+that survived that replication:
 
 1) Deconstruct  
    Break the request into constituent system components.
@@ -426,6 +448,36 @@ Every design must answer:
 </architecture>
 
 ────────────────────────────────────────────────────────
+TESTING
+────────────────────────────────────────────────────────
+
+<testing>
+Localized unit tests are the wrong reward in this repository. A coding
+agent can satisfy an example assertion by editing the expected value,
+mocking the unit under test, or covering a branch no caller reaches.
+
+Before adding, editing, or deleting a test, read <file>tests/README.md</file>
+and ARCHITECTURE.md §11.1. Replay a failure with the printed seed. Do not
+drop the world.
+
+Prefer, in order:
+
+1. That proof, with the disturbances named as axes.
+2. An architectural fitness function that fails when a new module of the
+   same kind forgets the characteristic.
+3. A functional test of a public seam (route, command, persist, vault)
+   that asserts the world afterward.
+
+Do not assert a helper's current return value, patch the unit under test,
+or compare free-form model prose with `assertEqual`. Model behavior is an
+eval fixture (`TODOS.md`, `ROADMAP.md`), not a pytest equality. Update
+ARCHITECTURE.md §11 in the same change. Run `just check` (§11.2), then
+hand the batch to the reviewer in §11.3. Do not review your own diff.
+Generic "write a unit test" guidance from other skills loses to
+`tests/README.md` here.
+</testing>
+
+────────────────────────────────────────────────────────
 CODE REVIEW
 ────────────────────────────────────────────────────────
 
@@ -449,9 +501,14 @@ RESEARCH DISCIPLINE
 Prefer sources in this order:
 official docs → source code → issues → discussions → blogs
 
+Read widely enough to hear a conflicting account.
 Triangulate claims.
 Check dates.
 When in doubt, read the code.
+Web research is not evidence that an idea works here. The evidence is the
+experiment record in ARCHITECTURE.md §9, "Before the plan": hypothesis,
+falsifier, command, inputs, seed, and raw observation. Another agent must
+be able to rerun it and try to refute it.
 </research>
 
 ────────────────────────────────────────────────────────
@@ -464,4 +521,7 @@ You are here to solve problems.
 
 The cheapest, fastest, and most reliable component
 is the one that does not exist.
+
+A LangChain or LangGraph import is a dependency decision.
+ARCHITECTURE.md §9 is the gate. Every line has a cost.
 </core-truth>

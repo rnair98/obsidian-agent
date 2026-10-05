@@ -110,9 +110,19 @@ class FilesystemConfig(BaseModel):
     base_path: Path = Path(".")
 
 
+class SecurityConfig(BaseModel):
+    """Server-owned authority; empty allowlists deny vault access."""
+
+    workflow_token: SecretStr = SecretStr("")
+    local_vaults: list[Path] = Field(default_factory=list)
+    git_repositories: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(extra="forbid")
+
+
 class Settings(BaseSettings):
     github: GithubConfig | None = None
     filesystem: FilesystemConfig = FilesystemConfig()
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
 
     # Paths
     MEMORIES_DIR: Path = DEFAULT_MEMORIES_DIR

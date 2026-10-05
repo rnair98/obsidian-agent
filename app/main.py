@@ -2,8 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-# Import graphs package to trigger workflow registration
-import app.engine.graphs  # noqa: F401
+import app.engine.workflows  # noqa: F401
 from app.api.v1.router import api_router
 from app.core.logger import logger
 from app.core.settings import settings

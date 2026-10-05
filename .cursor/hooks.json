@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".venv/bin/python .cursor/hooks/complexity.py",
+        "timeout": 15
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".venv/bin/python .cursor/hooks/complexity.py",
+        "matcher": "Write|StrReplace|EditNotebook|ApplyPatch",
+        "timeout": 15
+      }
+    ],
+    "stop": [
+      {
+        "command": ".venv/bin/python .cursor/hooks/complexity.py",
+        "timeout": 20,
+        "loop_limit": 3
+      }
+    ]
+  }
+}

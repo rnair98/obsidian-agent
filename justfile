@@ -15,6 +15,20 @@ clean:
     find . -type d -name ".ruff_cache" -exec rm -rf {} +
     find . -type d -name ".logs" -exec rm -rf {} +
 
+# Outer harness. ARCHITECTURE.md §11.2
+check:
+    uv run ruff check app tests .cursor/hooks
+    uv run pyright
+    uv run lint-imports
+    uv run pytest
+
+# Hand the diff to a fresh reviewer. ARCHITECTURE.md §11.3
+review:
+    @echo "Start a new agent. Its only instruction is .cursor/skills/adversarial-qa/SKILL.md"
+    @echo "It reads the diff itself. Do not paste a summary of intent."
+    git status --short
+    git diff --stat HEAD
+
 # Format and lint the codebase
 fmt:
     uv run ruff format
@@ -30,14 +44,15 @@ openapi:
 
 # Start Arize Phoenix for tracing
 phoenix:
-    podman run --rm -it -p 6006:6006 -p 4317:4317 arizephoenix/phoenix:latest
+    podman run --rm -it -p 127.0.0.1:6006:6006 -p 127.0.0.1:4317:4317 arizephoenix/phoenix:latest
 
 run:
     uv run uvicorn app.main:app --reload --port 8000
 
 # Spin up a local Postgres test database
 db-up:
-    podman run --name test-db -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:alpine
+    test -n "${POSTGRES_PASSWORD:-}"
+    podman run --name test-db -e POSTGRES_PASSWORD -p 127.0.0.1:5432:5432 -d postgres:alpine
 
 # Spin up the entire stack (app, phoenix, db)
 up:

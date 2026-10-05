@@ -32,7 +32,11 @@ node_modules/
 .opencode/
 .gemini/
 .factory/
-.cursor/
+.cursor/*
+!.cursor/hooks.json
+!.cursor/hooks/
+.cursor/hooks/state/
+!.cursor/skills/
 .pi/
 
 # env files

@@ -74,10 +74,10 @@ def test_parse_file_skips_when_parser_cannot_load(
     path = tmp_path / "sample.py"
     path.write_text("def run():\n    return 1\n", encoding="utf-8")
 
-    def fail_get_parser(language: str):
+    def fail_get_language(language: str):
         raise RuntimeError(f"no grammar for {language}")
 
-    monkeypatch.setattr(parser, "get_parser", fail_get_parser)
+    monkeypatch.setattr(parser, "get_language", fail_get_language)
 
     assert parse_file(path) is None
 
