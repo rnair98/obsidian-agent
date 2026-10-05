@@ -1033,6 +1033,18 @@ are target capabilities, not current APIs or permission changes. The existing
 virtual shell remains non-host execution; any experiment runner needs a separate
 explicit capability boundary and corresponding updates to §§5, 9 and 10.
 
+**swe-term convergence (proposed, not implemented):** the
+[roadmap](ROADMAP.md#platform-convergence-swe-term) proposes replacing LangGraph
+and LangChain with the sibling `swe-term` harness and its agent SDK. swe-term has
+no agent loop, SDK or wire protocol yet (its `ARCHITECTURE.md` §4, §12 items 7–8),
+so nothing here changes the current runtime, §9 adoption gate or §10 invariants.
+Until the roadmap's C4 cutover, do not add records to `ResearchState` or LangGraph
+checkpoints. Write new run, evidence and receipt records as schema-validated
+files, and keep new domain code (`evidence`, `artifacts`, `obsidian`, `vaults`,
+`parsing`, `codesearch`) free of `langchain*` and `langgraph*` imports. Treat
+`Runner`, host-hosted tools and the Python SDK client as target names, not APIs.
+Remove or rewrite this paragraph, and §§1, 2, 4, 8, 9 and 12, in the cutover change.
+
 Node consolidation, artifact stores, graph-based vault profiling, and the
 OpenAI/Groq factory are implemented (see §§2–10). Remaining integration work:
 

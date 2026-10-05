@@ -102,6 +102,12 @@ you MUST:
    Refactors) — you must not undo or conflict with work that is already
    mid-flight without naming it.
 
+5) Cross-project check (sibling repo `../swe-term`). Read the skill
+   `cross-project-requests`, then run `xreq unseen` before drafting a plan and
+   realign to anything addressed to you. While scoping, log a request in
+   `docs/cross-project/swe-term.md` only when swe-term work would block a ROADMAP
+   gate or replace code you are about to write. Never edit the sibling's ledger.
+
 <rule>
 Skipping ARCHITECTURE.md is a correctness bug. A response produced without
 consulting it is unreliable and must be flagged as such.

@@ -90,8 +90,8 @@ remain fallible and never grant authorization or establish truth by themselves.
 | Component | Responsibility | Boundary |
 |---|---|---|
 | Harness and deterministic code | Validate arguments, enforce capabilities/budgets, record outcomes, publish artifacts | No prompt-only security or completion guarantees. |
-| LangGraph | Existing orchestration and checkpoints | Keep one orchestration runtime; checkpoint storage alone is not a resume API. |
-| Models via `AgentSpec` | Choose research actions, synthesize, assess evidence, propose notes | Reuse current typed call boundary until an alternative wins an experiment. |
+| LangGraph | Existing orchestration and checkpoints, to be replaced by swe-term ([Platform convergence](#platform-convergence-swe-term)) | One orchestration runtime per run; checkpoint storage alone is not a resume API. Do not deepen LangGraph-shaped state. |
+| Models via `AgentSpec` | Choose research actions, synthesize, assess evidence, propose notes | Reuse current typed call boundary until swe-term typed output passes the C3 parity gate or another alternative wins an experiment. |
 | Filesystem-backed records | Run manifest, evidence, assessments, publication receipts | Source of truth for research artifacts; traces are observers. |
 | Phoenix | Optional operational visibility | Keep private evidence and unfiltered errors out of exported telemetry. |
 | BAML / Jev, candidates | Bounded generation / semantic-assessment experiments | No adoption without calibration, tracing, rollback, and measured benefit. |
@@ -123,6 +123,116 @@ JSON/JSONL and Markdown through `FilesystemBackend` are sufficient initially.
 A graph-shaped domain does not require a graph database. Add a derived local index
 only when measured retrieval latency or corpus size requires it; keep it rebuildable.
 
+## Platform convergence: swe-term
+
+**Status: proposed. Nothing here is a runtime claim.** `~/sandbox/swe-term` (Go) has
+no agent loop yet: its [ARCHITECTURE.md](../swe-term/ARCHITECTURE.md) §4 describes a
+one-shot provider stream, and `Tool`, `SessionStore`, `ControlJournal`,
+`VerificationReceipt`, `Obligation` and `MutationLease` are all `Target`. Contract
+shapes live in that file; this section records only what this repo must change and
+consume.
+
+**Direction.** Obsidian Agent becomes the reference research pack on swe-term, as
+Feynman is a pack on pi. At 0.5.8 Feynman has 15 import sites from `@earendil-works/pi-*`
+under `src/` and `extensions/`; its product is skills, prompts and research tools
+over pi's loop. Here, swe-term owns the loop and run integrity. This repo owns the
+research domain. LangChain and LangGraph are deleted at cutover. Needs that swe-term
+cannot yet meet become its backlog; swe-term must not gain research nouns
+(claim, evidence, vault) in core.
+
+### Ownership after convergence
+
+| Concern | Owner | Today here |
+|---|---|---|
+| Agent loop, tool dispatch, steering | swe-term | LangGraph, `create_agent` |
+| Session persistence and resume | swe-term `SessionStore` | Postgres / `MemorySaver` |
+| Control journal, budgets, cancellation, mutation lease, receipts | swe-term | M1 items, not built |
+| Compaction with protected spine and artifact handles | swe-term | `ContextEditingMiddleware` |
+| Providers, typed final output | swe-term | `ChatOpenAI`/`ChatGroq`, `ProviderStrategy` |
+| Evidence, claims, note proposals, vault semantics, vault profile | this repo (domain) | M2–M4 |
+| Model-facing tools: shell grammar, vault ops, evidence capture, code IR, GitHub | this repo, as host-hosted tools registered through the swe-term Python SDK | `app/harness`, `workspace_commands` |
+| Python SDK client, wire protocol, public Go API | swe-term; this repo is the first consumer and acceptance test | none |
+| Prompts, skills, output schemas, obligations | this repo, as a pack | `agents/*.py` `SPEC` |
+| HTTP identity, vault approval | this repo gateway, projected to swe-term as session policy | `api/security.py`, `vaults.py` |
+| Pipeline sequencing | this repo: plain async code driving sessions | `graphs/`, `compose_graphs` |
+
+### Changes required in this repo
+
+1. **Contracts before code.** Run manifest, journal event, receipt, evidence record,
+   claim assessment and note proposal become versioned JSON Schemas. swe-term owns
+   manifest, journal and receipt shapes; this repo owns evidence, claim and note
+   shapes. Pydantic models validate against them. M1 writes these records from
+   Python as an interim adapter behind the same schema. It does not add them to
+   `ResearchState`.
+2. **Framework-free domain.** Separate `evidence`, `artifacts`, `obsidian`, `vaults`,
+   `parsing` and `codesearch` from `nodes`/`graphs`/`workflows`. Add an import-linter
+   contract: the domain may not import `langchain*` or `langgraph*`. `app/harness`
+   already holds this line.
+3. **Runner port.** `executor` depends on `Runner.run(request) → run events`. One
+   adapter wraps today's LangGraph path; a second drives swe-term headless. This
+   also makes M0's paired baseline runner-agnostic.
+4. **Host-hosted tools.** The gateway process is the SDK host. It spawns swe-term,
+   registers the existing shell grammar, `ObsidianVaultOperations` (closing the
+   ARCHITECTURE.md §12 bullet) and evidence capture as tools, and executes them
+   when the loop calls back. There is no second Python process. Each tool publishes
+   a manifest with declared effects: vault paths, hosts, secret names. Core can only
+   record these as `attested`, so enforcement stays in our tool code (item 7).
+   Provider-hosted `web_search`/`code_interpreter` are `unobservable`; declare them
+   so, never as empty. Feynman works the same way: it spawns pi in `--mode rpc` and
+   adds extensions, skills and prompts.
+5. **Pipeline as code.** The static five-node graph becomes a function: deterministic
+   vault profile as a pre-model context packet → researcher session → typed-output
+   summarizer and Zettelkasten steps → lease-gated deterministic `persist`. Parallel
+   researchers (M3) use swe-term's read-only investigation join; workers never publish.
+6. **Obligations.** Register obligation kinds with verifiers this repo ships:
+   decisive claim has retained evidence; note has evidence and expected prior hash;
+   write stays inside the approved vault. Deterministic locator/hash checks come
+   first. Semantic assessors (Jev, M5) run in shadow mode. Run status derives from
+   receipts, which is M1's "no model-written PASS strings" requirement.
+7. **Two security layers.** Bearer token and vault allowlist stay here. The allowlist
+   is projected into swe-term workspace policy per session, and our tool code rechecks
+   paths itself, because host-hosted effects are only attested. Neither layer trusts prompts or the other layer.
+8. **One trajectory source.** The swe-term control journal feeds M5 trajectory
+   capture. Do not build a second recorder.
+9. **Deletions at C4.** `langgraph`, `langchain`, `langchain-openai`, `langchain-groq`,
+   `langgraph-checkpoint-postgres`, `psycopg`, `openinference-instrumentation-langchain`,
+   the Compose `db` service, `graphs/`, `compose_graphs`, and the §9 adoption-gate
+   table. `test_framework_boundary.py` becomes a zero-import check. ARCHITECTURE.md
+   §§1, 2, 4, 8, 9 and 12 are rewritten in the cutover change.
+
+### Convergence gates (order, not dates)
+
+- **C0 — Contracts and Runner port.** Schemas drafted with swe-term; executor behind
+  `Runner`; M0 fixtures run through the port on LangGraph. Gate: M0 exit.
+- **C1 — SDK host.** Python SDK client registers host-hosted tools; read-only vault
+  Q&A runs through the swe-term loop with a mock provider. Needs swe-term Phase 1
+  and its public API boundary.
+- **C2 — Typed output, sessions, journal.** Summarizer/Zettelkasten use typed
+  output; `persist` runs under a lease; M1's crash/replay/cancel/budget gate passes
+  on the swe-term path.
+- **C3 — Parity.** Full pipeline on the M0 corpus, swe-term versus LangGraph, paired
+  cases, equal enforced budgets. List per-case regressions. Gate: no critical
+  integrity regression; RSS, latency and cost reported with failures included.
+- **C4 — Cutover.** swe-term path is default; item 9 deletions land in one change.
+- **C5 — Differentiators.** M2–M4 receipts, evidence retention under the compaction
+  spine, and note-publication lease are built once, on swe-term.
+
+**Sequencing with M0–M7.** M0 → C0 → M1 (interim, schema-first) → C1–C3 → C4 → M2+.
+M2–M4 may start earlier only as framework-free domain code.
+
+**Escape hatch.** If swe-term is not at C3 when M2 needs a runtime, continue M2+ on
+LangGraph through the Runner port. Contracts are unchanged, so nothing is lost.
+
+**Costs and open risks.**
+- A Go child process joins the gateway. Measure its RSS and start cost per session
+  against a shared daemon before choosing between them.
+- Tool effects are attested, not observed. swe-term core is authoritative for what it
+  executes; our tool code is authoritative for what it attests. Divergence is a
+  conformance-suite failure, and strict profiles may refuse attested effects.
+- The SDK does not exist yet and obsidian-agent is its first user. Expect protocol
+  churn. Pin the swe-term version and schema revision; keep our records
+  schema-first so a protocol change is a client change, not a data migration.
+
 ## Delivery order
 
 M0 establishes evaluation; M1 makes runs/artifacts reliable; M2 retains evidence;
@@ -138,7 +248,8 @@ proceed independently. Dependencies below are release gates, not calendar estima
 
 - [ ] Add a stub-model traversal of the current five-node graph through response
   projection and real temporary filesystem persistence. Include failure at each
-  boundary; do not infer graph correctness from API routing tests.
+  boundary; do not infer graph correctness from API routing tests. Drive it through
+  the C0 `Runner` port so the same fixtures later run against swe-term.
 - [ ] Build a reviewed pilot corpus spanning narrow factual questions, technical
   comparisons, literature disagreements, paper/code mismatches, unanswerable
   questions, stale memory, private documents, and incremental vault updates.
@@ -170,6 +281,10 @@ baseline before candidate promotion, not after seeing candidate results.
 
 **Addresses:** F2, F6, F7, F9, F10 and current overwrite/response bugs.
 **Depends on:** M0 failure fixtures for acceptance; does not require new retrieval.
+**Convergence:** manifest, status, receipt, budget and cancel contracts here are the
+swe-term schemas (C0). Write them as schema-validated records. The Python writers are
+an interim adapter that C2 replaces with swe-term's journal. Do not extend
+`ResearchState` or LangGraph checkpoints to carry them.
 
 - [ ] Carry the existing run ID to persistence; write under
   `outputs/runs/<run_id>/` with a manifest. Return references from explicit write
@@ -316,7 +431,8 @@ once their own datasets/contracts exist.
   search policies against a frozen corpus/index capable of answering new queries;
   recorded-query replay alone is not a fair retrieval-policy comparison.
 - [ ] **BAML trial:** compare one bounded generation stage with `ProviderStrategy`
-  on schema/semantic quality, retries, traces, latency and cost. If adopted, replace
+  (after C3, with swe-term typed output; a third structured-output boundary is not
+  allowed to ship alongside it) on schema/semantic quality, retries, traces, latency and cost. If adopted, replace
   that boundary explicitly; keep one authoritative schema/prompt, not layered parsers.
 - [ ] **Jev trials:** context KEEP/TRUNCATE/DROP, Zettel atomicity/novelty/convention
   fit, source/memory relevance/redundancy/support. Calibrate with human labels,
@@ -348,6 +464,8 @@ Do not require M5 optimization to ship useful experiments.
   subprocesses, GPU or network uses a separate execution capability, never a
   silent escape from the current virtual shell. Adapt the agent-facing command
   through the harness grammar/registration and update ARCHITECTURE.md §§9–12.
+  After C2, that capability is a swe-term sandbox adapter that publishes effect
+  declarations (swe-term §6). Do not build a second confinement or approval path here.
 - [ ] Freeze effective inputs before launch: exact committed source or an explicit
   reviewed snapshot, data/model references and hashes where available, dependency
   locks/environment, evaluator version, seeds, command and intended outputs.
@@ -461,8 +579,10 @@ Keep production a modular application on the existing runtime. Bound RSS through
 streaming, compact references, incremental records, bounded concurrency and lazy
 hydration. Set explicit disk-retention policy for evidence/checkpoints with visible
 impact on replay; never silently evict material still needed by durable citations.
-Do not rewrite in another language, add resident model servers, or introduce
-additional databases without a measured bottleneck.
+The domain and host-hosted tools stay Python. The agent runtime moves to swe-term (Go)
+under [Platform convergence](#platform-convergence-swe-term). Make no other
+language rewrite, add no resident model servers, and introduce no additional
+databases without a measured bottleneck. Cutover removes the Postgres service.
 
 Ship additive/versioned run artifacts first, then evidence handling, then semantic
 policy changes. Diagnose a failure from run ID → status/stop reason → action receipt
@@ -475,3 +595,6 @@ Start with **M0's graph/persistence fixtures and M1's run-owned artifacts/receip
 They expose the baseline, prevent cross-run confusion, and give every later
 verification result a reliable home. Do not begin with a new model-call library,
 a four-agent imitation, or a large search infrastructure project.
+
+Pair that slice with **C0**: draft the shared schemas and put the executor behind
+the `Runner` port before adding any record to LangGraph state.
