@@ -43,7 +43,7 @@ def get_workflow(
     checkpointer: BaseCheckpointSaver[Any],
     **factory_kwargs: Any,
 ) -> Runnable[Any, Any]:
-    """Retrieve a compiled workflow graph by name.
+    """Retrieve the compiled runnable for a workflow.
 
     Additional keyword arguments are forwarded to the registered factory.
     Workflows are built per-request, so passing per-request context here

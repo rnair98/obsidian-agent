@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -9,7 +8,7 @@ from app.engine.agents.researcher import SPEC as RESEARCHER_SPEC
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.executor import execute
 from app.engine.nodes.types import WorkflowName
-from app.engine.schema import LocalVaultRequest, ResearchRequest
+from app.engine.schema import LocalVaultRequest, ResearchRequest, WorkflowRunResponse
 from app.engine.tools.shell import run_shell_command
 from app.engine.vaults import VaultLayout
 from app.engine.workspace import build_workspace_session
@@ -25,6 +24,7 @@ def test_researcher_spec_exposes_shell_tool() -> None:
 @pytest.mark.asyncio
 async def test_executor_installs_workspace_scope(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     assets_marker = object()
 
@@ -36,15 +36,20 @@ async def test_executor_installs_workspace_scope(
             config: object,
             context: object,
         ) -> dict[str, str]:
-            return {"pwd": run_shell_command("pwd")}
+            assert run_shell_command("pwd") == "/workspace\n"
+            return {"topic": "typed workspace harness"}
 
-    def fake_get_workflow(name: WorkflowName, checkpointer: object) -> FakeGraph:
+    def fake_get_workflow(
+        name: WorkflowName, checkpointer: object, *, prompt_context: dict[str, str]
+    ) -> FakeGraph:
+        assert name is WorkflowName.RESEARCH
+        assert "<prior_memories>" in prompt_context["prior_memories"]
         return FakeGraph()
 
     monkeypatch.setattr("app.engine.executor.get_workflow", fake_get_workflow)
 
     fake_layout = VaultLayout(
-        backend=InProcessFilesystemBackend(base_path=Path("/")),
+        backend=InProcessFilesystemBackend(base_path=tmp_path),
         root=Path("."),
         notes_dir=Path("notes"),
         outputs_dir=Path("outputs"),
@@ -68,15 +73,16 @@ async def test_executor_installs_workspace_scope(
         "app.engine.executor.build_workspace_session", fake_workspace_session
     )
 
-    result: dict[str, Any] = await execute(
+    result = await execute(
         WorkflowName.RESEARCH,
         ResearchRequest(
             topic="typed workspace harness",
-            vault=LocalVaultRequest(type="local", path=Path("/tmp/vault")),
+            vault=LocalVaultRequest(type="local", path=tmp_path),
         ),
     )
 
-    assert result["pwd"] == "/workspace\n"
+    assert isinstance(result, WorkflowRunResponse)
+    assert result.topic == "typed workspace harness"
 
 
 def test_workspace_memory_mount_uses_artifact_memories(

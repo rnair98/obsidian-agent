@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.security import require_workflow_token
 from app.engine.executor import execute
 from app.engine.nodes.types import WorkflowName
 from app.engine.schema import ResearchRequest, WorkflowRunResponse
@@ -8,6 +9,7 @@ from app.engine.vaults import VaultResolutionError
 router = APIRouter(
     prefix="/workflows",
     tags=["workflows"],
+    dependencies=[Depends(require_workflow_token)],
 )
 
 

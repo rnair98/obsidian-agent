@@ -16,35 +16,21 @@ from app.engine.nodes.builders.agent import (
     run_agent_executor,
 )
 from app.engine.nodes.persist import persist_artifacts
-from app.engine.nodes.types import NodeName, WorkflowName
+from app.engine.nodes.types import NodeName
 from app.engine.nodes.vault_profiler import vault_profiler_node
-from app.engine.registry import workflow
 from app.engine.schema import ResearchContext, ResearchState
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
-    from langgraph.checkpoint.memory import BaseCheckpointSaver
-    from langgraph.graph.state import CompiledStateGraph
     from langgraph.runtime import Runtime
 
     from app.engine.nodes.builders.agent import AgentRunResult
 
 
-@workflow(WorkflowName.RESEARCH)
-def create_research_workflow(
-    checkpointer: BaseCheckpointSaver,
+def build_research_graph(
     *,
     prompt_context: Mapping[str, str] | None = None,
-) -> CompiledStateGraph:
-    """Compile the research workflow.
-
-    ``prompt_context`` is forwarded only to the researcher node, which
-    is the sole agent whose static prompt consumes a per-request
-    placeholder (``$prior_memories``). The zettelkasten agent receives
-    the vault profile dynamically from state (via the vault_profiler
-    node) — that's why no ``$vault_profile`` placeholder is baked into
-    its prompt anymore.
-    """
+) -> StateGraph:
     graph = StateGraph[
         ResearchState,
         ResearchContext,
@@ -69,7 +55,7 @@ def create_research_workflow(
     graph.add_edge(NodeName.SUMMARIZER, NodeName.ZETTELKASTEN)
     graph.add_edge(NodeName.ZETTELKASTEN, NodeName.PERSIST)
     graph.add_edge(NodeName.PERSIST, END)
-    return graph.compile(checkpointer=checkpointer)
+    return graph
 
 
 def _make_zettelkasten_node():

@@ -5,8 +5,8 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
-from tree_sitter import Node
-from tree_sitter_language_pack import get_parser
+from tree_sitter import Node, Parser
+from tree_sitter_language_pack import get_language
 
 from app.services.codesearch.languages import detect_language
 from app.services.codesearch.models import FileIR, Import, Scope, Symbol
@@ -58,7 +58,7 @@ def parse_file(path: Path) -> FileIR | None:
         return None
 
     try:
-        parser = get_parser(language)
+        parser = Parser(get_language(language))
         tree = parser.parse(source_bytes)
     except Exception:
         return None

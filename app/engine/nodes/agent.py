@@ -9,7 +9,7 @@ and reused across invocations of the returned coroutine.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.runtime import Runtime
@@ -19,6 +19,7 @@ from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.agents.spec import AgentSpec
 from app.engine.nodes.builders.agent import (
+    AgentExecutor,
     AgentRunResult,
     build_agent_executor_from_spec,
     run_agent_executor,
@@ -38,19 +39,10 @@ def make_agent_node(
 
     The executor is built once at factory-call time, not on every node
     invocation — saves three ``ChatOpenAI`` constructions per request.
-
-    Args:
-        spec: The agent definition (schema + prompt + tools).
-        log_streams: If true, stream the agent and log reasoning/text
-            chunks at debug level.
-        stream_mode: LangGraph stream modes; defaults to
-            ``["messages", "updates"]`` when ``log_streams`` is true.
-        prompt_context: Optional per-request placeholder values forwarded
-            to :meth:`AgentSpec.system_prompt` (e.g. ``{"prior_memories":
-            ...}``). Because the executor is built once per request from
-            the workflow factory, the rendered prompt is request-scoped.
     """
-    executor = build_agent_executor_from_spec(spec, prompt_context=prompt_context)
+    executor: AgentExecutor = build_agent_executor_from_spec(
+        spec, prompt_context=prompt_context
+    )
     effective_modes: list[StreamMode] | None = (
         list(stream_mode)
         if stream_mode is not None
@@ -59,8 +51,11 @@ def make_agent_node(
 
     async def node(
         state: ResearchState,
+        *,
         runtime: Runtime[ResearchContext],
-        config: RunnableConfig,
+        # `X | None` stringifies to a form LangGraph's injector does not
+        # recognize under `from __future__ import annotations`.
+        config: Optional[RunnableConfig] = None,
     ) -> AgentRunResult:
         logger.debug(
             "[{}] use_responses_api={} model={}",
@@ -72,7 +67,7 @@ def make_agent_node(
             executor,
             state=state,
             runtime_context=runtime.context,
-            config=config,
+            config=config if config is not None else {},
             workflow_name=spec.name,
             stream_mode=effective_modes,
             log_stream_chunks=log_streams,

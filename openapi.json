@@ -11,7 +11,13 @@
           "workflows"
         ],
         "summary": "Run Workflow",
+        "description": "Execute a registered workflow and return references to its artifacts.\n\nThe 200 OK body is a :class:`WorkflowRunResponse` \u2014 a typed projection of\nthe final ``ResearchState`` that points clients at every durable artifact\nthe workflow materialized in the vault (report, sources CSV, Zettel\nnotes, memory file) plus the LangGraph ``run_id`` for checkpoint replay.\nThe raw state is intentionally NOT exposed; it carries internal LangGraph\nplumbing and noisy per-node accumulators.",
         "operationId": "run_workflow_api_v1_workflows_run__workflow_name__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "workflow_name",
@@ -38,9 +44,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Run Workflow Api V1 Workflows Run  Workflow Name  Post"
+                  "$ref": "#/components/schemas/WorkflowRunResponse"
                 }
               }
             }
@@ -77,6 +81,28 @@
   },
   "components": {
     "schemas": {
+      "ArtifactRef": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "Vault-relative POSIX path to the artifact."
+          },
+          "absolute_path": {
+            "type": "string",
+            "title": "Absolute Path",
+            "description": "Backend-resolved absolute path to the artifact."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "absolute_path"
+        ],
+        "title": "ArtifactRef",
+        "description": "Reference to a single materialized artifact on the vault."
+      },
       "GitVaultRequest": {
         "properties": {
           "type": {
@@ -172,6 +198,82 @@
         ],
         "title": "ResearchRequest"
       },
+      "RunArtifacts": {
+        "properties": {
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``outputs/report.md`` if the summarizer persisted one."
+          },
+          "sources_csv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``outputs/sources.csv`` written by the persist node."
+          },
+          "zettels": {
+            "items": {
+              "$ref": "#/components/schemas/ZettelArtifactRef"
+            },
+            "type": "array",
+            "title": "Zettels",
+            "description": "One entry per Zettel note materialized under ``notes/``."
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "type": "array",
+            "title": "Memories",
+            "description": "Memory files newly written under ``.memories/`` by this run (diff vs. the pre-run listing)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RunArtifacts",
+        "description": "Bundle of every artifact a workflow may materialize to the vault."
+      },
+      "RunSummary": {
+        "properties": {
+          "key_insights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Insights"
+          },
+          "research_notes_count": {
+            "type": "integer",
+            "title": "Research Notes Count",
+            "default": 0
+          },
+          "sources_count": {
+            "type": "integer",
+            "title": "Sources Count",
+            "default": 0
+          },
+          "zettel_count": {
+            "type": "integer",
+            "title": "Zettel Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RunSummary",
+        "description": "Compact projection of ``ResearchState`` cardinalities + insights."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -195,6 +297,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -215,6 +324,107 @@
         ],
         "title": "WorkflowName",
         "description": "Identifier for an HTTP-invocable workflow.\n\nDistinct from :class:`NodeName` so the FastAPI route layer can reject\nbare-node identifiers (``persist``) at request validation rather than\nsurfacing a 404 from the registry."
+      },
+      "WorkflowRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "LangGraph ``thread_id`` for this invocation. Pass back to the checkpointer to inspect/replay run state."
+          },
+          "workflow": {
+            "type": "string",
+            "title": "Workflow",
+            "description": "Workflow name that was invoked (mirrors the path param)."
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "vault": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LocalVaultRequest"
+              },
+              {
+                "$ref": "#/components/schemas/GitVaultRequest"
+              }
+            ],
+            "title": "Vault",
+            "description": "Echo of the request's resolved vault descriptor.",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "git": "#/components/schemas/GitVaultRequest",
+                "local": "#/components/schemas/LocalVaultRequest"
+              }
+            }
+          },
+          "artifacts": {
+            "$ref": "#/components/schemas/RunArtifacts"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RunSummary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "workflow",
+          "topic",
+          "vault"
+        ],
+        "title": "WorkflowRunResponse",
+        "description": "Typed 200 OK body for ``POST /api/v1/workflows/run/{workflow_name}``.\n\nReplaces the raw ``ResearchState`` dump so clients can rely on a stable\ncontract and locate every artifact the run materialized."
+      },
+      "ZettelArtifactRef": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "Vault-relative POSIX path to the artifact."
+          },
+          "absolute_path": {
+            "type": "string",
+            "title": "Absolute Path",
+            "description": "Backend-resolved absolute path to the artifact."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Note id as emitted by the agent."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Note title as emitted by the agent."
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "Tags persisted to the note's frontmatter."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "absolute_path",
+          "id",
+          "title"
+        ],
+        "title": "ZettelArtifactRef",
+        "description": "Reference to a persisted Zettelkasten note, with note metadata."
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

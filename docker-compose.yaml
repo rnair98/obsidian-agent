@@ -4,11 +4,14 @@ services:
       context: .
       dockerfile: Containerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     command: [ "uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload" ]
     environment:
       - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:4317
-      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/postgres
+      - SECURITY__WORKFLOW_TOKEN=${SECURITY__WORKFLOW_TOKEN:?Set SECURITY__WORKFLOW_TOKEN}
+      - SECURITY__LOCAL_VAULTS=[]
+      - SECURITY__GIT_REPOSITORIES=${SECURITY__GIT_REPOSITORIES:-[]}
       - JINA_API_KEY=${JINA_API_KEY:-}
     depends_on:
       db:
@@ -21,17 +24,14 @@ services:
   phoenix:
     image: arizephoenix/phoenix:latest
     ports:
-      - "6006:6006"
-      - "4317:4317"
+      - "127.0.0.1:6006:6006"
     networks:
       - reviewer-network
 
   db:
     image: postgres:alpine
     environment:
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s

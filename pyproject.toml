@@ -36,10 +36,12 @@ concurrent-builds = 1
 concurrent-downloads = 1
 concurrent-installs = 1
 compile-bytecode = false
-upgrade-package = ["ruff"]
 
 [dependency-groups]
 dev = [
+    "complexipy>=8.0.1",
+    "hypothesis>=6.168.3",
+    "import-linter>=2.15",
     "ipykernel>=7.1.0",
     "jupyterlab>=4.5.3",
     "marimo>=0.19.7",
@@ -77,3 +79,49 @@ line-ending = "auto"
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
 include = ["app/harness", "tests/harness"]
+
+[tool.importlinter]
+root_packages = ["app"]
+
+[[tool.importlinter.contracts]]
+name = "§9 graphs are not workflows. Graphs do not import the registry, workflows, or the HTTP API. ARCHITECTURE.md §9 and §10."
+type = "forbidden"
+source_modules = ["app.engine.graphs"]
+forbidden_modules = [
+    "app.engine.registry",
+    "app.engine.workflows",
+    "app.api",
+]
+
+[[tool.importlinter.contracts]]
+name = "§9 tools stay off graphs, nodes, artifact stores, workflows, and the HTTP API. ARCHITECTURE.md §9."
+type = "forbidden"
+source_modules = ["app.engine.tools"]
+forbidden_modules = [
+    "app.engine.graphs",
+    "app.engine.nodes",
+    "app.engine.artifacts",
+    "app.engine.workflows",
+    "app.api",
+]
+
+[[tool.importlinter.contracts]]
+name = "§9 backends stay off nodes, graphs, workflows, and the HTTP API. ARCHITECTURE.md §9."
+type = "forbidden"
+source_modules = ["app.engine.backends"]
+forbidden_modules = [
+    "app.engine.nodes",
+    "app.engine.graphs",
+    "app.engine.workflows",
+    "app.api",
+]
+
+[[tool.importlinter.contracts]]
+name = "§9 nodes stay off the HTTP API, the workflow registry, and workflows. ARCHITECTURE.md §9."
+type = "forbidden"
+source_modules = ["app.engine.nodes"]
+forbidden_modules = [
+    "app.api",
+    "app.engine.registry",
+    "app.engine.workflows",
+]

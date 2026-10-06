@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from app.core.settings import settings
 from app.engine.backends.inprocess import InProcessFilesystemBackend
 from app.engine.schema import ResearchRequest
 from app.engine.vaults import VaultResolutionError, resolve_vault
@@ -62,10 +63,13 @@ def test_research_request_rejects_unknown_vault_type() -> None:
         )
 
 
-def test_local_vault_resolver_preserves_existing_vault_content(tmp_path: Path) -> None:
+def test_local_vault_resolver_preserves_existing_vault_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     vault_path = tmp_path / "Vault"
     backend = InProcessFilesystemBackend(vault_path)
     backend.write_text("Existing.md", "# Existing")
+    monkeypatch.setattr(settings.security, "local_vaults", [vault_path])
 
     layout = resolve_vault(
         ResearchRequest(
@@ -82,34 +86,44 @@ def test_local_vault_resolver_preserves_existing_vault_content(tmp_path: Path) -
 def test_git_vault_resolver_clones_to_managed_writable_vault(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    remote = tmp_path / "remote-vault"
-    remote.mkdir()
-    subprocess.run(
-        ["git", "init", "-b", "main"], cwd=remote, check=True, capture_output=True
-    )
-    (remote / "Remote.md").write_text("# Remote", encoding="utf-8")
-    subprocess.run(["git", "add", "Remote.md"], cwd=remote, check=True)
-    subprocess.run(
-        [
-            "git",
-            "-c",
-            "user.email=test@example.com",
-            "-c",
-            "user.name=Test",
-            "commit",
-            "-m",
-            "init",
-        ],
-        cwd=remote,
-        check=True,
-        capture_output=True,
-    )
+    url = "https://github.com/example/vault.git"
+    calls = []
+    from app.engine.vaults import _run_git
+
+    # A local stand-in for the remote. Clone, fetch and checkout run real git
+    # against it, so the test sees whatever they do to the worktree.
+    source = tmp_path / "source"
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
+    subprocess.run([*git, "init", "-b", "main", str(source)], check=True)
+    (source / "Remote.md").write_text("# Remote")
+    subprocess.run([*git, "-C", str(source), "add", "."], check=True)
+    subprocess.run([*git, "-C", str(source), "commit", "-m", "init"], check=True)
+
+    def simulated_git(args: list[str]) -> str:
+        calls.append(args)
+        if args[0] == "config":
+            return _run_git(args)
+        if args[0] == "clone":
+            target = args[-1]
+            subprocess.run(
+                [*git, "clone", "--no-checkout", str(source), target], check=True
+            )
+            subprocess.run(
+                [*git, "-C", target, "remote", "set-url", "origin", url], check=True
+            )
+            return ""
+        local = [str(source) if arg == url else arg for arg in args]
+        subprocess.run([*git, *local], check=True, capture_output=True)
+        return ""
+
     monkeypatch.setattr("app.core.settings.settings.filesystem.base_path", tmp_path)
+    monkeypatch.setattr(settings.security, "git_repositories", [url])
+    monkeypatch.setattr("app.engine.vaults._run_git", simulated_git)
 
     layout = resolve_vault(
         ResearchRequest(
             topic="git vault",
-            vault={"type": "git", "url": str(remote), "ref": "main"},
+            vault={"type": "git", "url": url, "ref": "main"},
         )
     )
 
@@ -119,6 +133,14 @@ def test_git_vault_resolver_clones_to_managed_writable_vault(
     layout.backend.write_text("notes/local.md", "local write")
     assert layout.backend.read_text("notes/local.md") == "local write"
     assert (tmp_path / ".vaults").is_dir()
+    # Existing vaults keep local notes and fetch only the approved URL.
+    resolve_vault(
+        ResearchRequest(
+            topic="git vault", vault={"type": "git", "url": url, "ref": "main"}
+        )
+    )
+    assert calls[-2][2:] == ["fetch", "--", url, "main"]
+    assert layout.backend.read_text("notes/local.md") == "local write"
 
 
 def test_git_vault_resolver_rejects_option_shaped_operands(
@@ -134,6 +156,119 @@ def test_git_vault_resolver_rejects_option_shaped_operands(
             )
         )
 
+
+def test_local_vault_default_denial_has_no_side_effects(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.security, "local_vaults", [])
+    target = tmp_path / "not-approved"
+    with pytest.raises(VaultResolutionError, match="not approved"):
+        resolve_vault(
+            ResearchRequest(
+                topic="denied path", vault={"type": "local", "path": str(target)}
+            )
+        )
+    assert not target.exists()
+
+
+def test_approved_root_does_not_approve_children_or_symlinks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    approved = tmp_path / "approved"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    approved.symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(settings.security, "local_vaults", [approved])
+    for target in [approved, outside, approved / "child", Path("relative")]:
+        with pytest.raises(VaultResolutionError):
+            resolve_vault(
+                ResearchRequest(
+                    topic="denied alias", vault={"type": "local", "path": str(target)}
+                )
+            )
+    assert not (outside / ".obsidian").exists()
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://github.com/example/vault.git",
+        "https://github.com/other/vault.git",
+        "https://127.0.0.1/vault.git",
+        "https://github.com@127.0.0.1/vault.git",
+        "http://github.com/example/vault.git",
+        "file:///tmp/repo",
+        "ssh://github.com/repo",
+        "https://github.com/example/vault.git?redirect=bad",
+        "ext::bad",
+    ],
+)
+def test_git_default_denial_never_starts_process(
+    url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.security, "git_repositories", [])
+    monkeypatch.setattr(settings.filesystem, "base_path", tmp_path)
+    monkeypatch.setattr(
+        "app.engine.vaults._run_git", lambda args: pytest.fail("Denied URL started git")
+    )
+    with pytest.raises(VaultResolutionError):
+        resolve_vault(
+            ResearchRequest(
+                topic="denied git", vault={"type": "git", "url": url, "ref": "main"}
+            )
+        )
+    assert not (tmp_path / ".vaults").exists()
+
+
+def test_cached_url_rewrites_are_rejected(tmp_path: Path) -> None:
+    from app.engine.vaults import _validate_cached_git_config
+
+    config = tmp_path / ".git/config"
+    config.parent.mkdir()
+    config.write_text('[url "https://internal/"]\n\tinsteadOf = https://github.com/\n')
+    with pytest.raises(VaultResolutionError, match="Unsafe"):
+        _validate_cached_git_config(tmp_path, "https://github.com/example/vault.git")
+
+
+def test_git_worker_does_not_inherit_network_or_credential_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.engine.vaults import _run_git
+
+    observed = {}
+    monkeypatch.setenv("HTTPS_PROXY", "http://untrusted-proxy")
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_SSH_COMMAND", "untrusted")
+
+    def record(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        observed.update(command=command, **kwargs)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr("app.engine.vaults.subprocess.run", record)
+    _run_git(["--version"])
+    env = observed["env"]
+    assert env["GIT_ALLOW_PROTOCOL"] == "https"
+    assert env["GIT_CONFIG_GLOBAL"] == "/dev/null"
+    assert not {"HTTPS_PROXY", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND"} & env.keys()
+    assert "http.followRedirects=false" in observed["command"]
+    assert "http.sslVerify=true" in observed["command"]
+
+
+@pytest.mark.parametrize("ref", ["main@{1}", "a..b", "a//b"])
+def test_git_ref_outside_the_grammar_is_rejected(
+    ref: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = "https://github.com/example/vault.git"
+    monkeypatch.setattr(settings.security, "git_repositories", [url])
+    with pytest.raises(VaultResolutionError, match="Invalid git ref"):
+        resolve_vault(
+            ResearchRequest(
+                topic="git vault", vault={"type": "git", "url": url, "ref": ref}
+            )
+        )
+
+
+def test_git_option_shaped_ref_is_rejected() -> None:
     with pytest.raises(VaultResolutionError, match="ref must not start"):
         resolve_vault(
             ResearchRequest(
@@ -145,3 +280,54 @@ def test_git_vault_resolver_rejects_option_shaped_operands(
                 },
             )
         )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://github.com/example/vault.git",
+        "https://127.0.0.1/vault.git",
+        "file:///tmp/repo",
+        "ssh://github.com/example/vault.git",
+        "https://github.com/example/vault.git?query=bad",
+        "https://github.com@example.invalid/example/vault.git",
+    ],
+)
+def test_allowlist_cannot_enable_unsafe_git_transport(
+    url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.security, "git_repositories", [url])
+    monkeypatch.setattr(
+        "app.engine.vaults._run_git",
+        lambda args: pytest.fail("Unsafe transport started"),
+    )
+    with pytest.raises(VaultResolutionError):
+        resolve_vault(
+            ResearchRequest(
+                topic="unsafe transport",
+                vault={"type": "git", "url": url, "ref": "main"},
+            )
+        )
+
+
+def test_actual_git_worker_rejects_file_transport(tmp_path: Path) -> None:
+    from app.engine.vaults import _run_git
+
+    source = tmp_path / "source"
+    subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
+    with pytest.raises(VaultResolutionError, match="operation failed"):
+        _run_git(["clone", "--", str(source), str(tmp_path / "clone")])
+
+
+def test_approved_local_vault_does_not_authorize_its_children(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.security, "local_vaults", [tmp_path])
+    child = tmp_path / "unapproved-child"
+    with pytest.raises(VaultResolutionError, match="not approved"):
+        resolve_vault(
+            ResearchRequest(
+                topic="unapproved child", vault={"type": "local", "path": str(child)}
+            )
+        )
+    assert not child.exists()

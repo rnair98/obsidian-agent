@@ -23,10 +23,18 @@ See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
 proposing design changes.
 
+See [**ROADMAP.md**](./ROADMAP.md) for proposed research-policy improvements,
+BAML/Jev experiments, evaluation milestones, and longer-term distillation work.
+
 ## Quick start
 
+Configure workflow authentication and approved vault paths first; see
+[workflow access](docs/security-access.md). Empty credentials or allowlists
+fail closed. Container vault paths require explicit writable mounts.
+
 ```bash
-# Prerequisites: podman (or docker) + OPENAI_API_KEY in your environment
+# Prerequisites: podman + provider keys + configured workflow access
+# Compose also requires an exported, generated POSTGRES_PASSWORD.
 
 just up                                   # app + postgres + phoenix
 # or, locally without the stack:
@@ -34,16 +42,19 @@ just run                                  # uvicorn with --reload
 
 # Fire a research run
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Authorization: Bearer $SECURITY__WORKFLOW_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"topic":"emerging patterns in retrieval-augmented generation","vault":{"type":"local","path":"/path/to/Vault"}}'
 
 # Use a local Obsidian vault as the workspace base
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Authorization: Bearer $SECURITY__WORKFLOW_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"topic":"zettelkasten workflows","vault":{"type":"local","path":"/path/to/Vault"}}'
 
-# Use a remote Git vault as the workspace base (cloned locally; not pushed)
+# Use an explicitly approved public GitHub HTTPS vault (not pushed)
 curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
+  -H "Authorization: Bearer $SECURITY__WORKFLOW_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"topic":"zettelkasten workflows","vault":{"type":"git","url":"https://github.com/user/vault.git","ref":"main"}}'
 ```
@@ -82,14 +93,14 @@ Paths below are **vault-relative**. Every request must provide
 
 ```bash
 uv sync                           # install deps (Python 3.13+)
+just check                        # ruff, pyright, import boundaries, pytest (§11.2)
 just fmt                          # ruff format + lint --fix
-uv run pytest                     # full test suite
 just phoenix                      # OTEL UI at http://localhost:6006
 just db-up                        # local postgres for checkpointing
 ```
 
-Common `just` targets: `run`, `up`, `up-logs`, `down`, `logs`, `fmt`,
-`clean`, `phoenix`, `db-up`, `agents`.
+Common `just` targets: `check`, `review`, `run`, `up`, `up-logs`, `down`,
+`logs`, `fmt`, `clean`, `phoenix`, `db-up`, `agents`.
 
 ## Agent scaffolding
 
