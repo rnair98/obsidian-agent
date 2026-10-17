@@ -1,0 +1,30 @@
+README.md
+  s_9171ba00127552::t_74a2943b5fa4ec 11,26-27,81-83
+  s_9171ba00127552::t_6fbf1db61e4199 150
+tests/README.md
+  s_9171ba00127552::t_74a2943b5fa4ec 11
+AGENTS.md
+  s_9171ba00127552::t_74a2943b5fa4ec 108,479
+docs/development.md
+  s_9171ba00127552::t_74a2943b5fa4ec 1-15
+docs/security-access.md
+  s_9171ba00127552::t_74a2943b5fa4ec 64,71,79,81-84,86-91
+ARCHITECTURE.md
+  s_9171ba00127552::t_74a2943b5fa4ec 290,894,1024-1035
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93962e34c2fcfbf08b662091e7aff6d8d964c2b5",
+  "prompts": {},
+  "sessions": {
+    "s_9171ba00127552": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0e10e-2193-7c83-b0aa-f3b6adf62fa8",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
