@@ -1,0 +1,21 @@
+AGENTS.md
+  s_b8b3cdfc47e029::t_0bdf8f378afa62 111-116
+docs/development.md
+  s_b8b3cdfc47e029::t_0bdf8f378afa62 16-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4134e539f185715872bcdc4587b1dc5c748a5d7",
+  "prompts": {},
+  "sessions": {
+    "s_b8b3cdfc47e029": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e10e-2193-7c83-b0aa-f3b6adf62fa8",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
