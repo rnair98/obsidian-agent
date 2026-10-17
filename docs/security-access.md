@@ -61,14 +61,14 @@ hostile concurrent local cache mutation is outside this boundary.
 
 Compose publishes the API and Phoenix UI on IPv4 loopback. Postgres and the
 collector have no host ports. Compose requires `POSTGRES_PASSWORD` and
-`SECURITY__WORKFLOW_TOKEN`; it no longer supplies a default database password.
+`SECURITY__WORKFLOW_TOKEN`; no default database password is supplied.
 Use a generated URL-safe database password because the Compose connection URI
 contains it. Do not print resolved Compose configuration containing credentials.
 
 Compose's local vault allowlist is deliberately empty: container paths and
 writable vault mounts must be configured explicitly before enabling local vaults.
 Git allowlisting is passed through from `SECURITY__GIT_REPOSITORIES`, but writable
-managed-cache storage is still required. These source changes do not restart or
+managed-cache storage is still required. Changing source configuration does not restart or
 reconfigure an existing stack, database, firewall or persisted credentials.
 Recreating an existing database with a new environment value does not rotate
 its initialized password; use a separate controlled rotation if needed.
@@ -76,15 +76,16 @@ its initialized password; use a separate controlled rotation if needed.
 `just db-up` requires an exported `POSTGRES_PASSWORD` and publishes port 5432
 only on localhost. `just phoenix` binds its UI and collector to localhost.
 
-## Verification and rollback
+## Verification and recovery
 
-Tests reject missing/wrong credentials before execution, unapproved local paths,
-symlink aliases, non-approved Git destinations and cached URL rewrites. They
-also verify the Git process environment does not inherit proxy/Git overrides.
-Positive tests cover approved local access and a simulated approved Git vault;
-they do not contact GitHub or paid model providers.
+Before deployment, configure credentials and approved paths, then run `just check`.
+The access tests cover request authentication, vault approval and Git transport
+configuration using local fixtures; they do not contact GitHub or model providers.
+Verify the configured deployment separately before enabling access.
 
-Before deployment, configure credentials and approved paths, run tests, and
-review the saved security diff. Rollback means reverting only that diff and
-restoring the prior local configuration. No database or user vault migration is
-part of this change. Reverting reintroduces the access-boundary findings.
+Keep a copy of the previous deployment configuration. If deployment fails, restore
+the last working image and configuration while retaining authentication and vault
+approval. Changing environment values does not rotate an initialized database's
+password. Never restore exposed credentials as part of rollback.
+
+Historical rollout details are in the [development archive](https://github.com/rnair98/obsidian-agent/wiki/Development-history).

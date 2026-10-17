@@ -105,7 +105,7 @@ you MUST:
 5) Cross-project check (sibling repo `../swe-term`). Read the skill
    `cross-project-requests`, then run `xreq unseen` before drafting a plan and
    realign to anything addressed to you. While scoping, log a request in
-   `docs/cross-project/swe-term.md` only when swe-term work would block a ROADMAP
+   `docs/cross-project/swe-term.md` only when swe-term work would block a [wiki roadmap](https://github.com/rnair98/obsidian-agent/wiki/Roadmap)
    gate or replace code you are about to write. Never edit the sibling's ledger.
 
 <rule>
@@ -476,7 +476,7 @@ Prefer, in order:
 
 Do not assert a value that only restates a helper's implementation, patch the unit under test,
 or compare free-form model prose with `assertEqual`. Model behavior is an
-eval fixture (`TODOS.md`, `ROADMAP.md`), not a pytest equality. Update
+eval fixture (see [development archive](docs/development.md)), not a pytest equality. Update
 ARCHITECTURE.md §11 in the same change. Run `just check` (§11.2), then
 hand the batch to the reviewer in §11.3. Do not review your own diff.
 Generic "write a unit test" guidance from other skills loses to
