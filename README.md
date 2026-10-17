@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" />
 </a>
 <br></br>
-<i>Researcher → Summarizer → Zettelkasten → Persist</i>
+<i>Vault profiler → Researcher → Summarizer → Zettelkasten → Persist</i>
 <br></br>
 </div>
 
@@ -23,8 +23,8 @@ See [**ARCHITECTURE.md**](./ARCHITECTURE.md) for the full mental model,
 domain types, invariants, and extension points — read it before
 proposing design changes.
 
-See [**ROADMAP.md**](./ROADMAP.md) for proposed research-policy improvements,
-BAML/Jev experiments, evaluation milestones, and longer-term distillation work.
+Plans, implementation tasks and research audits live in the
+[development archive](docs/development.md).
 
 ## Quick start
 
@@ -77,6 +77,9 @@ Paths below are **vault-relative**. Every request must provide
 | `{vault}/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
+
+Reports and source CSVs overwrite the previous run. Note IDs can overwrite
+prior-run notes; use a dedicated vault or a backup when retaining earlier output.
 
 ## Configuration
 
@@ -144,5 +147,4 @@ Model: `gpt-5.4-mini` (hard-coded).
 
 ## License
 
-No license file has been added yet — treat the repository as
-all-rights-reserved until one lands.
+Licensed under [Apache 2.0](LICENSE).

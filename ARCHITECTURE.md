@@ -287,10 +287,8 @@ app/
 ```text
 .
 ├── ARCHITECTURE.md               # this file
-├── ROADMAP.md                    # target capabilities and release gates
-├── TODOS.md                      # ordered implementation tasks and completion checks
+├── docs/development.md           # links to the wiki development archive
 ├── AGENTS.md                     # agent operating contract (delegates to this doc)
-├── TASKS.md                      # one-off setup task for agent tooling
 ├── README.md                     # minimal local-run instructions
 ├── pyproject.toml                # uv / ruff / deps (py>=3.13, langgraph, langchain-openai, polars, monty, …)
 ├── uv.lock
@@ -893,7 +891,7 @@ offered it.
 Policy: [tests/README.md](tests/README.md). State the promise as a `Proof` (§11.1)
 and check it across `tests/support/multiverse.py`. Do not add example
 assertions that restate a helper. Model-output scoring stays in the eval
-fixtures in `TODOS.md` / `ROADMAP.md`, outside this map. The door is
+fixtures described in the [development archive](docs/development.md), outside this map. The door is
 `just check` (§11.2).
 
 ### 11.1 Proofs and the multiverse
@@ -1023,27 +1021,18 @@ exercises only the request/routing surface, not graph traversal.
 This section records remaining integration work and known inconsistencies.
 Reconcile it with the current code when changing these contracts.
 
-**Research-system planning (not implemented):** the source-grounded
-[Feynman audit](docs/research/feynman-audit.md) and
-[OpenResearch audit](docs/research/openresearch-audit.md) inform the
-[roadmap](ROADMAP.md).
-It proposes shared run/evidence contracts, safe vault publication, and later
-authorized experiment execution so both CLIs can eventually be retired. These
-are target capabilities, not current APIs or permission changes. The existing
-virtual shell remains non-host execution; any experiment runner needs a separate
-explicit capability boundary and corresponding updates to §§5, 9 and 10.
+Plans, audits and the previous integration record live in the
+[development archive](docs/development.md). They do not change current APIs,
+permissions or the §9 adoption gate.
 
-**swe-term convergence (proposed, not implemented):** the
-[roadmap](ROADMAP.md#platform-convergence-swe-term) proposes replacing LangGraph
-and LangChain with the sibling `swe-term` harness and its agent SDK. swe-term has
-no agent loop, SDK or wire protocol yet (its `ARCHITECTURE.md` §4, §12 items 7–8),
-so nothing here changes the current runtime, §9 adoption gate or §10 invariants.
-Until the roadmap's C4 cutover, do not add records to `ResearchState` or LangGraph
-checkpoints. Write new run, evidence and receipt records as schema-validated
-files, and keep new domain code (`evidence`, `artifacts`, `obsidian`, `vaults`,
-`parsing`, `codesearch`) free of `langchain*` and `langgraph*` imports. Treat
-`Runner`, host-hosted tools and the Python SDK client as target names, not APIs.
-Remove or rewrite this paragraph, and §§1, 2, 4, 8, 9 and 12, in the cutover change.
+**Current extension constraints:** the virtual shell does not execute host
+commands. Any experiment runner requires a separate explicit capability boundary
+and updates to §§5, 9 and 10. Until the [roadmap's C4 cutover](https://github.com/rnair98/obsidian-agent/wiki/Roadmap#platform-convergence-swe-term),
+do not add records to `ResearchState` or LangGraph checkpoints. Write new run,
+evidence and receipt records as schema-validated files. Keep new domain code
+(`evidence`, `artifacts`, `obsidian`, `vaults`, `parsing`, `codesearch`) free of
+`langchain*` and `langgraph*` imports. `Runner`, host-hosted tools and the Python
+SDK client are planned names, not implemented APIs.
 
 Node consolidation, artifact stores, graph-based vault profiling, and the
 OpenAI/Groq factory are implemented (see §§2–10). Remaining integration work:
