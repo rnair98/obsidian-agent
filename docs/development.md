@@ -10,6 +10,6 @@ The [GitHub wiki](https://github.com/rnair98/obsidian-agent/wiki/Home) owns plan
 - [OpenResearch audit](https://github.com/rnair98/obsidian-agent/wiki/OpenResearch-audit)
 - [Development history](https://github.com/rnair98/obsidian-agent/wiki/Development-history)
 
-Keep setup, usage, interfaces, operating contracts, executable checks, schemas and licenses with the code. Keep the active cross-project request ledger in `docs/cross-project/`; historical references there retain their original wording. Its `ROADMAP.md` references now resolve to the wiki roadmap.
+Keep setup, usage, interfaces, operating contracts, executable checks, schemas and licenses with the code. Keep the active cross-project request ledger in `docs/cross-project/`; historical references there retain their original wording. For its historical `ROADMAP.md` references, use [Platform convergence](https://github.com/rnair98/obsidian-agent/wiki/Roadmap#platform-convergence-swe-term); the ledger records this location correction as a notice.
 
 The wiki is public. Remove credentials, private source content, personal paths and conversation links before publishing. Runnable audit checks remain in `docs/research/`; the audit pages document their pinned inputs and commands.

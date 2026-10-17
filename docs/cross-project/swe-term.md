@@ -32,3 +32,8 @@ Context: Provider-hosted web_search and code_interpreter cannot be observed by a
 Evidence: app/engine/tools/__init__.py:4 (OPENAI_TOOLS); ../swe-term/ARCHITECTURE.md §12 item 8
 Workaround: Prompt-only routing, which is not a permission boundary (ARCHITECTURE.md §2 item 5).
 Blocks: C2
+
+### OA-004 · notice · 2026-10-17
+Title: OA-001 roadmap evidence moved to the wiki
+Need: For OA-001 C1 evidence, use https://github.com/rnair98/obsidian-agent/wiki/Roadmap#platform-convergence-swe-term item 4.
+Context: ROADMAP.md was archived. This corrects its location without changing OA-001 or its status.
