@@ -1,0 +1,21 @@
+docs/cross-project/swe-term.md
+  s_b8b3cdfc47e029::t_4f3c1a092ef9c2 35-39
+docs/development.md
+  s_b8b3cdfc47e029::t_4f3c1a092ef9c2 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b440a9baa38fcbd5e1901989dcd397f77da8f2c",
+  "prompts": {},
+  "sessions": {
+    "s_b8b3cdfc47e029": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e10e-2193-7c83-b0aa-f3b6adf62fa8",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
