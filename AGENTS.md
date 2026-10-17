@@ -108,6 +108,12 @@ you MUST:
    `docs/cross-project/swe-term.md` only when swe-term work would block a [wiki roadmap](https://github.com/rnair98/obsidian-agent/wiki/Roadmap)
    gate or replace code you are about to write. Never edit the sibling's ledger.
 
+6) Use the persistent `.wiki/` checkout for development plans and history.
+   Before editing, inspect `git -C .wiki status --short`, preserve existing work,
+   then run `git -C .wiki pull --ff-only` when clean. Do not clone into temporary
+   directories. Follow [the wiki workflow](docs/development.md#local-wiki-workflow)
+   for initial setup and publication.
+
 <rule>
 Skipping ARCHITECTURE.md is a correctness bug. A response produced without
 consulting it is unreliable and must be flagged as such.
