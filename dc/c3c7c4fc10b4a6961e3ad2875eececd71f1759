@@ -1,0 +1,27 @@
+app/engine/artifacts/sources.py
+  s_d31fc1338fa299::t_2e633afcf5927a 11-14,46
+tests/engine/test_artifacts.py
+  s_d31fc1338fa299::t_dbbe27b2726082 68
+  s_d31fc1338fa299::t_2e633afcf5927a 58-67
+  s_d31fc1338fa299::t_70772d27f76bf8 69-73
+pyproject.toml
+  s_d31fc1338fa299::t_47fb77d3d961b8 13
+uv.lock
+  s_d31fc1338fa299::t_1327e6fa2cb0fb 3044,3464,3469,3471,3476-3487
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dcc3c7c4fc10b4a6961e3ad2875eececd71f1759",
+  "prompts": {},
+  "sessions": {
+    "s_d31fc1338fa299": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7626c582-b65a-4b01-94c3-ee292578d54f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
