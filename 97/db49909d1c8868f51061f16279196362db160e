@@ -1,0 +1,30 @@
+pyproject.toml
+  s_339384270fc0f7::t_a285b5e4103004 32,41-42
+  s_339384270fc0f7::t_725d59c0ee15f0 43
+ARCHITECTURE.md
+  s_339384270fc0f7::t_459a77fb51e2b7 602,611-618
+Containerfile
+  s_339384270fc0f7::t_d9bc0113503bbb 10-15
+README.md
+  s_339384270fc0f7::t_41f1b0a666a7d4 35-38
+docker-compose.yaml
+  s_339384270fc0f7::t_7ededd653e495b 6-7
+uv.lock
+  s_339384270fc0f7::t_43ce2597edbf4a 2,2779,2827,4574-4577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "97db49909d1c8868f51061f16279196362db160e",
+  "prompts": {},
+  "sessions": {
+    "s_339384270fc0f7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e0d6-c8cc-7250-b8eb-927d9f12c8ba",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
