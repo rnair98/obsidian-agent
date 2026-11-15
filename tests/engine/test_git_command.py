@@ -70,10 +70,8 @@ def test_git_command_rejects_mutating_porcelain() -> None:
     result = command(session, ["push"])
 
     assert result.exit_code == 2
-    assert result.stderr == (
-        "git: unsupported command: push; supported forms: "
-        "git ls-tree [-r] owner/repo; git clone owner/repo [ref]\n"
-    )
+    assert "supported forms:" in result.stderr
+    assert "git -C /repos/owner/repo.git <" in result.stderr
 
 
 def test_git_command_rejects_oversmart_show_command_with_supported_forms() -> None:

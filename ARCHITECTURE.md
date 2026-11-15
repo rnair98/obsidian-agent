@@ -101,7 +101,7 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
 │   harness/  ← typed virtual workspace + fake shell core          │
 ├──────────────────────────────────────────────────────────────────┤
 │                     services/ (external integrations)            │
-│   gh_client (PyGithub app-installation auth) ·                   │
+│   gh_client (githubkit app auth · Seatbelt git mirrors) ·        │
 │   codesearch (tree-sitter IR parsing over local snapshots)       │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -134,8 +134,9 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
    and `shell`. Its default prompt routes URL reads to `exa.crawling_exa`,
    calculations to `code_interpreter`, and shell use to named prior-memory
    reads. Summarizer, Zettelkasten, and profiler specs have no tools. The
-   harness still implements file operations, Jina-backed `curl`, GitHub `git`,
-   and Monty-backed `python`. Prompt restrictions are not runtime permission
+   harness still implements file operations, Jina-backed `curl`, GitHub `git`
+   (REST snapshots plus confined history reads on a mirror), and Monty-backed
+   `python`, whose code can call `git(*args)`. Prompt restrictions are not runtime permission
    boundaries. See §12 for remaining prompt inconsistencies.
 6. **Filesystem writes go through `FilesystemBackend`.** Never call
    `Path.write_text` directly from node/tool code. The backend enforces a
@@ -277,7 +278,8 @@ app/
     │   ├── models.py             # FileIR / Symbol / Scope / Import Pydantic models
     │   └── parser.py             # parse_file / parse_snapshot with skip heuristics
     └── gh_client/
-        ├── auth.py               # GitHubHandle (client + auth) cached factory; get_github_handle / get_github_client
+        ├── auth.py               # GitHubHandle: githubkit installation client + cached git token; get_github_handle
+        ├── mirror.py             # blobless bare mirrors; run_git under a Seatbelt profile (§10)
         ├── repo.py               # GitHubRepositoryService.get_tree / .shallow_clone (tarball → backend)
         └── types.py              # SnapshotResult Pydantic model
 ```
@@ -337,7 +339,7 @@ by merging node return values.
 | `key_insights` | `list[str]` | researcher | persist |
 
 Tools that need a filesystem backend or a GitHub client resolve them via
-the `get_filesystem_backend(...)` / `get_github_client()` factories — they
+the `get_filesystem_backend(...)` / `get_github_handle()` factories — they
 are *not* carried in state.
 
 ### `ResearchContext` (frozen dataclass)
@@ -435,7 +437,11 @@ metadata source. Runtime supported forms are exactly: `help [command]`, `pwd`,
 `cd [path]`, `ls [path]`, `cat path`, `mkdir path`, `write path content`,
 `write path -- content`, `rm path`, `mv src dst`, `cp src dst`,
 `grep pattern path`, `curl URL`, `git ls-tree [-r] owner/repo`,
-`git clone owner/repo [ref]`, `python -c code`, and `python path.py`.
+`git clone owner/repo [ref]`, `git clone --bare owner/repo`,
+`git -C /repos/owner/repo.git <read subcommand> [args]`, `python -c code`,
+and `python path.py`. The read subcommands are `READ_SUBCOMMANDS` in
+`services/gh_client/mirror.py`; their own git arguments pass through to the
+sandbox in §10.
 No other flags, pipelines, redirects, shell expansion, or host commands are
 supported. Unsupported flags must fail with a message naming the supported
 form, so agents get corrected instead of silently drifting into normal shell
@@ -595,7 +601,7 @@ requested explicitly instead of occurring during every run.
 | Agent workspace | Typed virtual shell harness + durable artifact/repo mounts | `app/harness/`, `engine/workspace.py`, `tools/shell.py` |
 | URL → Markdown | Jina Reader (`r.jina.ai`) | `engine/workspace_commands/curl.py` via shell `curl URL` |
 | Ad hoc Python analysis | Pydantic Monty through shell `python` | `engine/workspace_commands/python.py`, `harness/session.py` |
-| GitHub | PyGithub (App-installation auth), surfaced to agents as `git` | `services/gh_client/`, `engine/workspace_commands/git.py` |
+| GitHub | githubkit (App-installation auth) for REST; the git CLI under Seatbelt for history; surfaced as `git` and Monty `git()` | `services/gh_client/`, `engine/workspace_commands/git.py` |
 | Code IR parsing | standalone `tree_sitter.Parser(get_language(...))`; language pack supplies grammars | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
@@ -773,7 +779,10 @@ offered it.
    should be ordinary workspace files or `python -c` snippets.
 3. If host capabilities are needed, expose them as explicit Monty external
    functions with tests and permission checks; do not fall back to host
-   subprocess execution.
+   subprocess execution. Agent code never chooses a host program. A
+   registered harness command may run one fixed binary when an OS sandbox
+   confines it, as `git()` does (§10); the external function calls that
+   command, so the shell and Monty share one path.
 
 ### Add a new graph
 
@@ -825,9 +834,42 @@ offered it.
   A graph builder does not register. A workflow module omitted from
   `app/engine/workflows/__init__.py` silently does not register.
   `WorkflowName` and `list_workflows()` are the same set.
-- **PyGithub client is process-cached** via `lru_cache(maxsize=1)` in
-  `gh_client/auth.py`. Config changes take effect only on process restart or
-  explicit `clear_github_client()`.
+- **GitHub client is process-cached** via `lru_cache(maxsize=1)` in
+  `gh_client/auth.py`. Config changes take effect only on process restart.
+  The installation token for the git CLI is minted on demand and reused
+  until five minutes before it expires.
+- **Agent git history runs inside Seatbelt, not a flag list.** `run_git`
+  starts the toolchain git (not the `/usr/bin` shim) under `sandbox-exec`
+  with stdin closed. Reads are limited to `/usr/lib`, `/System`, TLS trust
+  stores, the toolchain and the resolved mirror; `/usr/local` and
+  `/usr/share` are excluded. Writes are limited to `mirror/objects` (lazy
+  blob fetches). Exec is limited to the `git` binary and `git-remote-http`,
+  never the toolchain directory, which holds `python3`. Two permissions stay
+  wide: `mach-lookup` (any service) and outbound TCP 443 to any host. Neither
+  is reachable without code exec, which the exec rule closes.
+  `GitCommand` accepts only `-C /repos/owner/repo.git` plus a
+  `READ_SUBCOMMANDS` member. As a second layer it rejects `--output`,
+  `--open-files-in-pager`/`-O` and `--no-index`, including abbreviations of
+  two or more characters. Short-option clusters can pass that layer, so
+  Seatbelt stays the boundary. An agent can still write into the mirror's
+  object store, and `log -p --all` on a blobless mirror can fetch every blob;
+  the worst cases are a corrupted mirror and disk use. Monty `git()` has no
+  per-run call budget, only the 120 s per-call timeout.
+- **Mirror refresh is host-run and keeps the mirror usable.**
+  `ensure_mirror` runs outside Seatbelt with host-chosen argv. A first clone
+  goes to a `.partial` directory and is renamed into place only on success,
+  so a killed clone leaves no mirror behind. A refresh refuses a mirror with
+  `objects/info/alternates`; fetches `refs/heads/*` and `refs/tags/*`
+  explicitly, because `clone --bare` writes no fetch refspec; and re-points
+  `HEAD` at the upstream default branch from `ls-remote --symref`. The mirror
+  config is never writable by agents, so the promisor URL and token scope
+  stay fixed. The token travels in `GIT_CONFIG_*` env, scoped to
+  `https://github.com/`, and is never written to disk. Mirror paths must be
+  resolved before they become Seatbelt parameters: macOS temp and asset paths
+  pass through symlinks. Other hosts fail closed with `MirrorError`. Output
+  is capped at 64 KiB with a visible truncation note; runs time out at 120 s.
+  A path-limited `log --follow` on a blobless mirror fetches blobs to detect
+  renames and can approach that limit. githubkit requests time out at 90 s.
 - **GitHub archives are content-addressed.** `shallow_clone` resolves ref →
   commit SHA first, names the snapshot `{owner}/{repo}@{sha}`, and skips
   when the directory is non-empty. Never rename that path format — the
@@ -985,7 +1027,8 @@ The review is not a `just check` step.
 | `tests/backends/test_sandbox_multiverse.py` | always: `resolve` / `write_text` stay in the sandbox or raise `PathEscapeError` without writing outside, across path shape × operation; sometimes: a relative write is accepted |
 | `tests/support/test_multiverse.py` | checker contracts: seeded replay, counterexample message, sometimes fails closed, proof axes match the run |
 | `tests/backends/test_factory.py` | every `FilesystemBackendType` has a factory, and the configured default is one of them |
-| `tests/test_gh_client_repo.py` | `get_tree` caches per commit SHA; `shallow_clone` skips when snapshot dir is populated |
+| `tests/test_gh_client_repo.py` | `get_tree` fetches each commit tree once; `shallow_clone` extracts the tarball and then reuses the snapshot; the githubkit fake's parameters stay a subset of githubkit's real signatures |
+| `tests/engine/test_git_history.py` | always: agent git argv on the shell or Monty seam reads only the mirror or fails, never leaks a host file, rewrites the mirror config or writes outside it, across probe × seam × resolved/symlinked root; sometimes: Monty reads history; Seatbelt denies exec of `python3` below the argv check; git never reads host stdin; a repeat `clone --bare` moves branches forward and follows a default-branch rename; a killed clone leaves no mirror; a mirror with `objects/info/alternates` is refused; AXI emptiness, truncation and recovery messages. macOS only |
 | `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
 | `tests/test_imports.py` | `app.main` loads; `WorkflowName` equals the registered workflows; tools import |  
 | `tests/engine/test_compose_graphs.py` | One graph keeps its nodes; several graphs share one state; an empty composition is rejected; every registered workflow accepts the executor's `prompt_context` and keeps `ResearchState` channels |  

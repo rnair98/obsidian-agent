@@ -37,3 +37,11 @@ Blocks: C2
 Title: OA-001 roadmap evidence moved to the wiki
 Need: For OA-001 C1 evidence, use https://github.com/rnair98/obsidian-agent/wiki/Roadmap#platform-convergence-swe-term item 4.
 Context: ROADMAP.md was archived. This corrects its location without changing OA-001 or its status.
+
+### OA-005 · open · 2026-11-15
+Title: Fail-closed sandbox argv wrapper usable from a Python host
+Need: Run one fixed binary with reads limited to given paths, writes limited to one subtree, exec limited to a toolchain, and outbound TCP 443 only; fail closed where no OS sandbox exists; callable from Python.
+Context: Agent git history reads run under a hand-written macOS Seatbelt profile. ../swe-term/docs/core/BACKLOG.md:53 lists this wrapper.
+Evidence: app/services/gh_client/mirror.py:32
+Workaround: Local Seatbelt profile in mirror.py; Linux hosts refuse history commands.
+Blocks: none

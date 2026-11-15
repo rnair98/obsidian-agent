@@ -1,154 +1,121 @@
 from __future__ import annotations
 
+import inspect
+import io
+import tarfile
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
-from app.core.paths import DEFAULT_ASSETS_DIR
 from app.engine.backends.inprocess import InProcessFilesystemBackend
-from app.services.gh_client.repo import GITHUB_ARCHIVE_FORMAT, GitHubRepositoryService
+from app.services.gh_client.repo import GitHubRepositoryService
 
 
-class _FakeCommit:
-    def __init__(self, sha: str) -> None:
-        self.sha = sha
+def _tarball(files: dict[str, str]) -> bytes:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        for name, text in files.items():
+            data = text.encode()
+            info = tarfile.TarInfo(f"owner-repo-abc/{name}")
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return buffer.getvalue()
 
 
-class _FakeRepo:
-    def __init__(self) -> None:
-        self.full_name = "owner/repo"
-        self.default_branch = "main"
-        self._sha = "sha-1"
-        self.get_git_tree_calls = 0
+class _FakeGitHub:
+    """githubkit's client shape at the call sites the service uses."""
 
-    def get_commit(self, ref: str) -> _FakeCommit:
-        assert ref == self.default_branch
-        return _FakeCommit(self._sha)
+    def __init__(self, *, offline: bool = False) -> None:
+        self.offline = offline
+        self.head = "sha-1"
+        self.requests: list[str] = []
+        self.rest = SimpleNamespace(
+            repos=SimpleNamespace(
+                get=self._repo,
+                get_commit=self._commit,
+                download_tarball_archive=self._tarball,
+            ),
+            git=SimpleNamespace(get_tree=self._tree),
+        )
 
-    def get_git_tree(self, sha: str, recursive: bool = False) -> SimpleNamespace:
-        assert recursive is True
-        assert sha == self._sha
-        self.get_git_tree_calls += 1
-        return SimpleNamespace(tree=[sha])
+    def _record(self, name: str) -> None:
+        if self.offline:
+            raise AssertionError(f"unexpected GitHub request: {name}")
+        self.requests.append(name)
 
-    def get_archive_link(self, archive_format: str, ref: str) -> str:
-        assert archive_format == GITHUB_ARCHIVE_FORMAT
-        return f"https://example.invalid/{ref}.tar.gz"
+    def _repo(self, owner: str, repo: str) -> Any:
+        self._record("repos.get")
+        return SimpleNamespace(parsed_data=SimpleNamespace(default_branch="main"))
 
+    def _commit(self, owner: str, repo: str, ref: str) -> Any:
+        self._record("repos.get_commit")
+        return SimpleNamespace(parsed_data=SimpleNamespace(sha=self.head))
 
-class _LazyPropertyRepo(_FakeRepo):
-    @property
-    def owner(self):
-        raise AssertionError("list_snapshots must not load repo.owner")
+    def _tree(self, owner: str, repo: str, tree_sha: str, *, recursive: str) -> Any:
+        self._record("git.get_tree")
+        assert recursive == "1"
+        return SimpleNamespace(
+            parsed_data=SimpleNamespace(tree=[SimpleNamespace(path=tree_sha)])
+        )
 
-    @property
-    def name(self):
-        raise AssertionError("list_snapshots must not load repo.name")
-
-
-class _FakeClient:
-    def __init__(self, repo: _FakeRepo) -> None:
-        self.repo = repo
-
-    def get_repo(self, full_name_or_id: str, lazy: bool = False) -> _FakeRepo:
-        assert full_name_or_id == self.repo.full_name
-        assert lazy is True
-        return self.repo
-
-
-class _FakeFilesystemBackend:
-    def __init__(self, existing_dirs: set[str] | None = None) -> None:
-        self.base_path = DEFAULT_ASSETS_DIR
-        self._existing_dirs = existing_dirs or set()
-
-    def resolve(self, path: str | Path) -> Path:
-        return (self.base_path / Path(path)).resolve()
-
-    def is_dir(self, path: str | Path) -> bool:
-        return str(path) in self._existing_dirs
-
-    def list_dir(self, path: str | Path) -> list[Path]:
-        if str(path) in self._existing_dirs:
-            return [Path("already-present")]
-        return []
-
-    def mkdir(
-        self,
-        path: str | Path,
-        parents: bool = True,
-        exist_ok: bool = True,
-    ) -> Path:
-        self._existing_dirs.add(str(path))
-        return self.resolve(path)
-
-    def extract_tar_bytes(
-        self,
-        archive_bytes: bytes,
-        destination: str | Path,
-        strip_components: int = 1,
-    ) -> Path:
-        self._existing_dirs.add(str(destination))
-        return self.resolve(destination)
+    def _tarball(self, owner: str, repo: str, ref: str) -> Any:
+        self._record("repos.download_tarball_archive")
+        return SimpleNamespace(content=_tarball({"README.md": f"at {ref}\n"}))
 
 
-def test_get_tree_caches_by_commit_sha() -> None:
-    repo = _FakeRepo()
-    service = GitHubRepositoryService(_FakeClient(repo), repo_name=repo.full_name)
-
-    first_tree = service.get_tree()
-    second_tree = service.get_tree()
-
-    assert first_tree == ["sha-1"]
-    assert second_tree == ["sha-1"]
-    assert repo.get_git_tree_calls == 1
-
-
-def test_get_tree_refreshes_when_commit_sha_changes() -> None:
-    repo = _FakeRepo()
-    service = GitHubRepositoryService(_FakeClient(repo), repo_name=repo.full_name)
-
-    first_tree = service.get_tree()
-    repo._sha = "sha-2"
-    second_tree = service.get_tree()
-
-    assert first_tree == ["sha-1"]
-    assert second_tree == ["sha-2"]
-    assert repo.get_git_tree_calls == 2
-
-
-def test_shallow_clone_skips_when_snapshot_directory_is_non_empty() -> None:
-    repo = _FakeRepo()
-    snapshot_dir = f"owner/repo@{repo._sha}"
-    backend = _FakeFilesystemBackend(existing_dirs={snapshot_dir})
-    service = GitHubRepositoryService(
-        _FakeClient(repo),
-        repo_name=repo.full_name,
-        filesystem_backend=backend,
-    )
-
-    result = service.shallow_clone()
-
-    assert result is not None
-    assert result.skipped is True
-    assert result.commit_sha == repo._sha
-
-
-def test_list_snapshots_uses_repo_name_without_lazy_github_properties(
-    tmp_path: Path,
-) -> None:
-    repo = _LazyPropertyRepo()
+def _service(client: _FakeGitHub, tmp_path: Path) -> GitHubRepositoryService:
     backend = InProcessFilesystemBackend(base_path=tmp_path)
-    snapshot_dir = backend.mkdir(f"owner/repo@{repo._sha}")
-    service = GitHubRepositoryService(
-        _FakeClient(repo),
-        repo_name=repo.full_name,
+    return GitHubRepositoryService(
+        client,  # type: ignore[arg-type]
+        repo_name="owner/repo",
         filesystem_backend=backend,
     )
 
-    result = service.list_snapshots()
 
-    assert len(result) == 1
-    assert result[0].repo_name == repo.full_name
-    assert result[0].commit_sha == repo._sha
-    assert result[0].requested_ref == repo._sha
-    assert result[0].path == snapshot_dir
-    assert result[0].skipped is False
+def test_get_tree_fetches_each_commit_tree_once(tmp_path: Path) -> None:
+    client = _FakeGitHub()
+    service = _service(client, tmp_path)
+
+    first = service.get_tree()
+    again = service.get_tree()
+    client.head = "sha-2"
+    moved = service.get_tree()
+
+    assert [entry.path for entry in first or []] == ["sha-1"]
+    assert again == first
+    assert [entry.path for entry in moved or []] == ["sha-2"]
+    assert client.requests.count("git.get_tree") == 2
+
+
+def test_shallow_clone_extracts_the_commit_and_then_reuses_it(tmp_path: Path) -> None:
+    client = _FakeGitHub()
+    service = _service(client, tmp_path)
+
+    cloned = service.shallow_clone()
+    cached = service.shallow_clone()
+
+    assert cloned is not None and cloned.skipped is False
+    assert (tmp_path / "owner" / "repo@sha-1" / "README.md").read_text() == "at sha-1\n"
+    assert cached is not None and cached.skipped is True
+    assert client.requests.count("repos.download_tarball_archive") == 1
+
+
+def test_fake_matches_githubkit_call_signatures() -> None:
+    from githubkit import GitHub
+
+    client = GitHub("unused")
+    real = client.rest
+    fake = _FakeGitHub().rest
+    for group, method in [
+        ("repos", "get"),
+        ("repos", "get_commit"),
+        ("repos", "download_tarball_archive"),
+        ("git", "get_tree"),
+    ]:
+        real_params = inspect.signature(
+            getattr(getattr(real, group), method)
+        ).parameters
+        fake_params = inspect.signature(
+            getattr(getattr(fake, group), method)
+        ).parameters
+        assert set(fake_params) <= set(real_params), (group, method)

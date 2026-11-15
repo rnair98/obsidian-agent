@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 import pydantic_monty
 
 from app.harness.commands import CommandSpec
@@ -24,6 +27,7 @@ class PythonCommand:
             collector = pydantic_monty.CollectStreams()
             pydantic_monty.Monty(code, script_name=script_name).run(
                 print_callback=collector,
+                external_functions=_external_functions(session),
             )
         except _UnsupportedPythonFlag as exc:
             return CommandResult.error(f"python: {exc}\n", exit_code=2, events=events)
@@ -53,6 +57,22 @@ class PythonCommand:
         if not event.allowed:
             raise PermissionError("permission denied")
         return session.backend.read_text(script_path), script_path, (event,)
+
+
+def _external_functions(session: WorkspaceSession) -> dict[str, Callable[..., Any]]:
+    git = session.commands.get("git")
+    if git is None:
+        return {}
+
+    def run_git(*args: str) -> dict[str, Any]:
+        result = git(session, [str(arg) for arg in args])
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.exit_code,
+        }
+
+    return {"git": run_git}
 
 
 def _render_streams(streams: list[tuple[str, str]]) -> str:
