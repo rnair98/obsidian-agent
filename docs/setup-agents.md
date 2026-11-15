@@ -2,7 +2,7 @@
 
 Bootstraps per-agent scaffolding (`.agents/` plus per-IDE dotdirs) by
 cloning a pinned version of
-[`cercova-studios/terminal-agent-plugins`](https://github.com/cercova-studios/terminal-agent-plugins)
+[`cercova-studios/10x-swe`](https://github.com/cercova-studios/10x-swe)
 and wiring its `commands/`, `hooks/`, and `skills/` into each selected
 agent's directory via symlinks.
 
@@ -31,7 +31,7 @@ customizations in `.agents/` are preserved.
 ```text
 .agents/
 ├── .mcp.json            # shared MCP config (empty {} if upstream ships none)
-├── .src/                # shallow clone of terminal-agent-plugins
+├── .src/                # shallow clone of 10x-swe
 ├── commands/            # copied from plugins/10x-swe/agents
 ├── hooks/               # copied from plugins/10x-swe/hooks
 ├── rules/               # reserved
@@ -64,4 +64,4 @@ readlink .claude/commands         # symlink into .agents/commands
 Re-running the script fetches the pinned `PLUGIN_VERSION` and
 `git reset --hard FETCH_HEAD`s the cached clone at `.agents/.src/`,
 then reapplies the `rsync --update` merge. Use this when upstream
-`terminal-agent-plugins` publishes new commands or skills.
+`10x-swe` publishes new commands or skills.

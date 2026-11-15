@@ -2,7 +2,7 @@
 #
 # setup-agents.sh — Bootstrap AI agent plugin directories
 #
-# Clones a pinned version of terminal-agent-plugins and wires up
+# Clones a pinned version of 10x-swe and wires up
 # per-agent directories (.claude, .cursor, etc.) via symlinks.
 #
 # Usage:
@@ -18,7 +18,7 @@ set -euo pipefail
 # ── Configuration ────────────────────────────────────────────────────────────
 
 PLUGIN_VERSION="${PLUGIN_VERSION:-main}"
-REPO_URL="https://github.com/cercova-studios/terminal-agent-plugins.git"
+REPO_URL="https://github.com/cercova-studios/10x-swe.git"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENTS_DIR="$PROJECT_ROOT/.agents"
 
@@ -96,7 +96,7 @@ setup_claude() {
     local plugin_config='{
         "code-review@claude-plugins-official": true,
         "explanatory-output-style@claude-plugins-official": true,
-        "10x-swe@terminal-agent-plugins": true
+        "10x-swe@10x-swe": true
     }'
 
     if command -v jq &>/dev/null; then
@@ -119,7 +119,7 @@ setup_claude() {
 			    "enabledPlugins": {
 			        "code-review@claude-plugins-official": true,
 			        "explanatory-output-style@claude-plugins-official": true,
-			        "10x-swe@terminal-agent-plugins": true
+			        "10x-swe@10x-swe": true
 			    }
 			}
 			EJSON

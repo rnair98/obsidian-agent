@@ -48,3 +48,8 @@ node_modules/
 .demongrep.db/
 .fastembed_cache/
 .antigravitycli/
+
+# Upstream reference clones used for audits (see wiki)
+/OpenResearch/
+/feynman/
+/open-knowledge-format/

@@ -110,7 +110,7 @@ Common `just` targets: `check`, `review`, `run`, `up`, `up-logs`, `down`,
 `setup-agents.sh` provisions `.agents/` plus per-IDE dotdirs (`.claude`,
 `.cursor`, `.codex`, …) via symlinks, pulling shared commands, hooks,
 and skills from
-[`cercova-studios/terminal-agent-plugins`](https://github.com/cercova-studios/terminal-agent-plugins).
+[`cercova-studios/10x-swe`](https://github.com/cercova-studios/10x-swe).
 Full usage: [docs/setup-agents.md](./docs/setup-agents.md).
 
 ```bash
