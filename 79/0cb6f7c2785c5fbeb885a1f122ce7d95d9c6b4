@@ -1,0 +1,46 @@
+README.md
+  s_339384270fc0f7::t_44ddec7ecf5284 113
+.gitignore
+  s_d31fc1338fa299::t_86fb6697eb5e20 51-55
+docs/setup-agents.md
+  s_467129469abcc4::t_02f28a7c407dfb 5,34,67
+setup-agents.sh
+  s_467129469abcc4::t_af0ae4c8b0de2f 5,21,99,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "790cb6f7c2785c5fbeb885a1f122ce7d95d9c6b4",
+  "prompts": {},
+  "humans": {
+    "h_f55e8856ec8c19": {
+      "author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_339384270fc0f7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e0d6-c8cc-7250-b8eb-927d9f12c8ba",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_467129469abcc4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a12d90-fe64-7f01-b322-0a76ac36ece9",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_d31fc1338fa299": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7626c582-b65a-4b01-94c3-ee292578d54f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
