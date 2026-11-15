@@ -41,58 +41,79 @@ VARIABLE_NODE_TYPES = {"variable_declarator"}
 SCOPE_KINDS = {"class", "function", "method"}
 
 
+def _walk(
+    node: Node,
+    path: Path,
+    source_bytes: bytes,
+    language: str,
+    class_stack: list[str],
+    symbols: list[Symbol],
+    scopes: list[Scope],
+    imports: list[Import],
+) -> None:
+    symbol = _extract_symbol(node, path, source_bytes, class_stack)
+    next_stack = class_stack
+    if symbol is not None:
+        symbols.append(symbol)
+        if symbol.kind in SCOPE_KINDS:
+            scopes.append(
+                Scope(
+                    name=symbol.name,
+                    kind=symbol.kind,
+                    start_line=symbol.start_line,
+                    end_line=symbol.end_line,
+                )
+            )
+        if symbol.kind == "class":
+            next_stack = [*class_stack, symbol.name]
+    parsed_imports = _extract_imports(node, source_bytes, language)
+    if parsed_imports:
+        imports.extend(parsed_imports)
+    for child in node.children:
+        _walk(
+            child,
+            path,
+            source_bytes,
+            language,
+            next_stack,
+            symbols,
+            scopes,
+            imports,
+        )
+
+
+def _source_bytes(path: Path) -> bytes | None:
+    try:
+        if path.stat().st_size > MAX_FILE_SIZE_BYTES:
+            return None
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
 def parse_file(path: Path) -> FileIR | None:
     """Parse a single source file. Returns ``None`` for unsupported or binary files."""
     language = detect_language(path)
     if language is None:
         return None
 
-    try:
-        if path.stat().st_size > MAX_FILE_SIZE_BYTES:
-            return None
-        source_bytes = path.read_bytes()
-    except OSError:
-        return None
-
-    if _is_binary(source_bytes):
+    source_bytes = _source_bytes(path)
+    if source_bytes is None or _is_binary(source_bytes):
         return None
 
     try:
-        parser = Parser(get_language(language))
-        tree = parser.parse(source_bytes)
+        grammar = get_language(language)
     except Exception:
         return None
-    lines = source_bytes.decode("utf-8", errors="replace").splitlines()
+    tree = Parser(grammar).parse(source_bytes)
+    if tree is None:
+        return None
 
     symbols: list[Symbol] = []
     scopes: list[Scope] = []
     imports: list[Import] = []
-
-    def walk(node: Node, class_stack: list[str]) -> None:
-        symbol = _extract_symbol(node, path, source_bytes, class_stack)
-        next_stack = class_stack
-        if symbol is not None:
-            symbols.append(symbol)
-            if symbol.kind in SCOPE_KINDS:
-                scopes.append(
-                    Scope(
-                        name=symbol.name,
-                        kind=symbol.kind,
-                        start_line=symbol.start_line,
-                        end_line=symbol.end_line,
-                    )
-                )
-            if symbol.kind == "class":
-                next_stack = [*class_stack, symbol.name]
-
-        parsed_imports = _extract_imports(node, source_bytes, language)
-        if parsed_imports:
-            imports.extend(parsed_imports)
-
-        for child in node.children:
-            walk(child, next_stack)
-
-    walk(tree.root_node, [])
+    _walk(tree.root_node, path, source_bytes, language, [], symbols, scopes, imports)
+    lines = source_bytes.decode("utf-8", errors="replace").splitlines()
 
     return FileIR(
         path=str(path),

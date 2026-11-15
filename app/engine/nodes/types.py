@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 class NodeName(StrEnum):
     """Identifier for a single node within a graph."""
 
-    VAULT_PROFILER = "vault_profiler"
     RESEARCHER = "researcher"
     SUMMARIZER = "summarizer"
     ZETTELKASTEN = "zettelkasten"

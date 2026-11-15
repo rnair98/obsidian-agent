@@ -23,7 +23,7 @@ Prefer, in this order:
    - **Triggered:** `uv run pytest` on every change. Continual production monitors are for model evals, not for this suite.
    - Protect a §10 invariant or a caller-visible outcome. Do not protect the current shape of a private helper.
 
-3. **Functional tests.** Drive a public seam — HTTP route, shell command, persist node, vault operation — and assert the world afterward: status, files, rejection, or the absence of a side effect. `tests/nodes/test_persist.py`, `tests/api/test_workflows.py`, and `tests/engine/test_vaults.py` are the pattern. Routing tests do not establish graph correctness. The uncovered holistic path is still `vault_profiler → researcher → summarizer → zettelkasten → persist` through the compiled graph with a stub model. When that path is tested, the stub model, the vault contents, and the faults are axes of one proof, not nine examples.
+3. **Functional tests.** Drive a public seam — HTTP route, shell command, persist node, vault operation — and assert the world afterward: status, files, rejection, or the absence of a side effect. `tests/nodes/test_persist.py`, `tests/api/test_workflows.py`, and `tests/engine/test_vaults.py` are the pattern. Routing tests do not establish graph correctness. The uncovered holistic path is still `researcher → summarizer → zettelkasten → persist` through the compiled graph with a stub model. When that path is tested, the stub model, the vault contents, and the faults are axes of one proof, not nine examples.
 
 4. **Generated inputs.** Use [Hypothesis](https://hypothesis.readthedocs.io/) when an axis is a large space of values rather than a small named set. Do not add the dependency for a single example. Hypothesis strategies are axes. They still need a `Proof`.
 

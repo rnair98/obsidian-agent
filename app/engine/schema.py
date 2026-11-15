@@ -23,17 +23,11 @@ class ResearchState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     topic: str
     research_notes: list[str]
-    experiments: list[str]
-    code_context: list[str]
     sources: list["SourceState"]
     report: str
     zettelkasten_notes: list["ZettelNote"]
     reasoning: list[str]
     key_insights: list[str]
-    # Rendered <vault_profile> block from the vault_profiler node.
-    # Empty until the profiler node runs; consumed by the zettelkasten
-    # node which prepends it to its own agent input as a SystemMessage.
-    vault_profile: str
 
 
 class LocalVaultRequest(BaseModel):
@@ -72,6 +66,7 @@ class ZettelNote(TypedDict):
 
 
 class SourceState(TypedDict):
+    id: str
     title: str
     url: str
     notes: str

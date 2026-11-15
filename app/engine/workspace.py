@@ -41,5 +41,5 @@ def build_workspace_session(
         },
         policy=PermissionPolicy.default(),
         cwd="/vault",
-        commands=default_workspace_commands(),
+        commands=default_workspace_commands(vault),
     )

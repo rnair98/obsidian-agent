@@ -537,3 +537,7 @@ is the one that does not exist.
 A LangChain or LangGraph import is a dependency decision.
 ARCHITECTURE.md §9 is the gate. Every line has a cost.
 </core-truth>
+
+## Learned User Preferences
+
+- Keep code comments to a minimum. Put explanations in ARCHITECTURE.md, and cite the section when code needs a pointer.

@@ -19,7 +19,7 @@
 `obsidian-agent` is a **LangGraph-orchestrated deep-research pipeline** served
 over FastAPI. Workflow POSTs require a configured bearer token and an approved
 vault; empty security configuration fails closed. A client POSTs a research topic; a sequence of LLM agents
-(Vault profiler → Researcher → Summarizer → Zettelkasten → Persist) produces a markdown report,
+(Researcher → Summarizer → Zettelkasten → Persist) produces a markdown report,
 atomic Zettel notes, a Polars CSV of sources, and durable memory files that
 seed future runs. Each request must provide a local or Git-backed Obsidian vault
 as the workspace base. Each run also
@@ -37,7 +37,6 @@ POST /api/v1/workflows/run/{workflow_name}
   → app.engine.executor.execute
   → app.engine.registry.get_workflow(name, checkpointer)
   → CompiledStateGraph.ainvoke(state, context=ResearchContext)
-      ├─ vault_profiler → writes: vault_profile
       ├─ researcher  → writes: research_notes, key_insights, sources, reasoning
       ├─ summarizer  → writes: report state (no filesystem writes)
       ├─ zettelkasten → writes: zettelkasten_notes state
@@ -68,7 +67,7 @@ Existence does not establish that this run wrote the artifact.
 | `app/engine/executor.py` | Single execution entry for any registered workflow |
 | `app/engine/schema.py` | `ResearchState`, `ResearchContext`, `ResearchRequest` |
 | `app/engine/workflows/research.py` | The research workflow: compiles the research graph |  
-| `app/engine/graphs/research.py` | The research graph (profiler, three agents, persist) |
+| `app/engine/graphs/research.py` | The research graph (three agents, persist) |
 | `app/core/settings.py` | Layered config (init → env → dotenv → YAML) |
 | `app/core/resources/agent_config.yaml` | LLM config + per-agent system prompts |
 
@@ -101,7 +100,7 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
 │   harness/  ← typed virtual workspace + fake shell core          │
 ├──────────────────────────────────────────────────────────────────┤
 │                     services/ (external integrations)            │
-│   gh_client (PyGithub app-installation auth) ·                   │
+│   gh_client (githubkit app auth · Seatbelt git mirrors) ·        │
 │   codesearch (tree-sitter IR parsing over local snapshots)       │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -133,9 +132,11 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
    OpenAI `web_search` / `code_interpreter`, DeepWiki / Exa MCP descriptors,
    and `shell`. Its default prompt routes URL reads to `exa.crawling_exa`,
    calculations to `code_interpreter`, and shell use to named prior-memory
-   reads. Summarizer, Zettelkasten, and profiler specs have no tools. The
-   harness still implements file operations, Jina-backed `curl`, GitHub `git`,
-   and Monty-backed `python`. Prompt restrictions are not runtime permission
+   reads. Zettelkasten has `shell`, and its prompt limits it to `vault`
+   graph reads and `cat` of existing notes. The summarizer has no tools. The
+   harness still implements file operations, Jina-backed `curl`, GitHub `git`
+   (REST snapshots plus confined history reads on a mirror), and Monty-backed
+   `python`, whose code can call `git(*args)`. Prompt restrictions are not runtime permission
    boundaries. See §12 for remaining prompt inconsistencies.
 6. **Filesystem writes go through `FilesystemBackend`.** Never call
    `Path.write_text` directly from node/tool code. The backend enforces a
@@ -176,13 +177,11 @@ engine layer, a set of **hexagonal adapters** behind `Protocol` contracts.
                                    │
                                    ▼
    CompiledStateGraph.ainvoke(state, context=ctx)
-     START → vault_profiler → researcher → summarizer
-           → zettelkasten → persist → END
+     START → researcher → summarizer → zettelkasten → persist → END
 
-     vault_profiler : stats + cached/LLM conventions → state.vault_profile
      researcher    : search/MCP tools + memory reads → structured findings
      summarizer    : no tools; report_content → state.report
-     zettelkasten  : no tools; private profile SystemMessage → notes
+     zettelkasten  : shell `vault` reads + fixed OKF conventions → notes
      persist       : writes report.md, notes/*.md, sources.csv,
                      .memories/*.md through FilesystemBackend
                                    │
@@ -224,14 +223,13 @@ app/
 │   ├── vaults.py                 # request vault resolution + standard Obsidian vault layout
 │   ├── parsing.py                # parse_structured() — layered SAP-lite recovery (strict → fence-strip → yapping → json-repair)
 │   ├── workspace.py              # build_workspace_session + FilesystemBackend-backed workspace mounts
-│   ├── workspace_commands/       # shell command backends: curl, git, python
+│   ├── workspace_commands/       # shell command backends: curl, git, python, vault
 │   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
 │   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
 │   │   ├── output_format.py      # render_output_format() — TypeScript-flavored compact schema descriptor
-│   │   ├── researcher.py         # ResearcherOutput + Source + DEFAULT_PROMPT + SPEC
-│   │   ├── summarizer.py         # SummarizerOutput + DEFAULT_PROMPT + SPEC
-│   │   ├── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + DEFAULT_PROMPT + SPEC
-│   │   └── vault_profiler.py     # VaultProfile + DEFAULT_PROMPT + SPEC
+│   │   ├── researcher.py         # ResearcherOutput + Source + SPEC
+│   │   ├── summarizer.py         # SummarizerOutput + SPEC
+│   │   └── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + SPEC
 │   ├── artifacts/                # Durable artifact stores + workspace mount adapter
 │   │   ├── __init__.py           # public exports: MarkdownMemoryStore, CsvSourceStore, ArtifactWorkspaceBackend
 │   │   ├── memory.py             # MarkdownMemoryStore (.memories research-run format)
@@ -251,7 +249,6 @@ app/
 │   │   └── agents.py             # Single-graph workflows for researcher, summarizer, zettelkasten
 │   ├── nodes/                    # Per-node logic (agent factory + persist)
 │   │   ├── agent.py              # make_agent_node(spec) — single factory replacing per-agent node modules
-│   │   ├── vault_profiler.py     # stats, cached/LLM profile → state
 │   │   ├── persist.py            # persist_artifacts(state) — side-effect node returning {} delta
 │   │   ├── types.py              # NodeName + WorkflowName StrEnums (split for FastAPI validation)
 │   │   └── builders/
@@ -277,7 +274,8 @@ app/
     │   ├── models.py             # FileIR / Symbol / Scope / Import Pydantic models
     │   └── parser.py             # parse_file / parse_snapshot with skip heuristics
     └── gh_client/
-        ├── auth.py               # GitHubHandle (client + auth) cached factory; get_github_handle / get_github_client
+        ├── auth.py               # GitHubHandle: githubkit installation client + cached git token; get_github_handle
+        ├── mirror.py             # blobless bare mirrors; run_git under a Seatbelt profile (§10)
         ├── repo.py               # GitHubRepositoryService.get_tree / .shallow_clone (tarball → backend)
         └── types.py              # SnapshotResult Pydantic model
 ```
@@ -308,7 +306,7 @@ app/
 | Dir | Owner | Contents |
 |---|---|---|
 | `<vault>/notes/` | persist node | Atomic markdown notes (`{slug}.md`) |
-| `<vault>/.memories/` | persist node + workspace mount | Frontmatter-rich run logs; mounted at `/memory`; profiler also writes hidden `.vault_profile.json` |
+| `<vault>/.memories/` | persist node + workspace mount | Frontmatter-rich run logs; mounted at `/memory` |
 | `<vault>/outputs/` | persist node + workspace mount | `report.md`, `sources.csv` (Polars) |
 | `.logs/` | core.logger | `app.log` (rotating, 10 MB, zip-compressed, 1-week retention) |
 | `.assets/` | FilesystemBackend default `base_path` | GitHub snapshots at `{owner}/{repo}@{sha}/…` |
@@ -329,17 +327,14 @@ by merging node return values.
 | `messages` | `Annotated[list[AnyMessage], add_messages]` | executor (initial messages), researcher, summarizer, zettelkasten | subsequent research agents |
 | `topic` | `str` | executor (from request) | researcher |
 | `research_notes` | `list[str]` | researcher | summarizer, persist |
-| `experiments` | `list[str]` | initialized empty; no structured-output producer | — |
-| `code_context` | `list[str]` | initialized empty; no structured-output producer | — |
 | `sources` | `list[SourceState]` | researcher | summarizer, persist |
 | `report` | `str` | summarizer | zettelkasten |
 | `zettelkasten_notes` | `list[ZettelNote]` | zettelkasten | persist, response projector |
-| `vault_profile` | `str` | vault_profiler | zettelkasten node |
 | `reasoning` | `list[str]` | researcher | persist |
 | `key_insights` | `list[str]` | researcher | persist |
 
 Tools that need a filesystem backend or a GitHub client resolve them via
-the `get_filesystem_backend(...)` / `get_github_client()` factories — they
+the `get_filesystem_backend(...)` / `get_github_handle()` factories — they
 are *not* carried in state.
 
 ### `ResearchContext` (frozen dataclass)
@@ -437,7 +432,11 @@ metadata source. Runtime supported forms are exactly: `help [command]`, `pwd`,
 `cd [path]`, `ls [path]`, `cat path`, `mkdir path`, `write path content`,
 `write path -- content`, `rm path`, `mv src dst`, `cp src dst`,
 `grep pattern path`, `curl URL`, `git ls-tree [-r] owner/repo`,
-`git clone owner/repo [ref]`, `python -c code`, and `python path.py`.
+`git clone owner/repo [ref]`, `git clone --bare owner/repo`,
+`git -C /repos/owner/repo.git <read subcommand> [args]`, `python -c code`,
+and `python path.py`. The read subcommands are `READ_SUBCOMMANDS` in
+`services/gh_client/mirror.py`; their own git arguments pass through to the
+sandbox in §10.
 No other flags, pipelines, redirects, shell expansion, or host commands are
 supported. Unsupported flags must fail with a message naming the supported
 form, so agents get corrected instead of silently drifting into normal shell
@@ -454,33 +453,36 @@ with a single `/vault` mount, so every operation honors the same
 `FilesystemBackend` sandbox as the rest of the engine. Capabilities:
 `list_notes`, `read`, `create` (with overwrite-guarded `NoteExistsError`),
 `append`, `search` (case-folded substring with `SearchHit` results),
-`tags` (counting `#tag` references), `backlinks` (matching both
-`[[wikilinks]]` and relative `[markdown](links.md)` by stem/basename/path),
+`tags` (counting `#tag` references), `links` (a note's resolved outgoing
+links, sorted), `backlinks` (resolving each
+`[[wikilink]]` and `[markdown](link.md)` to one note: `/`-prefixed links
+from the vault root as in OKF, others relative to the linking note, then
+from the vault root, then by unique path suffix; an ambiguous bare name
+resolves to nothing),
 and YAML `properties` / `set_property` for frontmatter. Symlink-cycle
 defense uses `Path.resolve(strict=False)` against a `visited` set during
 the recursive walk; `.obsidian/` config is skipped.
 
-**Status — library, not yet wired.** Currently consumed only by
-`tests/engine/test_obsidian.py`. No node, tool, or graph imports it yet.
-Treat it as the canonical entry point for any future agent-facing
-Obsidian-semantic operation (e.g., a `vault note ...` shell subcommand or
-a structured-output `materialize_notes` node). Do not duplicate its
-frontmatter or wikilink parsing logic elsewhere — extend this module.
+**Consumers.** The shell command `vault search QUERY | links NOTE |
+backlinks NOTE | tags` (`workspace_commands/vault.py`) is a read-only view
+over this module; it prints `/vault/...` paths. `nodes/persist.py` and
+`artifacts/memory.py` render frontmatter through `join_frontmatter`. Do not
+duplicate its frontmatter or link parsing logic elsewhere — extend this
+module.
 
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
-A frozen dataclass that bundles **schema + prompt + tools + per-agent LLM
-overrides** for a single agent. One `SPEC` per agent module under
-`app/engine/agents/`. Ordinary agent nodes use `make_agent_node(...)` in `app/engine/nodes/agent.py`.
-The research graph wraps Zettelkasten to inject the profile, while
-`nodes/vault_profiler.py` owns profiling/cache behavior. All use
-`build_agent_executor_from_spec()` to construct executors.
+A frozen dataclass that bundles **schema + tools** for a single agent. One `SPEC` per agent module under
+`app/engine/agents/`. The system prompt lives in
+`app/core/resources/agent_config.yaml`. Agent nodes use `make_agent_node(...)` in
+`app/engine/nodes/agent.py`, which builds executors with
+`build_agent_executor_from_spec()`.
 
-`spec.system_prompt()` resolves YAML overrides
-(`settings.agents.<name>.system_prompt`) before falling back to
-`default_system_prompt`, then interpolates a `$output_format` placeholder
-with `render_output_format(spec.output_schema)` so the prompt-side schema
-description is always in lockstep with the Pydantic model.
+`spec.system_prompt()` reads `settings.agents.<name>.system_prompt`,
+falls back to `default_system_prompt` when that string is empty, then
+interpolates a `$output_format` placeholder with
+`render_output_format(spec.output_schema)` so the prompt-side schema
+description stays in lockstep with the Pydantic model.
 
 `spec.parse(raw)` delegates to `parse_structured()` for seams that
 receive a free-form string (tool args, persisted artifacts, future
@@ -490,7 +492,7 @@ non-OpenAI providers) — the primary structured-output mechanism remains
 ### Output schemas (`app/engine/agents/<name>.py`)
 
 `ResearcherOutput`, `SummarizerOutput`, `ZettelkastenOutput`, `Source`,
-`ZettelkastenNote`, `VaultProfile` — defined alongside their prompts in `agents/<name>.py`
+`ZettelkastenNote` — defined alongside their prompts in `agents/<name>.py`
 and bound to the agents via `ProviderStrategy(...)` to request provider-native
 structured JSON matching these Pydantic models. Changing a field is still
 a breaking change, but the prompt that describes it is rendered
@@ -499,8 +501,7 @@ automatically — no hand-maintained schema text to keep in sync.
 `structured_response_delta()` explicitly maps researcher, summarizer, and
 Zettelkasten outputs to state. A new output model requires a mapping or custom
 node; unsupported Pydantic models currently yield an empty delta. Summarizer
-`executive_summary` and `sources_used` are not projected into state. The profiler
-handles its `VaultProfile` result directly.
+`executive_summary` and `sources_used` are not projected into state.
 
 ### `parse_structured` (`app/engine/parsing.py`)
 
@@ -529,14 +530,12 @@ Settings resolve in this priority order
   `installation_id`. App-installation auth is the **only** supported method.
 - `llm: LLMConfig | None` — `model` (required), reasoning knobs,
   `use_responses_api`, streaming flags, passthrough `model_kwargs`. `extra="allow"`.
-- `agents: AgentsConfig | None` — `researcher`, `summarizer`, `zettelkasten`,
-  and `vault_profiler` prompt and `llm` override blocks. Each `system_prompt` defaults to `""`; an
-  empty string falls through to the `default_system_prompt` defined on
-  the corresponding `AgentSpec` in `app/engine/agents/<name>.py`.
-- **LLM precedence:** global `llm` → per-agent `llm` → spec `llm_overrides`.
-  `_build_chat_model()` selects `openai` (default) or `groq` via `provider`.
-  Groq strips OpenAI-specific options and uses `groq_api_key` or `GROQ_API_KEY`,
-  never the global OpenAI key/base URL.
+- `agents: AgentsConfig | None` — `researcher`, `summarizer`, and
+  `zettelkasten` blocks. `system_prompt` is the agent prompt, including
+  `$output_format` and any per-run placeholders. An empty string falls through
+  to `AgentSpec.default_system_prompt`, which the shipped specs leave empty.
+- **LLM precedence:** global `llm` → per-agent `llm`. `_build_chat_model()`
+  builds `ChatOpenAI`; any other `provider` value raises `ValueError`.
 - `filesystem: FilesystemConfig` — `backend_type`, `base_path`.
 - `security: SecurityConfig` — `workflow_token: SecretStr`, exact
   `local_vaults: list[Path]`, and exact `git_repositories: list[str]`.
@@ -550,7 +549,7 @@ Settings resolve in this priority order
 - **`PHOENIX_ENABLED`** — when false, the FastAPI lifespan skips the
   Arize Phoenix `register()` call. Default `true`. Useful for tests and
   air-gapped runs.
-- **API keys** — `JINA_API_KEY`, `GROQ_API_KEY`.
+- **API keys** — `JINA_API_KEY`.
 - **Logging** — `LOG_LEVEL` (default `INFO`).
 
 Anything else in `.env` is silently ignored (`extra="ignore"`).
@@ -587,7 +586,7 @@ requested explicitly instead of occurring during every run.
 
 | Concern | Library / Service | Where |
 |---|---|---|
-| LLM | OpenAI / Groq | `ChatOpenAI` / `ChatGroq` via `_build_chat_model` in `builders/agent.py` |
+| LLM | OpenAI | `ChatOpenAI` via `_build_chat_model` in `builders/agent.py` |
 | Orchestration | Kept LangChain / LangGraph primitives only | §9 adoption gate. Not a license to import the rest of either package |
 | Checkpointing | `langgraph-checkpoint-postgres` | `executor.execute` |
 | Postgres driver | `psycopg[binary]` | required by checkpoint postgres imports |
@@ -596,12 +595,12 @@ requested explicitly instead of occurring during every run.
 | Agent workspace | Typed virtual shell harness + durable artifact/repo mounts | `app/harness/`, `engine/workspace.py`, `tools/shell.py` |
 | URL → Markdown | Jina Reader (`r.jina.ai`) | `engine/workspace_commands/curl.py` via shell `curl URL` |
 | Ad hoc Python analysis | Pydantic Monty through shell `python` | `engine/workspace_commands/python.py`, `harness/session.py` |
-| GitHub | PyGithub (App-installation auth), surfaced to agents as `git` | `services/gh_client/`, `engine/workspace_commands/git.py` |
+| GitHub | githubkit (App-installation auth) for REST; the git CLI under Seatbelt for history; surfaced as `git` and Monty `git()` | `services/gh_client/`, `engine/workspace_commands/git.py` |
 | Code IR parsing | standalone `tree_sitter.Parser(get_language(...))`; language pack supplies grammars | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
 | Native SQLite vector/graph SQL | Local `sqlite-vec` fork | Host Python dependency, imported as `sqlite_vec`; source is `../sqlite-vec` in `pyproject.toml` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
-| Frontmatter (YAML) | `pyyaml` | `engine/obsidian.py` — `_split_frontmatter` / `_join_frontmatter` |
+| Frontmatter (YAML) | `pyyaml` | `engine/obsidian.py` — `_split_frontmatter` / `join_frontmatter` (also used by `nodes/persist.py`) |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
 | Config | pydantic-settings (YAML + dotenv) | `core/settings.py` |
@@ -729,20 +728,19 @@ offered it.
 | `HumanMessage`, `SystemMessage`, `AnyMessage`, `BaseMessage` | `app/engine/executor.py`, `app/engine/graphs/research.py`, `app/engine/schema.py`, `app/engine/nodes/builders/agent.py` | The conversation channel |
 | `create_agent`, `ProviderStrategy` | `app/engine/nodes/builders/agent.py` | Build one executor from an `AgentSpec`; provider-side structured output |
 | `tool`, `BaseTool` | `app/engine/tools/shell.py`, `app/engine/agents/types.py` | Schema for the shell tool |
-| `ChatOpenAI`, `ChatGroq`, `BaseChatModel` | `app/engine/nodes/builders/agent.py` | The two chat adapters and their shared type |
+| `ChatOpenAI`, `BaseChatModel` | `app/engine/nodes/builders/agent.py` | The chat adapter and its type |
 | `ContextEditingMiddleware`, `ClearToolUsesEdit`, `ToolRetryMiddleware` | `app/engine/nodes/builders/middleware.py` | Trim old tool results; retry once on HTTP timeout |
 | `Runnable`, `RunnableConfig`, `StreamMode` | `app/engine/registry.py`, `app/engine/nodes/`, `app/engine/executor.py` | Invoke and stream the executor this table already builds |
 
 ### Add a new agent node
 
-1. Create `app/engine/agents/<agent>.py` containing **everything for the
-   agent in one file**:
-   - The Pydantic output schema(s).
-   - A `DEFAULT_PROMPT` string. Embed `$output_format` where you want the
-     compact schema description injected.
+1. Create `app/engine/agents/<agent>.py` containing the agent's schema,
+   tools, and `SPEC`. Put the system prompt in
+   `app/core/resources/agent_config.yaml` under
+   `agents.<name>.system_prompt`. Embed `$output_format` where the compact
+   schema description should appear.
    - A `SPEC: AgentSpec[OutputModel] = AgentSpec(name=..., output_schema=...,
-     default_system_prompt=DEFAULT_PROMPT, tools=(...,))`.
-   - Add `# ruff: noqa: E501` if the prompt prose exceeds 88 chars.
+     tools=(...,))`.
 2. Add the name to `AgentName` in `agents/types.py` and a `NodeName` in
    `app/engine/nodes/types.py`. Add a `WorkflowName` only in the same change
    as a workflow that runs this agent. A node name is not a workflow name.
@@ -751,7 +749,7 @@ offered it.
    and `ResearchState`, or handle the result in a custom node.
 4. Wire the spec into a graph with `make_agent_node(SPEC, log_streams=...)`
    from `app.engine.nodes.agent`. Use a custom node only for behavior the
-   spec cannot express, such as the research graph's private profile message.
+   spec cannot express.
 5. A workflow that should run the graph imports the builder from
    `app/engine/workflows/`. Importing `app.engine.graphs` registers nothing.
 
@@ -784,7 +782,10 @@ offered it.
    should be ordinary workspace files or `python -c` snippets.
 3. If host capabilities are needed, expose them as explicit Monty external
    functions with tests and permission checks; do not fall back to host
-   subprocess execution.
+   subprocess execution. Agent code never chooses a host program. A
+   registered harness command may run one fixed binary when an OS sandbox
+   confines it, as `git()` does (§10); the external function calls that
+   command, so the shell and Monty share one path.
 
 ### Add a new graph
 
@@ -836,9 +837,42 @@ offered it.
   A graph builder does not register. A workflow module omitted from
   `app/engine/workflows/__init__.py` silently does not register.
   `WorkflowName` and `list_workflows()` are the same set.
-- **PyGithub client is process-cached** via `lru_cache(maxsize=1)` in
-  `gh_client/auth.py`. Config changes take effect only on process restart or
-  explicit `clear_github_client()`.
+- **GitHub client is process-cached** via `lru_cache(maxsize=1)` in
+  `gh_client/auth.py`. Config changes take effect only on process restart.
+  The installation token for the git CLI is minted on demand and reused
+  until five minutes before it expires.
+- **Agent git history runs inside Seatbelt, not a flag list.** `run_git`
+  starts the toolchain git (not the `/usr/bin` shim) under `sandbox-exec`
+  with stdin closed. Reads are limited to `/usr/lib`, `/System`, TLS trust
+  stores, the toolchain and the resolved mirror; `/usr/local` and
+  `/usr/share` are excluded. Writes are limited to `mirror/objects` (lazy
+  blob fetches). Exec is limited to the `git` binary and `git-remote-http`,
+  never the toolchain directory, which holds `python3`. Two permissions stay
+  wide: `mach-lookup` (any service) and outbound TCP 443 to any host. Neither
+  is reachable without code exec, which the exec rule closes.
+  `GitCommand` accepts only `-C /repos/owner/repo.git` plus a
+  `READ_SUBCOMMANDS` member. As a second layer it rejects `--output`,
+  `--open-files-in-pager`/`-O` and `--no-index`, including abbreviations of
+  two or more characters. Short-option clusters can pass that layer, so
+  Seatbelt stays the boundary. An agent can still write into the mirror's
+  object store, and `log -p --all` on a blobless mirror can fetch every blob;
+  the worst cases are a corrupted mirror and disk use. Monty `git()` has no
+  per-run call budget, only the 120 s per-call timeout.
+- **Mirror refresh is host-run and keeps the mirror usable.**
+  `ensure_mirror` runs outside Seatbelt with host-chosen argv. A first clone
+  goes to a `.partial` directory and is renamed into place only on success,
+  so a killed clone leaves no mirror behind. A refresh refuses a mirror with
+  `objects/info/alternates`; fetches `refs/heads/*` and `refs/tags/*`
+  explicitly, because `clone --bare` writes no fetch refspec; and re-points
+  `HEAD` at the upstream default branch from `ls-remote --symref`. The mirror
+  config is never writable by agents, so the promisor URL and token scope
+  stay fixed. The token travels in `GIT_CONFIG_*` env, scoped to
+  `https://github.com/`, and is never written to disk. Mirror paths must be
+  resolved before they become Seatbelt parameters: macOS temp and asset paths
+  pass through symlinks. Other hosts fail closed with `MirrorError`. Output
+  is capped at 64 KiB with a visible truncation note; runs time out at 120 s.
+  A path-limited `log --follow` on a blobless mirror fetches blobs to detect
+  renames and can approach that limit. githubkit requests time out at 90 s.
 - **GitHub archives are content-addressed.** `shallow_clone` resolves ref →
   commit SHA first, names the snapshot `{owner}/{repo}@{sha}`, and skips
   when the directory is non-empty. Never rename that path format — the
@@ -853,11 +887,10 @@ offered it.
   `settings.filesystem.base_path/.vaults/<hash>`). Run artifacts use
   `runtime.context.vault.backend`; repository snapshots use `assets_backend()`
   under `.assets`. The default `artifacts_backend()` is not the request vault.
-- **An agent's schema, prompt, tools, and per-agent LLM overrides live
-  in the same file** under `app/engine/agents/<name>.py` as a single
-  `SPEC: AgentSpec[...]`. Never split them. Graphs wire the spec into
-  ordinary executors via `make_agent_node(SPEC, log_streams=...)`; custom
-  profile handling lives in `nodes/vault_profiler.py` and `graphs/research.py`.
+- **An agent's schema and tools live in the same file** under `app/engine/agents/<name>.py` as a single
+  `SPEC: AgentSpec[...]`. The system prompt lives in
+  `app/core/resources/agent_config.yaml`. Graphs wire the spec into
+  ordinary executors via `make_agent_node(SPEC, log_streams=...)`.
 - **Prompts use `$output_format` for schema injection.** Do not paste
   hand-written schema descriptions into prompts — they will silently
   drift from the Pydantic model. `AgentSpec.system_prompt()` interpolates
@@ -874,19 +907,39 @@ offered it.
     shell on every run.
 
   Unknown `$placeholders` are left intact by `safe_substitute`. One-agent
-  graph builders do not accept `prompt_context` or run the profiler.
-- **Vault profiling is the first research graph node.** It writes the rendered
-  `<vault_profile>` block to state. Only the research graph's Zettelkasten
-  wrapper injects it into a private `SystemMessage`; shared messages stay
-  unchanged. Stats inspect direct Markdown children of `notes/`, sampling up
-  to eight notes. Empty vaults skip the LLM. Qualitative profiles are cached
-  at `.memories/.vault_profile.json` keyed only by note count; edits preserving
-  that count do not invalidate the summary. Invocation failure falls back to
-  deterministic stats and default conventions.
+  graph builders do not accept `prompt_context`.
+- **Note conventions are fixed, not inferred.** The vault is an OKF bundle,
+  so the Zettelkasten prompt states the conventions: kebab-case `id`s and
+  vault-root markdown links (`/notes/<id>.md`), not wikilinks. No node
+  profiles the vault.
 - **Artifact paths are shared across runs.** Persistence overwrites
   `outputs/report.md` and `outputs/sources.csv`. Note IDs are sanitized and
   duplicates get numeric suffixes within one run; prior-run notes can still
-  be overwritten. The response projector mirrors these filename rules.
+  be overwritten. `persist.zettel_file_ids` decides each note's file name;
+  the response projector calls it too. When it renames a note, persist
+  rewrites `(/notes/<id>.md)` links in that run's notes to the new name; a
+  duplicate id links to the first note that has it.
+- **Persisted markdown is an OKF v0.2 concept.** The vault is the OKF
+  bundle. Every markdown file persist writes starts with YAML frontmatter
+  that has a non-empty `type` (`Zettel`, `Research Report`, `research_run`).
+  Notes and the report also carry `status: draft` and
+  `generated: {by: obsidian-agent/<model>, at: <UTC>}`; a `/` inside the
+  model name becomes `-` so the actor keeps OKF §7's single
+  `<producer>/<version>` split. Note ids `index` and `log` become
+  `index-note` / `log-note`, because OKF §3.1 reserves those filenames.
+  All three writers (report, notes, `.memories` run record) render
+  frontmatter through `obsidian.join_frontmatter`; do not hand-quote YAML.
+- **The report never swallows findings, and citations are indexed.** The
+  researcher assigns each source an `id` (`S1`, `S2`, …); prompts cite as
+  `[S#]`. Persist appends every research note and key insight verbatim to
+  `report.md`, so the summary is a view, not the only copy. Persist rewrites
+  `[S1]`, `[S1, S2]`, `[S1; S2]`, and `[^S1]` into OKF §5.1 footnotes
+  (`[^S1]`) and appends one definition per cited known source. A source is
+  known when it has an id and a URL; the first entry wins for a duplicate id.
+  `report.md` lists every known source in OKF `sources`
+  (`id`, `resource` = URL, `title`); a Zettel lists only the ids it cites.
+  A cited id that is not known goes to `unresolved_citations` instead of
+  being dropped. `sources.csv` gains a leading `id` column.
 - **`ProviderStrategy(...)` is the primary structured-output mechanism.**
   `parse_structured()` exists as a fallback for seams that receive a raw
   string (tool args, persisted artifacts, non-OpenAI providers). Do not
@@ -962,8 +1015,7 @@ complexipy runs from `.cursor/hooks.json` on files edited in the current
 conversation. It is not a `just check` step: six existing functions are
 already over its threshold of 15.
 
-The compiled path `vault_profiler → researcher → summarizer → zettelkasten →
-persist` with a stub model stays outside `just check`.
+The compiled path `researcher → summarizer → zettelkasten → persist` with a stub model stays outside `just check`.
 
 ### 11.3 Adversarial review
 
@@ -995,7 +1047,8 @@ The review is not a `just check` step.
 | `tests/backends/test_sandbox_multiverse.py` | always: `resolve` / `write_text` stay in the sandbox or raise `PathEscapeError` without writing outside, across path shape × operation; sometimes: a relative write is accepted |
 | `tests/support/test_multiverse.py` | checker contracts: seeded replay, counterexample message, sometimes fails closed, proof axes match the run |
 | `tests/backends/test_factory.py` | every `FilesystemBackendType` has a factory, and the configured default is one of them |
-| `tests/test_gh_client_repo.py` | `get_tree` caches per commit SHA; `shallow_clone` skips when snapshot dir is populated |
+| `tests/test_gh_client_repo.py` | `get_tree` fetches each commit tree once; `shallow_clone` extracts the tarball and then reuses the snapshot; the githubkit fake's parameters stay a subset of githubkit's real signatures |
+| `tests/engine/test_git_history.py` | always: agent git argv on the shell or Monty seam reads only the mirror or fails, never leaks a host file, rewrites the mirror config or writes outside it, across probe × seam × resolved/symlinked root; sometimes: Monty reads history; Seatbelt denies exec of `python3` below the argv check; git never reads host stdin; a repeat `clone --bare` moves branches forward and follows a default-branch rename; a killed clone leaves no mirror; a mirror with `objects/info/alternates` is refused; AXI emptiness, truncation and recovery messages. macOS only |
 | `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
 | `tests/test_imports.py` | `app.main` loads; `WorkflowName` equals the registered workflows; tools import |  
 | `tests/engine/test_compose_graphs.py` | One graph keeps its nodes; several graphs share one state; an empty composition is rejected; every registered workflow accepts the executor's `prompt_context` and keeps `ResearchState` channels |  
@@ -1006,20 +1059,25 @@ The review is not a `just check` step.
 | `tests/engine/test_executor_response.py` | Persisted artifact response projection and path handling |
 | `tests/engine/test_vaults.py` | local/Git vault approval, transport/config isolation and standard vault layout |
 | `tests/engine/test_obsidian.py` | `ObsidianVaultOperations` list/read/create/append/search/tags/backlinks/properties + symlink-cycle guard |
+| `tests/engine/test_backlinks_multiverse.py` | always: `backlinks` lists a note exactly when its path-qualified link resolves to the target, across link form × same-basename collision × source folder × aim |
 | `tests/engine/test_parsing.py` | `parse_structured` recovery stages (strict → fence strip → balanced extract → `json_repair`) |
 | `tests/engine/test_curl_command.py` | `CurlCommand` URL → Jina Reader translation and unsupported-flag handling |
+| `tests/engine/test_vault_command.py` | always: `vault links/backlinks/search/tags` through `build_workspace_session` print the fixture's graph as `/vault` paths, and a missing note, a flag, or an unknown subcommand exits non-zero, across subcommand × note form |
+| `tests/nodes/test_persist_links_multiverse.py` | always: a Zettel's `/notes/<id>.md` link to a same-run note resolves to the written file after persist renames it (reserved, sanitized, duplicate id), across target id × note order |
 | `tests/engine/test_git_command.py` | `GitCommand` `ls-tree` / `clone` argument parsing and `gh_client` delegation |
 | `tests/engine/test_python_command.py` | `python -c` and `python script.py` Monty-backed shell execution |
 | `tests/engine/agents/test_spec.py` | `AgentSpec.system_prompt` YAML-override resolution + `parse` delegation |
 | `tests/engine/agents/test_schema_prompt.py` | every `AgentName` renders its schema, fields, and descriptions into the system prompt |
 | `tests/engine/agents/test_structured_delta.py` | Pydantic structured-output → `ResearchState` delta merging contract |
 | `tests/nodes/test_persist.py` | `persist_artifacts` writes sources and memory artifacts end-to-end against a tmp filesystem |
+| `tests/nodes/test_persist_okf_multiverse.py` | always: every markdown file persist writes has parseable frontmatter with a non-empty OKF `type`, no concept takes a reserved OKF filename, and Zettel titles/tags and the run topic round-trip, across title × tags × topic × note id including YAML-hostile strings |
+| `tests/nodes/test_persist_citations_multiverse.py` | always: `report.md` holds every finding verbatim with citations as OKF footnotes, no bare `[S#]` remains, and every cited id is a sources entry with a footnote definition or appears in `unresolved_citations`, across report × finding × Zettel citations (none/known/unknown/combined/footnote) × source ids (unique/duplicate/missing) × missing URL |
 | `tests/api/test_workflows.py` | bearer authentication before execution; authenticated routing validation and bad vault → 400 |
 | `tests/api/test_security_config.py` | nested security settings, OpenAPI authentication declaration and development port restrictions |
 | `tests/harness/` | Typed workspace core, shell tool adapter, and executor/agent wiring |
 
 LangGraph executor end-to-end behavior with a stub LLM (full
-`vault_profiler → researcher → summarizer → zettelkasten → persist` traversal through
+`researcher → summarizer → zettelkasten → persist` traversal through
 the compiled graph) is still uncovered. `tests/api/test_workflows.py`
 exercises only the request/routing surface, not graph traversal.
 
@@ -1043,8 +1101,8 @@ evidence and receipt records as schema-validated files. Keep new domain code
 `langchain*` and `langgraph*` imports. `Runner`, host-hosted tools and the Python
 SDK client are planned names, not implemented APIs.
 
-Node consolidation, artifact stores, graph-based vault profiling, and the
-OpenAI/Groq factory are implemented (see §§2–10). Remaining integration work:
+Node consolidation, artifact stores, and the
+OpenAI chat factory are implemented (see §§2–10). Remaining integration work:
 
 - **Researcher prompt versus harness behavior.** The default prompt forbids
   shell fetching/analysis and incorrectly describes shell `curl` as raw host
@@ -1057,14 +1115,6 @@ OpenAI/Groq factory are implemented (see §§2–10). Remaining integration work
   prompts route elsewhere. Do not add direct REST-shaped, fetch-shaped, or
   experiment-shaped tools. Command changes must update `CommandSpec`,
   registration, shell docstring, grammar tests, and unsupported-flag tests.
-- **Obsidian-semantic operations.** `app/engine/obsidian.py`
-  (`ObsidianVaultOperations`) has dedicated tests and provides a library for headless
-  vault reads/writes (notes, tags, backlinks, frontmatter properties), but
-  no node, tool, or graph consumes it yet. When wiring it into a future
-  shell subcommand (e.g., `vault note <op>`) or a deterministic
-  materialization node, route through this module rather than re-rolling
-  frontmatter or wikilink parsing. Remove this bullet in the PR that ships
-  the first agent-facing consumer.
 
 ---
 

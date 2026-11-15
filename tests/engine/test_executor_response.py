@@ -39,8 +39,6 @@ def _state() -> ResearchState:
         messages=[],
         topic="typed response shape",
         research_notes=["note-a", "note-b"],
-        experiments=[],
-        code_context=[],
         sources=[{"title": "T", "url": "https://x", "notes": "", "provider": "exa"}],
         report="# Report\n\nsynthesis",
         zettelkasten_notes=[
@@ -53,7 +51,6 @@ def _state() -> ResearchState:
         ],
         reasoning=["picked exa"],
         key_insights=["langgraph state is a TypedDict"],
-        vault_profile="",
     )
 
 
