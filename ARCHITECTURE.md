@@ -217,7 +217,9 @@ app/
 │       └── agent_config.yaml     # LLMConfig + per-agent system prompts (loaded by YamlConfigSettingsSource)
 ├── engine/
 │   ├── executor.py               # async execute(workflow_name, request) — the only run entrypoint
+│   ├── frontmatter.py            # split/join YAML frontmatter; leaf module, imports no engine code
 │   ├── obsidian.py               # headless optimized Obsidian-vault functions over VaultLayout
+│   ├── similarity.py             # SimilarityIndex: sqlite-vec note embeddings, refreshed per query
 │   ├── registry.py               # @workflow(name) on workflow factories, not on graphs
 │   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest
 │   ├── vaults.py                 # request vault resolution + standard Obsidian vault layout
@@ -463,12 +465,30 @@ and YAML `properties` / `set_property` for frontmatter. Symlink-cycle
 defense uses `Path.resolve(strict=False)` against a `visited` set during
 the recursive walk; `.obsidian/` config is skipped.
 
-**Consumers.** The shell command `vault search QUERY | links NOTE |
-backlinks NOTE | tags` (`workspace_commands/vault.py`) is a read-only view
-over this module; it prints `/vault/...` paths. `nodes/persist.py` and
-`artifacts/memory.py` render frontmatter through `join_frontmatter`. Do not
-duplicate its frontmatter or link parsing logic elsewhere — extend this
-module.
+**Consumers.** The shell command `vault search QUERY | similar TEXT |
+links NOTE | backlinks NOTE | tags` (`workspace_commands/vault.py`) is a
+view over this module and `similarity.SimilarityIndex`. It never writes the
+vault; `similar` keeps its index under the assets backend. It prints
+`/vault/...` paths. Frontmatter parsing and rendering live in the leaf
+module `engine/frontmatter.py`, shared by this module, `nodes/persist.py`,
+and `artifacts/memory.py`. Do not duplicate frontmatter or link parsing
+elsewhere.
+
+### `SimilarityIndex` (`app/engine/similarity.py`)
+
+Note embeddings in a sqlite-vec `vec0` table (cosine) at
+`<assets>/.okf-index/<sha256(vault root)[:16]>.sqlite`, outside the vault so
+no binary file enters a user's vault, its sync, or its git history. Rows are
+keyed by vault path and content SHA-256. Each `similar(text)` call embeds the
+notes whose hash changed, then applies the inserts and deletions in one short
+transaction (no lock is held across HTTP calls), then returns the top 8 notes
+with similarity ≥ 0.5. Embeddings come from an OpenAI-compatible
+`/v1/embeddings` endpoint (`EMBEDDING_URL`), by default the `just embed`
+sidecar. Notes and queries both embed as plain text with no query prefix,
+the form E4b and E5 measured; notes are `title. body`, truncated to 1,500
+characters. The command turns embedding failures (HTTP, malformed reply) and
+index failures (`sqlite3.Error`, such as a vector-size change) into a
+non-zero exit.
 
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
@@ -550,6 +570,8 @@ Settings resolve in this priority order
   Arize Phoenix `register()` call. Default `true`. Useful for tests and
   air-gapped runs.
 - **API keys** — `JINA_API_KEY`.
+- **`EMBEDDING_URL`** — OpenAI-compatible embeddings endpoint for
+  `vault similar`; default `http://127.0.0.1:18931/v1/embeddings` (`just embed`).
 - **Logging** — `LOG_LEVEL` (default `INFO`).
 
 Anything else in `.env` is silently ignored (`extra="ignore"`).
@@ -578,7 +600,9 @@ requested explicitly instead of occurring during every run.
 `justfile` targets: `just check` (the outer harness, §11.2), `just review`
 (hand the diff to a fresh reviewer, §11.3), `just run` (local dev),
 `just up` (full stack via podman compose), `just phoenix`, `just db-up`,
-`just fmt`, `just clean`.
+`just fmt`, `just clean`, `just embed` (the embedding sidecar: `llama-server`
+serving `unsloth/bge-small-en-v1.5-GGUF:F16` from the Hugging Face cache on
+127.0.0.1:18931). The sidecar runs on the host; it is not a Compose service.
 
 ---
 
@@ -598,9 +622,10 @@ requested explicitly instead of occurring during every run.
 | GitHub | githubkit (App-installation auth) for REST; the git CLI under Seatbelt for history; surfaced as `git` and Monty `git()` | `services/gh_client/`, `engine/workspace_commands/git.py` |
 | Code IR parsing | standalone `tree_sitter.Parser(get_language(...))`; language pack supplies grammars | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
-| Native SQLite vector/graph SQL | Local `sqlite-vec` fork | Host Python dependency, imported as `sqlite_vec`; source is `../sqlite-vec` in `pyproject.toml` |
+| Native SQLite vector/graph SQL | Local `sqlite-vec` fork | Host Python dependency, imported as `sqlite_vec` by `engine/similarity.py`; source is `../sqlite-vec` in `pyproject.toml` |
+| Note embeddings | `llama-server` (llama.cpp) + `bge-small-en-v1.5` GGUF F16 | Out-of-process sidecar over HTTP via `httpx`; `just embed` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
-| Frontmatter (YAML) | `pyyaml` | `engine/obsidian.py` — `_split_frontmatter` / `join_frontmatter` (also used by `nodes/persist.py`) |
+| Frontmatter (YAML) | `pyyaml` | `engine/frontmatter.py` — `split_frontmatter` / `join_frontmatter` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
 | Logging | Loguru | `core/logger.py` |
 | Config | pydantic-settings (YAML + dotenv) | `core/settings.py` |
@@ -908,6 +933,17 @@ offered it.
 
   Unknown `$placeholders` are left intact by `safe_substitute`. One-agent
   graph builders do not accept `prompt_context`.
+- **A similarity score is a topic signal, never a merge decision.** In E4,
+  E4b and E5 (development archive), bge-small ranked the planted cross-field match first
+  for 7 of 8 notes, but no cosine threshold separated duplicates from
+  related notes or analogies (gap −0.176, and −0.287 on an independent
+  fixture); only unrelated notes fell below the 0.5 floor. `vault similar`
+  supplies candidates; the agent decides from the text. The index is derived:
+  delete its file under `<assets>/.okf-index/` to rebuild it, and after
+  changing the embedding model. Embedding and index failures exit non-zero.
+- **Every `app` module imports first in a fresh interpreter.** Import
+  cycles hide when another module happens to load first;
+  `tests/test_imports.py` imports each module alone.
 - **Note conventions are fixed, not inferred.** The vault is an OKF bundle,
   so the Zettelkasten prompt states the conventions: kebab-case `id`s and
   vault-root markdown links (`/notes/<id>.md`), not wikilinks. No node
@@ -928,7 +964,7 @@ offered it.
   `<producer>/<version>` split. Note ids `index` and `log` become
   `index-note` / `log-note`, because OKF §3.1 reserves those filenames.
   All three writers (report, notes, `.memories` run record) render
-  frontmatter through `obsidian.join_frontmatter`; do not hand-quote YAML.
+  frontmatter through `frontmatter.join_frontmatter`; do not hand-quote YAML.
 - **The report never swallows findings, and citations are indexed.** The
   researcher assigns each source an `id` (`S1`, `S2`, …); prompts cite as
   `[S#]`. Persist appends every research note and key insight verbatim to
@@ -1050,7 +1086,7 @@ The review is not a `just check` step.
 | `tests/test_gh_client_repo.py` | `get_tree` fetches each commit tree once; `shallow_clone` extracts the tarball and then reuses the snapshot; the githubkit fake's parameters stay a subset of githubkit's real signatures |
 | `tests/engine/test_git_history.py` | always: agent git argv on the shell or Monty seam reads only the mirror or fails, never leaks a host file, rewrites the mirror config or writes outside it, across probe × seam × resolved/symlinked root; sometimes: Monty reads history; Seatbelt denies exec of `python3` below the argv check; git never reads host stdin; a repeat `clone --bare` moves branches forward and follows a default-branch rename; a killed clone leaves no mirror; a mirror with `objects/info/alternates` is refused; AXI emptiness, truncation and recovery messages. macOS only |
 | `tests/services/test_codesearch_parser.py` | language detection, Python IR extraction, and snapshot skip heuristics for vendor/generated/binary files |
-| `tests/test_imports.py` | `app.main` loads; `WorkflowName` equals the registered workflows; tools import |  
+| `tests/test_imports.py` | every `app` module imports first in a fresh interpreter; `app.main` loads; `WorkflowName` equals the registered workflows; tools import |  
 | `tests/engine/test_compose_graphs.py` | One graph keeps its nodes; several graphs share one state; an empty composition is rejected; every registered workflow accepts the executor's `prompt_context` and keeps `ResearchState` channels |  
 | `tests/engine/test_framework_boundary.py` | LangChain / LangGraph imports, including literal `import_module`/`__import__`, stay in the §9 adapter files |
 | `tests/hooks/test_complexity_hook.py` | complexipy cognitive gate: a nested canary is sent back; a straight function is quiet |
@@ -1063,6 +1099,7 @@ The review is not a `just check` step.
 | `tests/engine/test_parsing.py` | `parse_structured` recovery stages (strict → fence strip → balanced extract → `json_repair`) |
 | `tests/engine/test_curl_command.py` | `CurlCommand` URL → Jina Reader translation and unsupported-flag handling |
 | `tests/engine/test_vault_command.py` | always: `vault links/backlinks/search/tags` through `build_workspace_session` print the fixture's graph as `/vault` paths, and a missing note, a flag, or an unknown subcommand exits non-zero, across subcommand × note form |
+| `tests/engine/test_vault_similar.py` | always: `vault similar TEXT` lists current notes at or above the 0.5 floor, best first, after a note is edited, added, or deleted, exits non-zero when the embedding server refuses connections or the vector size changes, and writes no index file into the vault, across change × embedder (fake embedder at the lookup site); `http_embedder` parses a recorded llama-server reply out of order, and a malformed reply exits non-zero |
 | `tests/nodes/test_persist_links_multiverse.py` | always: a Zettel's `/notes/<id>.md` link to a same-run note resolves to the written file after persist renames it (reserved, sanitized, duplicate id), across target id × note order |
 | `tests/engine/test_git_command.py` | `GitCommand` `ls-tree` / `clone` argument parsing and `gh_client` delegation |
 | `tests/engine/test_python_command.py` | `python -c` and `python script.py` Monty-backed shell execution |

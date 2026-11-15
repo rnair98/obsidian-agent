@@ -7,6 +7,36 @@ app.logger import path in a single pytest run.
 
 from __future__ import annotations
 
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[1]
+
+
+def test_every_app_module_imports_first_in_a_fresh_interpreter() -> None:
+    """An import cycle hides when another module happens to load first."""
+    modules = sorted(
+        ".".join(path.relative_to(_REPO).with_suffix("").parts).removesuffix(".__init__")
+        for path in (_REPO / "app").rglob("*.py")
+    )
+
+    def run(module: str) -> tuple[str, str]:
+        result = subprocess.run(
+            [sys.executable, "-c", f"import {module}"],
+            cwd=_REPO,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        error = result.stderr.strip().splitlines()[-1] if result.returncode else ""
+        return module, error
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        failures = {module: err for module, err in pool.map(run, modules) if err}
+    assert not failures, f"modules that fail when imported first: {failures}"
+
 
 def test_app_main_imports() -> None:
     from app.main import app

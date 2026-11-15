@@ -49,6 +49,10 @@ phoenix:
 run:
     uv run uvicorn app.main:app --reload --port 8000
 
+# Local embedding sidecar for `vault similar`. ARCHITECTURE.md §7
+embed:
+    llama-server -hf unsloth/bge-small-en-v1.5-GGUF:F16 --embedding --pooling cls --host 127.0.0.1 --port 18931
+
 # Spin up a local Postgres test database
 db-up:
     test -n "${POSTGRES_PASSWORD:-}"

@@ -9,10 +9,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-import yaml
-
 from app.engine.artifacts.mounts import ArtifactWorkspaceBackend
 from app.engine.backends.protocol import FilesystemBackend
+from app.engine.frontmatter import NoteProperties, join_frontmatter, split_frontmatter
 from app.engine.vaults import VaultLayout
 from app.harness.paths import normalize_path
 from app.harness.session import WorkspaceSession
@@ -43,12 +42,6 @@ class SearchHit:
     path: Path
     line_number: int
     line: str
-
-
-@dataclass(frozen=True, slots=True)
-class NoteProperties:
-    data: dict[str, Any]
-    body: str
 
 
 class ObsidianVaultOperations:
@@ -169,7 +162,7 @@ class ObsidianVaultOperations:
         path: str | Path | None = None,
     ) -> NoteProperties:
         target = self.resolve_note(file=file, path=path)
-        return _split_frontmatter(self._read_text(target))
+        return split_frontmatter(self._read_text(target))
 
     def set_property(
         self,
@@ -180,7 +173,7 @@ class ObsidianVaultOperations:
         path: str | Path | None = None,
     ) -> Path:
         target = self.resolve_note(file=file, path=path)
-        parsed = _split_frontmatter(self._read_text(target))
+        parsed = split_frontmatter(self._read_text(target))
         data = {**parsed.data, name: value}
         self._write_text(target, join_frontmatter(data, parsed.body))
         return target
@@ -373,23 +366,3 @@ class _NoteIndex:
             if note.as_posix().casefold().endswith(f"/{key}")
         ]
         return matches[0] if len(matches) == 1 else None
-
-
-def _split_frontmatter(content: str) -> NoteProperties:
-    if not content.startswith("---\n"):
-        return NoteProperties(data={}, body=content)
-    end = content.find("\n---\n", 4)
-    if end == -1:
-        return NoteProperties(data={}, body=content)
-    raw = content[4:end]
-    body = content[end + 5 :]
-    if body.startswith("\n"):
-        body = body[1:]
-    loaded = yaml.safe_load(raw) if raw.strip() else {}
-    data = loaded if isinstance(loaded, dict) else {}
-    return NoteProperties(data=data, body=body)
-
-
-def join_frontmatter(data: dict[str, Any], body: str) -> str:
-    rendered = yaml.safe_dump(data, sort_keys=True, allow_unicode=True).strip()
-    return f"---\n{rendered}\n---\n\n{body}"

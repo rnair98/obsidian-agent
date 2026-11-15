@@ -135,6 +135,9 @@ class Settings(BaseSettings):
     # API Keys
     JINA_API_KEY: str = ""
 
+    # Local embedding sidecar for `vault similar` (`just embed`). §6
+    EMBEDDING_URL: str = "http://127.0.0.1:18931/v1/embeddings"
+
     # LLM & Agent Config
     llm: LLMConfig | None = None
     agents: AgentsConfig | None = None

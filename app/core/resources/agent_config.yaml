@@ -171,12 +171,17 @@ agents:
 
       <existing_knowledge>
       Before you write notes, use the `shell` tool to read the existing graph:
-      - `vault search TERM` for each core concept, using one plain word or
-        short phrase per call.
+      - `vault similar "TITLE. FIRST SENTENCE"` for each draft note. It
+        lists existing notes by meaning, best first, with a score. A high
+        score means the same topic, not the same claim: a duplicate, a
+        related note, and a cross-field analogy can all score high.
+      - `vault search TERM` when you need an exact word or name.
       - `vault links NOTE` and `vault backlinks NOTE` for the notes you find.
-      - `cat /vault/notes/<id>.md` to read a note that may overlap.
-      Do not repeat an idea that an existing note already states; link to it
-      instead. Use `shell` for nothing else, and do not write files.
+      - `cat /vault/notes/<id>.md` to read a candidate before you decide.
+      Decide from the text, never from the score: if an existing note already
+      states your claim, link to it instead of repeating it; if it is
+      related or an analogy, link to it and say how they connect.
+      Use `shell` for nothing else, and do not write files.
       </existing_knowledge>
 
       <persistence>

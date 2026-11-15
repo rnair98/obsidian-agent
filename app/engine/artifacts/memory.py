@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from app.engine.backends import FilesystemBackend
-from app.engine.obsidian import join_frontmatter
+from app.engine.frontmatter import join_frontmatter
 
 _SLUG_INVALID_RE = re.compile(r"[^a-z0-9._-]+")
 _SLUG_MAX_LENGTH = 80

@@ -6,7 +6,7 @@ from app.engine.agents.spec import AgentSpec
 from app.engine.agents.summarizer import SPEC as SUMMARIZER_SPEC
 from app.engine.agents.zettelkasten import SPEC as ZETTELKASTEN_SPEC
 from app.engine.artifacts import CsvSourceStore, MarkdownMemoryStore
-from app.engine.obsidian import join_frontmatter
+from app.engine.frontmatter import join_frontmatter
 from app.engine.schema import ResearchContext, ResearchState, SourceState, ZettelNote
 from app.engine.vaults import VaultLayout, ensure_vault_layout
 

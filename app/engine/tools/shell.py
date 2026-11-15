@@ -29,7 +29,8 @@ def shell(command: str) -> str:
     ``mv src dst``, ``cp src dst``, ``grep pattern path``,
     ``curl URL``, ``git ls-tree [-r] owner/repo``,
     ``git clone owner/repo [ref]``, ``python -c code``,
-    ``python path.py``, ``vault search QUERY``, ``vault links NOTE``,
+    ``python path.py``, ``vault search QUERY``, ``vault similar TEXT``,
+    ``vault links NOTE``,
     ``vault backlinks NOTE``, and ``vault tags``. No other flags,
     pipelines, redirects, shell expansion, or host commands are
     supported. Run ``help`` or

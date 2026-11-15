@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Iterable
 from pathlib import Path
 
+import httpx
+
+from app.core.settings import settings
+from app.engine.backends.protocol import FilesystemBackend
 from app.engine.obsidian import ObsidianVaultOperations
+from app.engine.similarity import SimilarityIndex, http_embedder
 from app.engine.vaults import VaultLayout
 from app.harness.commands import CommandSpec, first_flag, unsupported_flag
 from app.harness.results import CommandResult
@@ -13,25 +19,29 @@ _MOUNT = "/vault/"
 
 
 class VaultCommand:
-    """Read the vault's note graph: search, outgoing links, backlinks, tags."""
+    """Read the vault's note graph: search, similar, links, backlinks, tags."""
 
     spec = CommandSpec(
         name="vault",
         forms=(
             "vault search QUERY",
+            "vault similar TEXT",
             "vault links NOTE",
             "vault backlinks NOTE",
             "vault tags",
         ),
     )
 
-    def __init__(self, layout: VaultLayout) -> None:
+    def __init__(self, layout: VaultLayout, assets: FilesystemBackend) -> None:
         self._vault = ObsidianVaultOperations(layout)
+        self._assets = assets
 
     def __call__(self, _session: WorkspaceSession, args: list[str]) -> CommandResult:
         if flag := first_flag(args):
             return unsupported_flag(self.spec, flag)
         match args:
+            case ["similar", text]:
+                return self._similar(text)
             case ["search", query]:
                 return _ok(
                     f"{_MOUNT}{hit.path.as_posix()}:{hit.line_number}: {hit.line}"
@@ -50,6 +60,25 @@ class VaultCommand:
                 return CommandResult.error(
                     f"vault: expected one of\n{forms}\n", exit_code=2
                 )
+
+    def _similar(self, text: str) -> CommandResult:
+        url = settings.EMBEDDING_URL
+        index = SimilarityIndex(self._vault, self._assets, http_embedder(url))
+        try:
+            neighbors = index.similar(text)
+        except (httpx.HTTPError, KeyError, ValueError) as exc:
+            return CommandResult.error(
+                f"vault similar: embedding server at {url} failed ({exc!r}); "
+                "start it with `just embed`\n"
+            )
+        except sqlite3.Error as exc:
+            return CommandResult.error(
+                f"vault similar: index {index.db_file} failed ({exc}); it is "
+                "rebuildable, so delete it after an embedding model change\n"
+            )
+        return _ok(
+            f"{_MOUNT}{path.as_posix()} {score:.3f}" for path, score in neighbors
+        )
 
 
 def _note(note: str) -> dict[str, str]:
