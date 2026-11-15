@@ -8,6 +8,10 @@ import polars as pl
 from app.engine.backends import FilesystemBackend
 
 
+def _text(value: object) -> str:
+    return "" if value is None else str(value)
+
+
 def _require_plain_filename(filename: str) -> str:
     if "\x00" in filename:
         raise ValueError("filename must not contain NUL bytes")
@@ -39,7 +43,7 @@ class CsvSourceStore:
                 "url": [entry.get("url", "") for entry in sources],
                 "notes": [entry.get("notes", "") for entry in sources],
                 "provider": [entry.get("provider", "") for entry in sources],
-                "score": [entry.get("score", "") for entry in sources],
+                "score": [_text(entry.get("score")) for entry in sources],
             }
         )
         return self.backend.write_text(

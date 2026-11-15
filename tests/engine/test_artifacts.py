@@ -55,3 +55,19 @@ def test_csv_source_store_writes_sources_csv(tmp_path: Path) -> None:
     assert frame.columns == ["title", "url", "notes", "provider", "score"]
     assert frame["url"].to_list() == ["https://x", "https://missing-fields"]
     assert frame["title"].to_list() == ["T", ""]
+
+
+def test_csv_source_store_writes_scores_of_any_shape(tmp_path: Path) -> None:
+    backend = InProcessFilesystemBackend(tmp_path)
+    store = CsvSourceStore(backend, Path("outputs"))
+    sources = [
+        {"id": "S1", "url": "https://a", "score": 7},
+        {"id": "S2", "url": "https://b", "score": 0.25},
+        {"id": "S3", "url": "https://c"},
+        {"id": "S4", "url": "https://d", "score": None},
+    ]
+
+    written_path = store.write(sources)  # type: ignore[arg-type]
+
+    frame = pl.read_csv(written_path, infer_schema=False)
+    assert frame["score"].to_list() == ["7", "0.25", "", ""]
