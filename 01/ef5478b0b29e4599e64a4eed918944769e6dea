@@ -1,0 +1,177 @@
+ARCHITECTURE.md
+  s_15ad8bc81211ed::t_569877b92db77e 601,610-612
+  s_055bf0a65c238a::t_41e06cbea1380d 22,70,180,232,309,495,504,533-534,752,893,910-914,1018,1080,1104
+  s_055bf0a65c238a::t_8fe64a2c7886b9 458-461
+  s_055bf0a65c238a::t_2a3044fae1fa3b 603
+  s_055bf0a65c238a::t_da3b52b3b919eb 890
+  s_055bf0a65c238a::t_dcf8786d595c41 922-925
+  s_055bf0a65c238a::t_746c1e0f8f1651 934-941
+  s_055bf0a65c238a::t_bdf40e6517e279 1073
+  s_055bf0a65c238a::t_510f9b4ddd8238 926-931
+  s_055bf0a65c238a::t_e10c39ff4192f8 1074
+  s_055bf0a65c238a::t_21e436f4261d2d 475,537-538,552,589,731,1105
+  s_055bf0a65c238a::t_4d41898cd12e6d 932-933,942
+  s_055bf0a65c238a::t_7572aa70547a54 1062
+  s_055bf0a65c238a::t_390f1e2f19c46f 456-457
+  s_15ad8bc81211ed::t_6392e01bec6177 613-615
+  s_055bf0a65c238a::t_09095939aa0bc1 919-921
+  s_055bf0a65c238a::t_627604c63642b7 135-136,184,226,466-471,477-479,616-617,918,1065-1066
+tests/engine/test_vault_command.py
+  s_055bf0a65c238a::t_24b02dce1ef606 1-118
+tests/engine/test_backlinks_multiverse.py
+  s_055bf0a65c238a::t_650ea68adc77e1 1-13,18-22,25-28,34-36,50-55,58,61-66,76,79,83-99,102-105
+  s_055bf0a65c238a::t_5e7d7f459ae073 14-17,23-24,29-33,37-49,56-57,59-60,67-75,77,80-81,100-101,106
+  s_055bf0a65c238a::t_bbdf242e212c11 78,82
+app/engine/tools/shell.py
+  s_055bf0a65c238a::t_70900afab1576d 34-35
+  s_055bf0a65c238a::t_5dd5e88c879289 31-32
+  s_055bf0a65c238a::t_586cc4c4780bcd 33
+app/engine/graphs/research.py
+  s_055bf0a65c238a::t_144938386a9304 35,38
+app/engine/workspace_commands/__init__.py
+  s_055bf0a65c238a::t_e1859c43c983ae 7,11,16,24
+  s_055bf0a65c238a::t_4e935c6de7b861 3
+app/engine/nodes/persist.py
+  s_055bf0a65c238a::t_29615c9f910981 37,42-58,67
+  s_055bf0a65c238a::t_331642ad61e435 133
+  s_055bf0a65c238a::t_3451bba48208ea 178-180
+  s_055bf0a65c238a::t_999ac1c276bfa4 10
+  s_055bf0a65c238a::t_bb464adf106505 16
+  s_055bf0a65c238a::t_fa63264e2c20e7 21
+  s_055bf0a65c238a::t_710acb818ae1b9 151-152,155
+  s_055bf0a65c238a::t_b9c6e21d102a89 38,40-41,59-66,68-77,83,88,97-98,100,113,119
+  s_055bf0a65c238a::t_118f4c05764bb5 17-18
+  s_055bf0a65c238a::t_b6a9e19fe9fc95 1
+  s_055bf0a65c238a::t_ac8a5091bd7f9e 27-28,33
+  s_055bf0a65c238a::t_0143e75c878aa6 39,80-82,94,99,101-112,121
+  s_055bf0a65c238a::t_851a82ce32c18d 144-146
+  s_055bf0a65c238a::t_443d1245ebec9c 132,134-141,143,154,156-157,159-160
+  s_055bf0a65c238a::t_0d0e8a66c4ee12 32,34,84-87,89-93,114-118,120,127
+  s_055bf0a65c238a::t_4acc44e0c3f253 2-3,5-7,9
+  s_055bf0a65c238a::t_45149e75d3458e 153,158,161-162
+  s_15ad8bc81211ed::t_9ed2c588cc836a 35-36,78,95-96,163-164
+app/engine/artifacts/memory.py
+  s_055bf0a65c238a::t_fef41e6669a7aa 9
+  s_055bf0a65c238a::t_1145badb8c9d8d 73-74
+  s_055bf0a65c238a::t_f3cfb5961cb292 47-56
+  s_339384270fc0f7::t_73f9e294037807 75
+tests/nodes/test_persist_okf_multiverse.py
+  s_055bf0a65c238a::t_8a53b9faaa669d 92
+  s_055bf0a65c238a::t_9a31359d74f603 1-22,24-28,32-35,40-45,49,53-65,68-70,76-91,93-101,106-108,110-141
+  s_055bf0a65c238a::t_74a0c878b62a9e 66-67,71-75
+  s_055bf0a65c238a::t_a8cf89c5331ef7 102-105,109
+  s_055bf0a65c238a::t_4ce9da1a4e47d6 23,29-31,36-39,46-48,50-52
+app/engine/workspace.py
+  s_055bf0a65c238a::t_e8eed1e645a552 44
+README.md
+  s_339384270fc0f7::t_44ddec7ecf5284 35-37
+  s_055bf0a65c238a::t_5864627e9c44a0 11
+  s_339384270fc0f7::t_8f4aeac4e8f870 38
+app/engine/agents/researcher.py
+  s_055bf0a65c238a::t_3ee08f9f182435 20
+app/engine/agents/spec.py
+  s_055bf0a65c238a::t_f68041233b485a 63
+  s_055bf0a65c238a::t_a6a56ee7d78f78 24
+  s_055bf0a65c238a::t_e182dd38659645 6
+tests/nodes/test_persist_citations_multiverse.py
+  s_055bf0a65c238a::t_b21e342422e9d9 131,133,135
+  s_055bf0a65c238a::t_db83f91746d9a2 1-16,26-30,33-36,41-44,50-52,64-70,73,76-77,79-80,82-83,91-92,100,116-118,136-138,151,153-169
+  s_055bf0a65c238a::t_817ff910a76925 17-25,31-32,37-40,45-49,53-63,71-72,74-75,78,81,84-90,93-99,101-115,119-130,132,134,139-150,152
+app/engine/executor.py
+  s_055bf0a65c238a::t_e607483bd61a47 26
+  s_055bf0a65c238a::t_e28334243356b8 135-137
+pyproject.toml
+  s_15ad8bc81211ed::t_8e75522f1d6034 41
+  s_055bf0a65c238a::t_84292009f89e03 31,40,42
+tests/nodes/test_persist_links_multiverse.py
+  s_055bf0a65c238a::t_3dc6f6d012812b 1-109
+app/engine/agents/types.py
+  s_055bf0a65c238a::t_208e3c0149d3ad 8
+tests/nodes/test_persist.py
+  s_055bf0a65c238a::t_625aa54ad32224 97,100
+  s_055bf0a65c238a::t_6480baad66104a 118
+  s_055bf0a65c238a::t_df9de7556066a8 119
+  s_055bf0a65c238a::t_694c913543f550 98
+app/engine/schema.py
+  s_055bf0a65c238a::t_12d4df8cc243f9 69
+app/core/resources/agent_config.yaml
+  s_055bf0a65c238a::t_b0ed58585fc556 130-132
+  s_055bf0a65c238a::t_0a4b4fd6dd64e0 160-165,169,184-185
+  s_055bf0a65c238a::t_59f749f7601f3c 166-168,172-180
+  s_055bf0a65c238a::t_a27353d3f7a46b 156
+  s_055bf0a65c238a::t_c1e4d13d5b3852 88-91
+  s_339384270fc0f7::t_36a17f67a3a455 111,181
+tests/engine/agents/test_spec.py
+  s_055bf0a65c238a::t_6138bf0146f5c1 81,88,90-92,94
+app/core/settings.py
+  s_055bf0a65c238a::t_0b18c9770653d8 67-68
+app/engine/artifacts/sources.py
+  s_055bf0a65c238a::t_627b658f4d43b9 42
+app/engine/agents/zettelkasten.py
+  s_055bf0a65c238a::t_c24a64b7b6ca86 8
+  s_055bf0a65c238a::t_08839c5f92ddc1 27
+app/engine/obsidian.py
+  s_055bf0a65c238a::t_aa7c604c425c68 142-143,145,150
+  s_055bf0a65c238a::t_cd897938a23bbf 14
+  s_055bf0a65c238a::t_1b071b33e19c8b 3,10
+  s_055bf0a65c238a::t_4c9481442515f9 163
+  s_055bf0a65c238a::t_e43fb2e625012f 185
+  s_055bf0a65c238a::t_1de6902cd0466a 340,342,344-375
+  s_055bf0a65c238a::t_d415a7f9b202fc 138-139,141,144,146-149
+  s_055bf0a65c238a::t_e259d615c31286 152-162
+  s_055bf0a65c238a::t_1d15b4b77c1cce 393
+  s_055bf0a65c238a::t_58cdc6ead9c21a 6
+  s_15ad8bc81211ed::t_94033f88a7cb1a 151
+app/engine/nodes/builders/agent.py
+  s_055bf0a65c238a::t_712851101c20aa 85
+  s_055bf0a65c238a::t_dd9418292d7af1 145,147-149
+tests/engine/test_artifacts.py
+  s_055bf0a65c238a::t_fad22cf0bcf892 57
+  s_055bf0a65c238a::t_eafe4a133d987f 6
+  s_055bf0a65c238a::t_b40757cad00dfe 28-32
+app/engine/workspace_commands/vault.py
+  s_055bf0a65c238a::t_c3f0d5abceda4d 1-2,4-59,61
+  s_055bf0a65c238a::t_2f44b7cd679b53 60
+  s_055bf0a65c238a::t_08e21e0243257d 3
+  s_055bf0a65c238a::t_0fa2649f1cb832 62,64-65
+tests/README.md
+  s_055bf0a65c238a::t_516fb34b261384 26
+Containerfile
+  s_339384270fc0f7::t_b3602b67f2ec8b 10-15
+docker-compose.yaml
+  s_339384270fc0f7::t_f0defef6cf71c7 6-7
+uv.lock
+  s_055bf0a65c238a::t_7f2fbce4a53037 2972,3019,4713-4716
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "01ef5478b0b29e4599e64a4eed918944769e6dea",
+  "prompts": {},
+  "sessions": {
+    "s_055bf0a65c238a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c979245e-6f2a-4e62-88c7-b1c351a1f58a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_15ad8bc81211ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a1e0d6-c8cc-7250-b8eb-927d9f12c8ba",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_339384270fc0f7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e0d6-c8cc-7250-b8eb-927d9f12c8ba",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
