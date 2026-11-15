@@ -32,8 +32,6 @@ def _state() -> ResearchState:
         messages=[],
         topic="langgraph persistence",
         research_notes=["note-a", "note-b"],
-        experiments=[],
-        code_context=[],
         sources=[{"title": "T", "url": "https://x", "notes": "", "provider": "exa"}],
         report="# Report\n\nUseful synthesis.",
         zettelkasten_notes=[

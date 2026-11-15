@@ -33,7 +33,7 @@ class AgentSpec(Generic[T]):
 
     name: AgentName
     output_schema: type[T]
-    default_system_prompt: str
+    default_system_prompt: str = ""
     tools: Sequence[AgentTool] = ()
     llm_overrides: Mapping[str, Any] = field(default_factory=lambda: _EMPTY_OVERRIDES)
 

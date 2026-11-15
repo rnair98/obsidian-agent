@@ -51,10 +51,7 @@ def _render_prior_memories(vault: VaultLayout) -> str:
     vault, returns a bounded manifest of filenames so the agent can `cat`
     relevant slugs directly without enumerating the directory itself.
     """
-    try:
-        entries = vault.backend.list_dir(vault.memories_dir)
-    except Exception:  # noqa: BLE001  -- backend may raise on missing dir
-        entries = []
+    entries = vault.backend.list_dir(vault.memories_dir)
     notes = sorted(p.name for p in entries if p.suffix == ".md")
     if not notes:
         return (
@@ -103,10 +100,7 @@ def _snapshot_memories(vault: VaultLayout) -> set[Path]:
     snapshot against a post-run listing is the cheapest reliable way to
     surface "what did this run write" without expanding ``ResearchState``.
     """
-    try:
-        return set(vault.backend.list_dir(vault.memories_dir))
-    except Exception:  # noqa: BLE001  -- backend may raise on missing dir
-        return set()
+    return set(vault.backend.list_dir(vault.memories_dir))
 
 
 def _project_run_response(
@@ -212,8 +206,6 @@ async def execute(
         ],
         topic=request.topic,
         research_notes=[],
-        experiments=[],
-        code_context=[],
         sources=[],
         report="",
         zettelkasten_notes=[],

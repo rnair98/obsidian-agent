@@ -48,6 +48,55 @@ _FRONTMATTER_FENCE = "---"
 _WIKILINK_RE = re.compile(r"\[\[[^\]]+\]\]")
 _MDLINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\([^)]+\)")
 _FRONTMATTER_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):", re.MULTILINE)
+_DATE_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def _read_sample(backend: Any, path: Path) -> str | None:
+    try:
+        return backend.read_text(path)
+    except (OSError, UnicodeError):
+        return None
+
+
+def _tally_slug(slug: str, flags: dict[str, int]) -> None:
+    if "-" in slug and slug.islower():
+        flags["kebab"] += 1
+    if _DATE_PREFIX_RE.match(slug):
+        flags["date_prefix"] += 1
+    if any(character.isupper() for character in slug):
+        flags["has_uppercase"] += 1
+
+
+def _tally_frontmatter(content: str, keys: Counter[str]) -> bool:
+    if not content.startswith(_FRONTMATTER_FENCE):
+        return False
+    end = content.find(f"\n{_FRONTMATTER_FENCE}", len(_FRONTMATTER_FENCE))
+    if end > 0:
+        for key in _FRONTMATTER_KEY_RE.findall(content[:end]):
+            keys[key] += 1
+    return True
+
+
+def _collect_samples(
+    backend: Any, note_paths: list[Path]
+) -> tuple[list[tuple[str, str]], int, int, int, Counter[str], dict[str, int]]:
+    samples: list[tuple[str, str]] = []
+    fm_count = 0
+    wikilink_total = 0
+    mdlink_total = 0
+    fm_keys: Counter[str] = Counter()
+    slug_flags = {"kebab": 0, "date_prefix": 0, "has_uppercase": 0}
+    for path in sorted(note_paths)[:_VAULT_PROFILE_SAMPLE_COUNT]:
+        content = _read_sample(backend, path)
+        if content is None:
+            continue
+        _tally_slug(path.stem, slug_flags)
+        if _tally_frontmatter(content, fm_keys):
+            fm_count += 1
+        wikilink_total += len(_WIKILINK_RE.findall(content))
+        mdlink_total += len(_MDLINK_RE.findall(content))
+        samples.append((path.name, content[:_VAULT_PROFILE_SAMPLE_BYTES]))
+    return samples, fm_count, wikilink_total, mdlink_total, fm_keys, slug_flags
 
 
 def _vault_stats(vault: VaultLayout) -> dict[str, Any]:
@@ -57,48 +106,15 @@ def _vault_stats(vault: VaultLayout) -> dict[str, Any]:
     dict that becomes the cache key and feeds the qualitative profiler.
     """
     backend = vault.backend
-    try:
-        note_paths = [p for p in backend.list_dir(vault.notes_dir) if p.suffix == ".md"]
-    except Exception:  # noqa: BLE001
-        note_paths = []
-    try:
-        top_level = [
-            p.name
-            for p in backend.list_dir(vault.root)
-            if backend.is_dir(p) and not p.name.startswith(".")
-        ]
-    except Exception:  # noqa: BLE001
-        top_level = []
-
-    samples: list[tuple[str, str]] = []
-    fm_count = 0
-    wikilink_total = 0
-    mdlink_total = 0
-    fm_keys: Counter[str] = Counter()
-    slug_flags = {"kebab": 0, "date_prefix": 0, "has_uppercase": 0}
-    date_prefix_re = re.compile(r"^\d{4}-\d{2}-\d{2}")
-    sample_targets = sorted(note_paths)[:_VAULT_PROFILE_SAMPLE_COUNT]
-    for path in sample_targets:
-        try:
-            content = backend.read_text(path)
-        except Exception:  # noqa: BLE001
-            continue
-        slug = path.stem
-        if "-" in slug and slug.islower():
-            slug_flags["kebab"] += 1
-        if date_prefix_re.match(slug):
-            slug_flags["date_prefix"] += 1
-        if any(c.isupper() for c in slug):
-            slug_flags["has_uppercase"] += 1
-        if content.startswith(_FRONTMATTER_FENCE):
-            fm_count += 1
-            end = content.find(f"\n{_FRONTMATTER_FENCE}", len(_FRONTMATTER_FENCE))
-            if end > 0:
-                for key in _FRONTMATTER_KEY_RE.findall(content[:end]):
-                    fm_keys[key] += 1
-        wikilink_total += len(_WIKILINK_RE.findall(content))
-        mdlink_total += len(_MDLINK_RE.findall(content))
-        samples.append((path.name, content[:_VAULT_PROFILE_SAMPLE_BYTES]))
+    note_paths = [p for p in backend.list_dir(vault.notes_dir) if p.suffix == ".md"]
+    top_level = [
+        p.name
+        for p in backend.list_dir(vault.root)
+        if backend.is_dir(p) and not p.name.startswith(".")
+    ]
+    samples, fm_count, wikilink_total, mdlink_total, fm_keys, slug_flags = (
+        _collect_samples(backend, note_paths)
+    )
 
     return {
         "notes_count": len(note_paths),

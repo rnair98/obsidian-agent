@@ -61,15 +61,12 @@ class LLMConfig(BaseModel):
 
 
 class AgentPromptConfig(BaseModel):
-    """Per-agent runtime overrides (prompt + LLM params).
+    """Per-agent prompt and LLM params from ``agent_config.yaml``.
 
-    Empty ``system_prompt`` (or omission) falls through to the default
-    defined on the corresponding ``AgentSpec`` in
-    ``app/engine/agents/<name>.py``. ``llm`` keys layer on top of the
-    global ``llm:`` block and the spec's ``llm_overrides`` (spec wins
-    over YAML; YAML wins over global). Use this to tune e.g.
-    ``temperature``, ``reasoning``, or ``verbosity`` per agent without
-    touching code.
+    ``system_prompt`` is the agent prompt. An empty string falls through
+    to ``AgentSpec.default_system_prompt``. ``llm`` keys layer on top of
+    the global ``llm:`` block and the spec's ``llm_overrides`` (spec wins
+    over YAML; YAML wins over global).
     """
 
     system_prompt: str = ""

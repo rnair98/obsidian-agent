@@ -228,10 +228,10 @@ app/
 │   ├── agents/                   # Co-located agent definitions: schema + prompt + tools per agent
 │   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
 │   │   ├── output_format.py      # render_output_format() — TypeScript-flavored compact schema descriptor
-│   │   ├── researcher.py         # ResearcherOutput + Source + DEFAULT_PROMPT + SPEC
-│   │   ├── summarizer.py         # SummarizerOutput + DEFAULT_PROMPT + SPEC
-│   │   ├── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + DEFAULT_PROMPT + SPEC
-│   │   └── vault_profiler.py     # VaultProfile + DEFAULT_PROMPT + SPEC
+│   │   ├── researcher.py         # ResearcherOutput + Source + SPEC
+│   │   ├── summarizer.py         # SummarizerOutput + SPEC
+│   │   ├── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + SPEC
+│   │   └── vault_profiler.py     # VaultProfile + SPEC
 │   ├── artifacts/                # Durable artifact stores + workspace mount adapter
 │   │   ├── __init__.py           # public exports: MarkdownMemoryStore, CsvSourceStore, ArtifactWorkspaceBackend
 │   │   ├── memory.py             # MarkdownMemoryStore (.memories research-run format)
@@ -329,8 +329,6 @@ by merging node return values.
 | `messages` | `Annotated[list[AnyMessage], add_messages]` | executor (initial messages), researcher, summarizer, zettelkasten | subsequent research agents |
 | `topic` | `str` | executor (from request) | researcher |
 | `research_notes` | `list[str]` | researcher | summarizer, persist |
-| `experiments` | `list[str]` | initialized empty; no structured-output producer | — |
-| `code_context` | `list[str]` | initialized empty; no structured-output producer | — |
 | `sources` | `list[SourceState]` | researcher | summarizer, persist |
 | `report` | `str` | summarizer | zettelkasten |
 | `zettelkasten_notes` | `list[ZettelNote]` | zettelkasten | persist, response projector |
@@ -469,18 +467,19 @@ frontmatter or wikilink parsing logic elsewhere — extend this module.
 
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
-A frozen dataclass that bundles **schema + prompt + tools + per-agent LLM
+A frozen dataclass that bundles **schema + tools + per-agent LLM
 overrides** for a single agent. One `SPEC` per agent module under
-`app/engine/agents/`. Ordinary agent nodes use `make_agent_node(...)` in `app/engine/nodes/agent.py`.
+`app/engine/agents/`. The system prompt lives in
+`app/core/resources/agent_config.yaml`. Ordinary agent nodes use `make_agent_node(...)` in `app/engine/nodes/agent.py`.
 The research graph wraps Zettelkasten to inject the profile, while
 `nodes/vault_profiler.py` owns profiling/cache behavior. All use
 `build_agent_executor_from_spec()` to construct executors.
 
-`spec.system_prompt()` resolves YAML overrides
-(`settings.agents.<name>.system_prompt`) before falling back to
-`default_system_prompt`, then interpolates a `$output_format` placeholder
-with `render_output_format(spec.output_schema)` so the prompt-side schema
-description is always in lockstep with the Pydantic model.
+`spec.system_prompt()` reads `settings.agents.<name>.system_prompt`,
+falls back to `default_system_prompt` when that string is empty, then
+interpolates a `$output_format` placeholder with
+`render_output_format(spec.output_schema)` so the prompt-side schema
+description stays in lockstep with the Pydantic model.
 
 `spec.parse(raw)` delegates to `parse_structured()` for seams that
 receive a free-form string (tool args, persisted artifacts, future
@@ -530,9 +529,9 @@ Settings resolve in this priority order
 - `llm: LLMConfig | None` — `model` (required), reasoning knobs,
   `use_responses_api`, streaming flags, passthrough `model_kwargs`. `extra="allow"`.
 - `agents: AgentsConfig | None` — `researcher`, `summarizer`, `zettelkasten`,
-  and `vault_profiler` prompt and `llm` override blocks. Each `system_prompt` defaults to `""`; an
-  empty string falls through to the `default_system_prompt` defined on
-  the corresponding `AgentSpec` in `app/engine/agents/<name>.py`.
+  and `vault_profiler` blocks. `system_prompt` is the agent prompt, including
+  `$output_format` and any per-run placeholders. An empty string falls through
+  to `AgentSpec.default_system_prompt`, which the shipped specs leave empty.
 - **LLM precedence:** global `llm` → per-agent `llm` → spec `llm_overrides`.
   `_build_chat_model()` selects `openai` (default) or `groq` via `provider`.
   Groq strips OpenAI-specific options and uses `groq_api_key` or `GROQ_API_KEY`,
@@ -726,14 +725,13 @@ offered it.
 
 ### Add a new agent node
 
-1. Create `app/engine/agents/<agent>.py` containing **everything for the
-   agent in one file**:
-   - The Pydantic output schema(s).
-   - A `DEFAULT_PROMPT` string. Embed `$output_format` where you want the
-     compact schema description injected.
+1. Create `app/engine/agents/<agent>.py` containing the agent's schema,
+   tools, and `SPEC`. Put the system prompt in
+   `app/core/resources/agent_config.yaml` under
+   `agents.<name>.system_prompt`. Embed `$output_format` where the compact
+   schema description should appear.
    - A `SPEC: AgentSpec[OutputModel] = AgentSpec(name=..., output_schema=...,
-     default_system_prompt=DEFAULT_PROMPT, tools=(...,))`.
-   - Add `# ruff: noqa: E501` if the prompt prose exceeds 88 chars.
+     tools=(...,))`.
 2. Add the name to `AgentName` in `agents/types.py` and a `NodeName` in
    `app/engine/nodes/types.py`. Add a `WorkflowName` only in the same change
    as a workflow that runs this agent. A node name is not a workflow name.
@@ -844,9 +842,10 @@ offered it.
   `settings.filesystem.base_path/.vaults/<hash>`). Run artifacts use
   `runtime.context.vault.backend`; repository snapshots use `assets_backend()`
   under `.assets`. The default `artifacts_backend()` is not the request vault.
-- **An agent's schema, prompt, tools, and per-agent LLM overrides live
+- **An agent's schema, tools, and per-agent LLM overrides live
   in the same file** under `app/engine/agents/<name>.py` as a single
-  `SPEC: AgentSpec[...]`. Never split them. Graphs wire the spec into
+  `SPEC: AgentSpec[...]`. The system prompt lives in
+  `app/core/resources/agent_config.yaml`. Graphs wire the spec into
   ordinary executors via `make_agent_node(SPEC, log_streams=...)`; custom
   profile handling lives in `nodes/vault_profiler.py` and `graphs/research.py`.
 - **Prompts use `$output_format` for schema injection.** Do not paste

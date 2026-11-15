@@ -23,8 +23,6 @@ class ResearchState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     topic: str
     research_notes: list[str]
-    experiments: list[str]
-    code_context: list[str]
     sources: list["SourceState"]
     report: str
     zettelkasten_notes: list["ZettelNote"]

@@ -23,10 +23,6 @@ def safe_note_id(note_id: object) -> str:
     return cleaned or "untitled"
 
 
-# Back-compat alias for callers that imported the previous private name.
-_safe_note_id = safe_note_id
-
-
 def _format_zettelkasten_note(note: ZettelNote) -> str:
     title = note.get("title")
     content = note.get("content", "")
