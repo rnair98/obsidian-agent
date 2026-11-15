@@ -1,0 +1,65 @@
+justfile
+  s_055bf0a65c238a::t_7e7b1a29a81451 52-55
+app/engine/frontmatter.py
+  s_055bf0a65c238a::t_daec2b5a18fa10 1-34
+app/engine/similarity.py
+  s_055bf0a65c238a::t_e4226f45561df6 1-12,14-17,19-34,36,40-41,54-56,59-61,65-66,68-85,93,99-104,119,125-128,131-134
+  s_055bf0a65c238a::t_83fb512cd8e39e 57-58
+  s_055bf0a65c238a::t_36627359cd642d 13,18,35,37-39,42-49,52-53,64,67,86-92,94-98,105-118,120-124,129-130
+  s_055bf0a65c238a::t_64f70cb11495ca 50-51,62-63
+app/core/settings.py
+  s_055bf0a65c238a::t_3f084e0bcc36d8 139-140
+  s_055bf0a65c238a::t_ec8ea954764408 138
+app/engine/nodes/persist.py
+  s_055bf0a65c238a::t_89064f81450e28 9
+ARCHITECTURE.md
+  s_055bf0a65c238a::t_26bf641a995585 220,222,468-469,472-479,573-574,603-605,625-626,628,938-941,944-946,967,1089
+  s_055bf0a65c238a::t_b517f620fe810d 470-471,480-491,936-937,942-943,1102
+app/engine/artifacts/memory.py
+  s_055bf0a65c238a::t_4ddd1f5448019b 9
+app/engine/workspace.py
+  s_055bf0a65c238a::t_945a15c253436a 44
+app/engine/obsidian.py
+  s_055bf0a65c238a::t_ba6e5823d8be11 14
+  s_055bf0a65c238a::t_a9daa70869494d 165,176
+app/core/resources/agent_config.yaml
+  s_055bf0a65c238a::t_40a5e1d25378d2 174-178,180-184
+tests/engine/test_vault_similar.py
+  s_055bf0a65c238a::t_154a833fdb33b6 1-2,4,9-14,16-30,32-35,39-42,48-54,57-59,62-68,70-72,74,77-84,86-93,95,100,102-155
+  s_055bf0a65c238a::t_acbe26c451c356 31,36-38,43-47,55-56,60-61
+  s_055bf0a65c238a::t_c795d0279a728f 3,5-8,15,156-201
+  s_055bf0a65c238a::t_1cf57ab457bf89 69,73,75-76,85,94,96-99,101
+tests/test_imports.py
+  s_055bf0a65c238a::t_0369e5c93cfe3f 33-34
+  s_055bf0a65c238a::t_da2d3f6c730493 10-32,35-39
+app/engine/workspace_commands/vault.py
+  s_055bf0a65c238a::t_4fb72ead545c78 3,10
+  s_055bf0a65c238a::t_b9deb778ed8194 64,67-68,70,73,82
+  s_055bf0a65c238a::t_824d31e836f356 22,28,43-44
+  s_055bf0a65c238a::t_b5782fb21450ab 7-9,12
+  s_055bf0a65c238a::t_46663bab8f43ab 65-66,69,71-72,74-78
+  s_055bf0a65c238a::t_7368c195f8a68f 35,37
+  s_055bf0a65c238a::t_c795d0279a728f 79-81
+app/engine/tools/shell.py
+  s_055bf0a65c238a::t_c98779ebe30fbe 32-33
+tests/fixtures/llama_server_embeddings.json
+  s_055bf0a65c238a::t_6f5db4ec619790 1
+app/engine/workspace_commands/__init__.py
+  s_055bf0a65c238a::t_74067a0d7a5913 3,12-14,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ae4f5782fcf373cf7538b7777c8fada13417dd32",
+  "prompts": {},
+  "sessions": {
+    "s_055bf0a65c238a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c979245e-6f2a-4e62-88c7-b1c351a1f58a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
