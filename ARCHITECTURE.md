@@ -599,6 +599,7 @@ requested explicitly instead of occurring during every run.
 | GitHub | PyGithub (App-installation auth), surfaced to agents as `git` | `services/gh_client/`, `engine/workspace_commands/git.py` |
 | Code IR parsing | standalone `tree_sitter.Parser(get_language(...))`; language pack supplies grammars | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
+| Native SQLite vector/graph SQL | Local `sqlite-vec` fork | Host Python dependency, imported as `sqlite_vec`; source is `../sqlite-vec` in `pyproject.toml` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
 | Frontmatter (YAML) | `pyyaml` | `engine/obsidian.py` — `_split_frontmatter` / `_join_frontmatter` |
 | Telemetry | Arize Phoenix / OpenInference instrumentations | `main.py: lifespan`, `pyproject.toml [dependency-groups].observability` |
@@ -606,6 +607,14 @@ requested explicitly instead of occurring during every run.
 | Config | pydantic-settings (YAML + dotenv) | `core/settings.py` |
 | Cognitive complexity | complexipy | `.cursor/hooks/complexity.py`; dev dependency; threshold 15 |
 | Import boundaries | import-linter (`lint-imports`) | `pyproject.toml` `[tool.importlinter]`; `just check` |
+
+The local `sqlite-vec` dependency requires a sibling `../sqlite-vec` checkout and
+a C compiler for source builds. Load it explicitly on each host SQLite connection;
+the package does not change workflow persistence or grant Monty host imports.
+Compose supplies that checkout as the named `sqlite-vec` build context. The
+Containerfile copies only the package inputs to `/sqlite-vec` before `uv sync`
+and installs the C compiler and libc headers. Direct image builds need
+`--build-context sqlite-vec=../sqlite-vec`.
 
 ---
 

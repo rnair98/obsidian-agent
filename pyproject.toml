@@ -29,6 +29,7 @@ dependencies = [
     "pydantic-monty>=0.0.17",
     "wrapt<2",
     "langchain-groq>=1.1.2",
+    "sqlite-vec",
 ]
 
 [tool.uv]
@@ -36,6 +37,9 @@ concurrent-builds = 1
 concurrent-downloads = 1
 concurrent-installs = 1
 compile-bytecode = false
+
+[tool.uv.sources]
+sqlite-vec = { path = "../sqlite-vec" }
 
 [dependency-groups]
 dev = [

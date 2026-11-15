@@ -32,6 +32,10 @@ Configure workflow authentication and approved vault paths first; see
 [workflow access](docs/security-access.md). Empty credentials or allowlists
 fail closed. Container vault paths require explicit writable mounts.
 
+The local SQLite dependency requires the fork checkout at `../sqlite-vec` and a
+C compiler for source builds. Compose supplies that checkout as an additional
+build context.
+
 ```bash
 # Prerequisites: podman + provider keys + configured workflow access
 # Compose also requires an exported, generated POSTGRES_PASSWORD.
