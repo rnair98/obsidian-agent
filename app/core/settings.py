@@ -64,9 +64,8 @@ class AgentPromptConfig(BaseModel):
     """Per-agent prompt and LLM params from ``agent_config.yaml``.
 
     ``system_prompt`` is the agent prompt. An empty string falls through
-    to ``AgentSpec.default_system_prompt``. ``llm`` keys layer on top of
-    the global ``llm:`` block and the spec's ``llm_overrides`` (spec wins
-    over YAML; YAML wins over global).
+    to ``AgentSpec.default_system_prompt``. ``llm`` keys override the
+    global ``llm:`` block.
     """
 
     system_prompt: str = ""
@@ -77,7 +76,6 @@ class AgentsConfig(BaseModel):
     researcher: AgentPromptConfig
     summarizer: AgentPromptConfig
     zettelkasten: AgentPromptConfig
-    vault_profiler: AgentPromptConfig = Field(default_factory=AgentPromptConfig)
 
     def prompt_for(self, name: AgentName) -> AgentPromptConfig:
         match name:
@@ -87,8 +85,6 @@ class AgentsConfig(BaseModel):
                 return self.summarizer
             case "zettelkasten":
                 return self.zettelkasten
-            case "vault_profiler":
-                return self.vault_profiler
             case _:
                 raise ValueError(f"unknown agent name: {name}")
 
@@ -138,7 +134,6 @@ class Settings(BaseSettings):
 
     # API Keys
     JINA_API_KEY: str = ""
-    GROQ_API_KEY: str = ""
 
     # LLM & Agent Config
     llm: LLMConfig | None = None

@@ -15,7 +15,6 @@ _ADAPTERS = frozenset(
         "app/engine/nodes/builders/middleware.py",
         "app/engine/nodes/persist.py",
         "app/engine/nodes/types.py",
-        "app/engine/nodes/vault_profiler.py",
         "app/engine/registry.py",
         "app/engine/schema.py",
         "app/engine/tools/shell.py",

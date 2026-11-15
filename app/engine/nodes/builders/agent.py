@@ -10,7 +10,6 @@ from langchain.agents.structured_output import ProviderStrategy
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AnyMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langgraph.types import StreamMode
 from pydantic import BaseModel
@@ -83,6 +82,7 @@ def structured_response_delta(response: object) -> AgentRunResult:
             "key_insights": response.key_insights,
             "sources": [
                 {
+                    "id": source.id,
                     "title": source.title,
                     "url": source.url,
                     "notes": source.notes,
@@ -141,61 +141,12 @@ def _extract_updates(data: object) -> list[Mapping[str, object]]:
     return typed_updates
 
 
-# Provider-agnostic keys we accept in per-agent ``llm:`` dicts. Anything
-# not in this set is provider-specific and passed through verbatim.
-_GROQ_DROPPED_OPENAI_KEYS = frozenset(
-    {
-        # OpenAI Responses-API specific
-        "use_responses_api",
-        "reasoning",
-        "verbosity",
-        "stream_usage",
-        "context_management",
-        # Cross-provider but OpenAI-namespaced in our global ``llm:`` block:
-        # ``LLM__API_KEY`` / ``LLM__BASE_URL`` are the OpenAI key/host and
-        # MUST NOT leak to ChatGroq. Groq auth comes from
-        # ``settings.GROQ_API_KEY`` (see below).
-        "api_key",
-        "base_url",
-        # Already translated below
-        "model",
-        "timeout",
-    }
-)
-
-
 def _build_chat_model(kwargs: dict[str, Any]) -> BaseChatModel:
-    """Construct a chat model from merged LLM kwargs, switching on ``provider``."""
-    kwargs = dict(kwargs)  # defensive copy; do not mutate caller's dict
+    kwargs = dict(kwargs)
     provider = str(kwargs.pop("provider", "openai")).lower()
-    if provider == "openai":
-        return ChatOpenAI(**kwargs)
-    if provider == "groq":
-        groq_kwargs: dict[str, Any] = {
-            k: v
-            for k, v in kwargs.items()
-            if k not in _GROQ_DROPPED_OPENAI_KEYS and v is not None
-        }
-        if "model" in kwargs:
-            groq_kwargs["model_name"] = kwargs["model"]
-        if "timeout" in kwargs and kwargs["timeout"] is not None:
-            groq_kwargs["request_timeout"] = kwargs["timeout"]
-        # Auth: take ONLY ``settings.GROQ_API_KEY`` (or an explicit
-        # ``groq_api_key`` override in YAML/spec). We deliberately do
-        # NOT inherit ``api_key`` / ``base_url`` from merged kwargs:
-        # those carry the OpenAI key/host from the global ``llm:``
-        # block (``LLM__API_KEY`` in .env). Forwarding them to ChatGroq
-        # produces a 401.
-        api_key = kwargs.get("groq_api_key") or settings.GROQ_API_KEY
-        if api_key:
-            groq_kwargs["groq_api_key"] = api_key
-        groq_base = kwargs.get("groq_api_base")
-        if groq_base:
-            groq_kwargs["groq_api_base"] = groq_base
-        return ChatGroq(**groq_kwargs)
-    raise ValueError(
-        f"unknown LLM provider: {provider!r} (expected 'openai' or 'groq')"
-    )
+    if provider != "openai":
+        raise ValueError(f"unknown LLM provider: {provider!r} (expected 'openai')")
+    return ChatOpenAI(**kwargs)
 
 
 def build_agent_executor_from_spec(

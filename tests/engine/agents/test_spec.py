@@ -78,20 +78,19 @@ def test_parse_round_trips_strict_json() -> None:
     assert parsed == _Out(title="ok")
 
 
-def test_llm_overrides_layered_on_top_of_settings(
+def test_agent_yaml_llm_keys_override_global_llm(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class _LLM:
         def model_dump(self, mode: str = "python") -> dict[str, object]:
             return {"model": "gpt-x", "temperature": 1.0}
 
+    agent = AgentPromptConfig(llm={"temperature": 0.2})
     monkeypatch.setattr("app.engine.agents.spec.settings.llm", _LLM())
-    spec = AgentSpec(
-        name="researcher",
-        output_schema=_Out,
-        default_system_prompt="x",
-        llm_overrides={"temperature": 0.2},
+    monkeypatch.setattr(
+        "app.engine.agents.spec.settings.agents",
+        AgentsConfig(researcher=agent, summarizer=agent, zettelkasten=agent),
     )
-    kwargs = spec.llm_kwargs()
+    kwargs = _make_spec().llm_kwargs()
     assert kwargs["model"] == "gpt-x"
     assert kwargs["temperature"] == 0.2

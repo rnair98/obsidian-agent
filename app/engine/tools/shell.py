@@ -28,9 +28,11 @@ def shell(command: str) -> str:
     ``write path content``, ``write path -- content``, ``rm path``,
     ``mv src dst``, ``cp src dst``, ``grep pattern path``,
     ``curl URL``, ``git ls-tree [-r] owner/repo``,
-    ``git clone owner/repo [ref]``, ``python -c code``, and
-    ``python path.py``. No other flags, pipelines, redirects, shell
-    expansion, or host commands are supported. Run ``help`` or
+    ``git clone owner/repo [ref]``, ``python -c code``,
+    ``python path.py``, ``vault search QUERY``, ``vault links NOTE``,
+    ``vault backlinks NOTE``, and ``vault tags``. No other flags,
+    pipelines, redirects, shell expansion, or host commands are
+    supported. Run ``help`` or
     ``help <command>`` to inspect the grammar from inside the workspace.
 
     Args:

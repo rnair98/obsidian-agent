@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from string import Template
-from types import MappingProxyType
 from typing import Any, Generic, TypeVar, cast, get_args
 
 from pydantic import BaseModel
@@ -17,25 +16,17 @@ from app.engine.parsing import parse_structured
 
 T = TypeVar("T", bound=BaseModel)
 
-_EMPTY_OVERRIDES: Mapping[str, Any] = MappingProxyType({})
 _AGENT_NAMES = frozenset(cast("tuple[AgentName, ...]", get_args(AgentName)))
 
 
 @dataclass(frozen=True, slots=True)
 class AgentSpec(Generic[T]):
-    """Frozen bundle describing one agent.
-
-    Not hashable in the general case — ``llm_overrides`` defaults to a
-    ``MappingProxyType`` (no ``__hash__``) and callers may pass concrete
-    ``list``/``dict`` values for ``tools``/``llm_overrides``. Treat
-    instances as values, not dict keys.
-    """
+    """Frozen bundle describing one agent: name, output schema, and tools."""
 
     name: AgentName
     output_schema: type[T]
     default_system_prompt: str = ""
     tools: Sequence[AgentTool] = ()
-    llm_overrides: Mapping[str, Any] = field(default_factory=lambda: _EMPTY_OVERRIDES)
 
     def __post_init__(self) -> None:
         if self.name not in _AGENT_NAMES:
@@ -69,17 +60,10 @@ class AgentSpec(Generic[T]):
         return Template(raw).safe_substitute(**substitutions)
 
     def llm_kwargs(self) -> dict[str, Any]:
-        """Merge LLM config in precedence: global → YAML per-agent → spec.
-
-        Spec-level ``llm_overrides`` win because they encode invariants
-        that the agent depends on (e.g. ``vault_profiler`` requires
-        ``temperature=0.2`` for stability). YAML per-agent overrides
-        let operators tune without code changes.
-        """
+        """Merge the global ``llm`` block with this agent's YAML ``llm`` keys."""
         base = settings.llm.model_dump(mode="python") if settings.llm else {}
         if settings.agents is not None:
             base.update(settings.agents.prompt_for(self.name).llm)
-        base.update(self.llm_overrides)
         return base
 
     def parse(self, raw: str) -> T:

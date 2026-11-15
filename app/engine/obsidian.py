@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import posixpath
 import re
 from collections import Counter
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import yaml
 
-from app.engine.artifacts import ArtifactWorkspaceBackend
+from app.engine.artifacts.mounts import ArtifactWorkspaceBackend
 from app.engine.backends.protocol import FilesystemBackend
 from app.engine.vaults import VaultLayout
 from app.harness.paths import normalize_path
@@ -132,23 +135,32 @@ class ObsidianVaultOperations:
         file: str | None = None,
         path: str | Path | None = None,
     ) -> list[Path]:
+        notes = self.list_notes()
+        index = _NoteIndex.build(notes)
         target = self.resolve_note(file=file, path=path)
-        target_stem = target.stem.casefold()
-        target_basename = target.name.casefold()
-        target_path = target.as_posix().casefold()
-        linked_from: list[Path] = []
-        for note_path in self.list_notes():
-            if note_path == target:
-                continue
-            body = self._read_text(note_path)
-            if _body_links_to(
-                body,
-                target_stem=target_stem,
-                target_basename=target_basename,
-                target_path=target_path,
-            ):
-                linked_from.append(note_path)
-        return linked_from
+        target = index.by_path.get(target.as_posix().casefold(), target)
+        return [
+            note
+            for note in notes
+            if note != target
+            and any(
+                index.resolve(ref, note) == target
+                for ref in _link_refs(self._read_text(note))
+            )
+        ]
+
+    def links(
+        self,
+        *,
+        file: str | None = None,
+        path: str | Path | None = None,
+    ) -> list[Path]:
+        index = _NoteIndex.build(self.list_notes())
+        source = self.resolve_note(file=file, path=path)
+        resolved = (
+            index.resolve(ref, source) for ref in _link_refs(self._read_text(source))
+        )
+        return sorted({note for note in resolved if note is not None})
 
     def properties(
         self,
@@ -170,7 +182,7 @@ class ObsidianVaultOperations:
         target = self.resolve_note(file=file, path=path)
         parsed = _split_frontmatter(self._read_text(target))
         data = {**parsed.data, name: value}
-        self._write_text(target, _join_frontmatter(data, parsed.body))
+        self._write_text(target, join_frontmatter(data, parsed.body))
         return target
 
     def resolve_note(
@@ -325,27 +337,42 @@ def _clean_file_target(file: str) -> str:
     return target.strip()
 
 
-def _body_links_to(
-    body: str,
-    *,
-    target_stem: str,
-    target_basename: str,
-    target_path: str,
-) -> bool:
+def _link_refs(body: str) -> Iterator[str]:
     for link in _WIKILINK_RE.findall(body):
-        cleaned = _clean_file_target(link).casefold()
-        if cleaned == target_stem or cleaned.endswith(f"/{target_stem}"):
-            return True
+        yield _clean_file_target(link)
     for link in _MARKDOWN_LINK_RE.findall(body):
-        cleaned = link.replace("%20", " ").split("#", maxsplit=1)[0].casefold()
-        if cleaned == target_path or cleaned.endswith(f"/{target_path}"):
-            return True
-        # Relative markdown links like `(Target.md)` should also match the
-        # target's basename so they aren't missed when the link doesn't
-        # carry the full vault-relative path.
-        if cleaned == target_basename or cleaned.endswith(f"/{target_basename}"):
-            return True
-    return False
+        if "://" not in link:
+            yield unquote(link.split("#", maxsplit=1)[0]).strip()
+
+
+@dataclass(frozen=True, slots=True)
+class _NoteIndex:
+    by_path: dict[str, Path]
+    by_name: dict[str, list[Path]]
+
+    @classmethod
+    def build(cls, notes: list[Path]) -> _NoteIndex:
+        by_name: dict[str, list[Path]] = {}
+        for note in notes:
+            by_name.setdefault(note.name.casefold(), []).append(note)
+        return cls({note.as_posix().casefold(): note for note in notes}, by_name)
+
+    def resolve(self, ref: str, source: Path) -> Path | None:
+        key = ref.casefold()
+        if not key.endswith(".md"):
+            key += ".md"
+        if key.startswith("/"):
+            return self.by_path.get(key.lstrip("/"))
+        here = posixpath.join(source.parent.as_posix().casefold(), key)
+        for candidate in (posixpath.normpath(here), posixpath.normpath(key)):
+            if candidate in self.by_path:
+                return self.by_path[candidate]
+        matches = [
+            note
+            for note in self.by_name.get(posixpath.basename(key), [])
+            if note.as_posix().casefold().endswith(f"/{key}")
+        ]
+        return matches[0] if len(matches) == 1 else None
 
 
 def _split_frontmatter(content: str) -> NoteProperties:
@@ -363,6 +390,6 @@ def _split_frontmatter(content: str) -> NoteProperties:
     return NoteProperties(data=data, body=body)
 
 
-def _join_frontmatter(data: dict[str, Any], body: str) -> str:
+def join_frontmatter(data: dict[str, Any], body: str) -> str:
     rendered = yaml.safe_dump(data, sort_keys=True, allow_unicode=True).strip()
     return f"---\n{rendered}\n---\n\n{body}"

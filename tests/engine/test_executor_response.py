@@ -51,7 +51,6 @@ def _state() -> ResearchState:
         ],
         reasoning=["picked exa"],
         key_insights=["langgraph state is a TypedDict"],
-        vault_profile="",
     )
 
 

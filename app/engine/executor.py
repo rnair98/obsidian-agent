@@ -23,7 +23,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from app.core.logger import logger
 from app.core.settings import settings
 from app.engine.backends import assets_backend
-from app.engine.nodes.persist import safe_note_id
+from app.engine.nodes.persist import zettel_file_ids
 from app.engine.nodes.types import WorkflowName
 from app.engine.registry import get_workflow
 from app.engine.schema import (
@@ -132,17 +132,9 @@ def _project_run_response(
     sources_ref = _ref(vault.outputs_dir / "sources.csv")
 
     zettel_refs: list[ZettelArtifactRef] = []
-    seen_ids: set[str] = set()
-    for note in state.get("zettelkasten_notes") or []:
-        base_id = safe_note_id(note.get("id"))
-        safe_id = base_id
-        suffix = 2
-        # Mirror persist's collision-suffixing so reported paths match disk.
-        while safe_id in seen_ids:
-            safe_id = f"{base_id}-{suffix}"
-            suffix += 1
-        seen_ids.add(safe_id)
-        rel = vault.notes_dir / f"{safe_id}.md"
+    notes = state.get("zettelkasten_notes") or []
+    for note, file_id in zip(notes, zettel_file_ids(notes), strict=True):
+        rel = vault.notes_dir / f"{file_id}.md"
         if not backend.exists(rel):
             continue
         zettel_refs.append(
@@ -211,17 +203,11 @@ async def execute(
         zettelkasten_notes=[],
         reasoning=[],
         key_insights=[],
-        vault_profile="",  # populated by the vault_profiler node
     )
 
     vault = await asyncio.to_thread(resolve_vault, request)
 
     context = ResearchContext(vault=vault)
-    # vault_profile is now produced inside the graph by the
-    # ``vault_profiler`` node (first node in the research workflow) and
-    # consumed by the zettelkasten node directly from state. Only
-    # ``prior_memories`` still needs to be baked into a static system
-    # prompt at compile time (researcher's ``$prior_memories``).
     prompt_context = {"prior_memories": _render_prior_memories(vault)}
 
     # Snapshot ``.memories/`` BEFORE the graph runs so we can identify the
