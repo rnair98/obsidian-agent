@@ -220,6 +220,7 @@ app/
 │   ├── frontmatter.py            # split/join YAML frontmatter; leaf module, imports no engine code
 │   ├── obsidian.py               # headless optimized Obsidian-vault functions over VaultLayout
 │   ├── similarity.py             # SimilarityIndex: sqlite-vec note embeddings, refreshed per query
+│   ├── connect.py                # bounded candidates, evidence validation and draft JSON report
 │   ├── registry.py               # @workflow(name) on workflow factories, not on graphs
 │   ├── schema.py                 # ResearchState, ResearchContext, ResearchRequest
 │   ├── vaults.py                 # request vault resolution + standard Obsidian vault layout
@@ -230,6 +231,7 @@ app/
 │   │   ├── spec.py               # AgentSpec[T] dataclass + system_prompt() with $output_format interpolation
 │   │   ├── output_format.py      # render_output_format() — TypeScript-flavored compact schema descriptor
 │   │   ├── researcher.py         # ResearcherOutput + Source + SPEC
+│   │   ├── connect.py            # ConnectOutput + Bridge + tool-free SPEC
 │   │   ├── summarizer.py         # SummarizerOutput + SPEC
 │   │   └── zettelkasten.py       # ZettelkastenNote + ZettelkastenOutput + SPEC
 │   ├── artifacts/                # Durable artifact stores + workspace mount adapter
@@ -244,13 +246,16 @@ app/
 │   │   └── errors.py             # FilesystemBackendError hierarchy (PathEscapeError, …)
 │   ├── graphs/                   # Uncompiled StateGraph builders. Not HTTP-invocable
 │   │   ├── research.py           # Research pipeline graph
+│   │   ├── connect.py            # Bounded retrieval/judgment/publication graph
 │   │   └── agents.py             # One-agent graphs (researcher, summarizer, zettelkasten)
 │   ├── workflows/                # HTTP-invocable compositions of one or more graphs
 │   │   ├── compose.py            # One graph compiles as itself; several become parent nodes
 │   │   ├── research.py           # research workflow
+│   │   ├── connect.py            # connect workflow
 │   │   └── agents.py             # Single-graph workflows for researcher, summarizer, zettelkasten
 │   ├── nodes/                    # Per-node logic (agent factory + persist)
 │   │   ├── agent.py              # make_agent_node(spec) — single factory replacing per-agent node modules
+│   │   ├── connect.py            # tool-free judgment adapter and proposal publication
 │   │   ├── persist.py            # persist_artifacts(state) — side-effect node returning {} delta
 │   │   ├── types.py              # NodeName + WorkflowName StrEnums (split for FastAPI validation)
 │   │   └── builders/
@@ -380,6 +385,7 @@ the resolved ``VaultLayout`` plus the LangGraph ``thread_id``. Fields:
 | `artifacts.sources_csv` | `ArtifactRef \| None` | ``outputs/sources.csv`` if present, possibly from an earlier run |
 | `artifacts.zettels` | `list[ZettelArtifactRef]` | Per-note ``notes/<id>.md`` |
 | `artifacts.memories` | `list[ArtifactRef]` | ``.memories/*.md`` newly written this run |
+| `artifacts.connect` | `ArtifactRef \| None` | Run-owned `outputs/connect/<run_id>.json`, for Connect only |
 | `summary.key_insights` | `list[str]` | From ``state["key_insights"]`` |
 | `summary.research_notes_count` | `int` | ``len(state["research_notes"])`` |
 | `summary.sources_count` | `int` | ``len(state["sources"])`` |
@@ -490,6 +496,44 @@ characters. The command turns embedding failures (HTTP, malformed reply) and
 index failures (`sqlite3.Error`, such as a vector-size change) into a
 non-zero exit.
 
+An optional `root` scopes the indexed note set and becomes part of the index
+identity. Connect indexes `notes/` separately from the shell command's whole-vault
+index, so reports cannot displace source candidates or evict another scope's rows.
+
+### Connect proposals (`app/engine/connect.py`)
+
+`connect` uses the existing approved-vault request and unchanged `ResearchState`.
+It reads at most 36 Markdown notes under `VaultLayout.notes_dir`, each at most
+64 KiB, and supplies up to 200 title and 1,500 body characters per note. The report
+marks truncation. Source IDs are opaque, assigned with seed 42. The union of
+top-eight neighborhoods at the existing 0.5 floor excludes self-pairs and pairs
+within two undirected source-note hops; at most 288 pairs reach the judge. Tags
+are not field identities. The topic is the judgment focus, limited to 1,500
+characters. Link resolution still scans vault metadata; the note limit bounds
+model input, not the total number of paths in the vault.
+
+The tool-free `agents/connect.py` spec uses the existing provider adapter for one
+structured judgment, capped at eight proposals and 7,000 output tokens, with a
+180-second provider timeout and no provider retries. Retrieval HTTP calls retain
+their 60-second timeout. No model is constructed for empty candidate pools.
+The judgment graph explicitly uses `checkpointer=False`; otherwise LangGraph
+inherits the outer saver and would checkpoint source excerpts and `ConnectOutput`.
+The outer workflow retains its normal checkpoints without those records.
+Unknown/self/duplicate/out-of-pool pairs and non-verbatim excerpt quotes fail
+before publication. Source paths and raw-byte SHA-256 hashes are rechecked before
+writing. Schema and quote validation do not establish semantic correctness.
+
+`ConnectReport` contains run ID, focus, model (null without a judgment), source
+and candidate counts, truncated source paths, status (`draft` or `empty`) and
+`Hypothesis` proposals. Each proposal has draft status, mechanism, mapping,
+limitation and two source path/hash/quote records. The node writes a temporary
+file through `FilesystemBackend`, then moves it to the run-owned
+`outputs/connect/<run_id>.json`; temporary files are cleaned on write failure.
+The response exposes that file through `artifacts.connect`, without stale research
+artifact references. Connect never edits source notes or links. Records stay in
+files, not LangGraph channels or checkpoints (§12). Concurrent hostile writers,
+process-crash recovery and arbitrary backend atomicity are not guaranteed.
+
 ### `AgentSpec` (`app/engine/agents/spec.py`)
 
 A frozen dataclass that bundles **schema + tools** for a single agent. One `SPEC` per agent module under
@@ -550,8 +594,8 @@ Settings resolve in this priority order
   `installation_id`. App-installation auth is the **only** supported method.
 - `llm: LLMConfig | None` — `model` (required), reasoning knobs,
   `use_responses_api`, streaming flags, passthrough `model_kwargs`. `extra="allow"`.
-- `agents: AgentsConfig | None` — `researcher`, `summarizer`, and
-  `zettelkasten` blocks. `system_prompt` is the agent prompt, including
+- `agents: AgentsConfig | None` — `researcher`, `summarizer`, `zettelkasten`,
+  and `connect` blocks. `system_prompt` is the agent prompt, including
   `$output_format` and any per-run placeholders. An empty string falls through
   to `AgentSpec.default_system_prompt`, which the shipped specs leave empty.
 - **LLM precedence:** global `llm` → per-agent `llm`. `_build_chat_model()`
@@ -750,7 +794,7 @@ offered it.
 | `BaseCheckpointSaver`, `MemorySaver`, `AsyncPostgresSaver` | `app/engine/executor.py`, `app/engine/workflows/` | `thread_id` checkpoints. Postgres when configured, otherwise one memory saver per run |
 | `add_messages` | `app/engine/schema.py` | Append `messages` on `ResearchState` |
 | `Runtime` | `app/engine/nodes/` | Inject frozen `ResearchContext` into a node |
-| `HumanMessage`, `SystemMessage`, `AnyMessage`, `BaseMessage` | `app/engine/executor.py`, `app/engine/graphs/research.py`, `app/engine/schema.py`, `app/engine/nodes/builders/agent.py` | The conversation channel |
+| `HumanMessage`, `SystemMessage`, `AnyMessage`, `BaseMessage` | `app/engine/executor.py`, `app/engine/graphs/research.py`, `app/engine/schema.py`, `app/engine/nodes/builders/agent.py`, `app/engine/nodes/connect.py` | The conversation channel; Connect supplies bounded evidence instead of prior messages |
 | `create_agent`, `ProviderStrategy` | `app/engine/nodes/builders/agent.py` | Build one executor from an `AgentSpec`; provider-side structured output |
 | `tool`, `BaseTool` | `app/engine/tools/shell.py`, `app/engine/agents/types.py` | Schema for the shell tool |
 | `ChatOpenAI`, `BaseChatModel` | `app/engine/nodes/builders/agent.py` | The chat adapter and its type |
@@ -1100,6 +1144,7 @@ The review is not a `just check` step.
 | `tests/engine/test_curl_command.py` | `CurlCommand` URL → Jina Reader translation and unsupported-flag handling |
 | `tests/engine/test_vault_command.py` | always: `vault links/backlinks/search/tags` through `build_workspace_session` print the fixture's graph as `/vault` paths, and a missing note, a flag, or an unknown subcommand exits non-zero, across subcommand × note form |
 | `tests/engine/test_vault_similar.py` | always: `vault similar TEXT` lists current notes at or above the 0.5 floor, best first, after a note is edited, added, or deleted, exits non-zero when the embedding server refuses connections or the vector size changes, and writes no index file into the vault, across change × embedder (fake embedder at the lookup site); `http_embedder` parses a recorded llama-server reply out of order, and a malformed reply exits non-zero |
+| `tests/engine/test_connect.py` | always: the public Connect executor preserves existing files, keeps excerpts/judgments out of the saver, and publishes only run-owned draft proposals with eligible pairs and exact source evidence, or fails without a report, across source layouts/limits/edits × provider output/failure; includes interrupted report writes; provider boundaries are simulated, model quality and concurrent writers are excluded |
 | `tests/nodes/test_persist_links_multiverse.py` | always: a Zettel's `/notes/<id>.md` link to a same-run note resolves to the written file after persist renames it (reserved, sanitized, duplicate id), across target id × note order |
 | `tests/engine/test_git_command.py` | `GitCommand` `ls-tree` / `clone` argument parsing and `gh_client` delegation |
 | `tests/engine/test_python_command.py` | `python -c` and `python script.py` Monty-backed shell execution |

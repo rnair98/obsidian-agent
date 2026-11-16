@@ -5,7 +5,7 @@ from typing import Any, Literal, TypeAlias, TypedDict
 
 from langchain_core.tools import BaseTool
 
-AgentName: TypeAlias = Literal["researcher", "summarizer", "zettelkasten"]
+AgentName: TypeAlias = Literal["researcher", "summarizer", "zettelkasten", "connect"]
 AgentTool: TypeAlias = BaseTool | Callable[..., Any] | dict[str, Any]
 
 

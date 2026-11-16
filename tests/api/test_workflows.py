@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.core.settings import settings
+from app.engine.nodes.types import WorkflowName
 from app.main import app
 
 TEST_TOKEN = "workflow-test-token-not-a-production-secret"
@@ -84,8 +85,11 @@ def test_inaccessible_git_vault_returns_400() -> None:
 
 
 @pytest.mark.parametrize("authorization", [None, "Bearer wrong", "Basic abc"])
+@pytest.mark.parametrize("workflow_name", list(WorkflowName))
 def test_unauthorized_request_never_executes(
-    authorization: str | None, monkeypatch: pytest.MonkeyPatch
+    authorization: str | None,
+    workflow_name: WorkflowName,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def forbidden(*args: object, **kwargs: object) -> None:
         pytest.fail("Unauthorized request reached workflow execution")
@@ -93,7 +97,7 @@ def test_unauthorized_request_never_executes(
     monkeypatch.setattr("app.api.v1.workflows.execute", forbidden)
     headers = {"Authorization": authorization} if authorization else {}
     response = TestClient(app).post(
-        "/api/v1/workflows/run/research",
+        f"/api/v1/workflows/run/{workflow_name}",
         headers=headers,
         json={"topic": "authorization", "vault": {"type": "local", "path": "/tmp/no"}},
     )

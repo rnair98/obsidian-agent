@@ -76,6 +76,7 @@ class AgentsConfig(BaseModel):
     researcher: AgentPromptConfig
     summarizer: AgentPromptConfig
     zettelkasten: AgentPromptConfig
+    connect: AgentPromptConfig
 
     def prompt_for(self, name: AgentName) -> AgentPromptConfig:
         match name:
@@ -85,6 +86,8 @@ class AgentsConfig(BaseModel):
                 return self.summarizer
             case "zettelkasten":
                 return self.zettelkasten
+            case "connect":
+                return self.connect
             case _:
                 raise ValueError(f"unknown agent name: {name}")
 

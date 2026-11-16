@@ -64,7 +64,33 @@ curl -sS -X POST http://localhost:8000/api/v1/workflows/run/research \
 ```
 
 Registered workflows: `research` (full pipeline), `researcher`,
-`summarizer`, `zettelkasten` (each agent standalone).
+`summarizer`, `zettelkasten` (each agent standalone), and `connect`.
+
+### Find connections between existing notes
+
+`connect` proposes up to eight cross-field analogies for human review. Start the
+local embedding sidecar with `just embed`, then request an approved test vault:
+
+```sh
+curl -sS -X POST http://localhost:8000/api/v1/workflows/run/connect \
+  -H "Authorization: Bearer $SECURITY__WORKFLOW_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"Find useful structural analogies","vault":{"type":"local","path":"/path/to/TestVault"}}'
+```
+
+The response's `artifacts.connect` points to `outputs/connect/<run_id>.json`.
+The report contains draft `Hypothesis` proposals, exact source quotes, source
+paths and SHA-256 hashes, mappings, limitations, and candidate counts. It does
+not edit source notes or graph links. Exact quotes establish source presence;
+they do not prove that an analogy is correct. Review proposals before using them.
+
+This pilot accepts at most 36 Markdown source notes under `notes/`, each at most
+64 KiB. It supplies up to 200 title characters and 1,500 body characters per note
+to the configured model, marking shortened sources in the report. The topic may
+contain at most 1,500 characters. The model receives those excerpts in one
+tool-free judgment call; it can return fewer proposals or none. Empty candidate
+pools produce an empty report without a model call. Linked pairs within two hops
+of the source-note graph are excluded. Tags do not determine field difference.
 
 ## What gets produced
 
@@ -79,6 +105,7 @@ Paths below are **vault-relative**. Every request must provide
 | `{vault}/outputs/sources.csv` | persist | Polars-written source table |
 | `{vault}/notes/*.md` | persist | Atomic Markdown notes |
 | `{vault}/.memories/{slug}-{ts}.md` | persist | Run log with frontmatter; mounted at `/memory` in agent workspaces |
+| `{vault}/outputs/connect/<run_id>.json` | connect | Run-owned draft Hypothesis proposals and source evidence |
 | `.assets/{owner}/{repo}@{sha}/` | GitHub snapshots | Tarball-extracted repo trees (only when a GH workflow asks for them) |
 | `.logs/app.log` | logger | Rotating log (10 MB / 1 week) |
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping, Sequence
-from typing import Any, Protocol, TypedDict, cast
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from typing import Any, Literal, Protocol, TypedDict, cast
 
 from langchain.agents.factory import (
     create_agent,  # pyright: ignore[reportUnknownVariableType]
@@ -153,6 +153,7 @@ def build_agent_executor_from_spec(
     spec: AgentSpec[Any],
     *,
     prompt_context: Mapping[str, str] | None = None,
+    checkpointer: Literal[False] | None = None,
 ) -> AgentExecutor:
     """Build an executor straight from an :class:`AgentSpec`."""
     return cast(
@@ -163,6 +164,7 @@ def build_agent_executor_from_spec(
             system_prompt=spec.system_prompt(prompt_context),
             response_format=ProviderStrategy(spec.output_schema),
             context_schema=ResearchContext,
+            checkpointer=checkpointer,
             middleware=cast("Sequence[Any]", [tool_retry, context_editing]),
         ),
     )
@@ -210,6 +212,36 @@ def _log_stream_chunk(workflow_name: str, token: object, buffer: list[str]) -> N
             buffer.append(text)
 
 
+def _stream_results(
+    chunk: object,
+    modes: Sequence[StreamMode],
+    workflow_name: str,
+    log_stream_chunks: bool,
+    reasoning_buffer: list[str],
+) -> Iterator[tuple[list[AnyMessage], AgentRunResult | None]]:
+    parsed = _split_stream_chunk(chunk, modes)
+    if parsed is None:
+        return
+    mode, data = parsed
+    if mode == "messages" and log_stream_chunks:
+        token = _extract_message_token(data)
+        if token is not None:
+            _log_stream_chunk(workflow_name, token, reasoning_buffer)
+    if mode != "updates":
+        return
+    for update in _extract_updates(data):
+        if not isinstance(update.get("messages"), list):
+            continue
+        if log_stream_chunks:
+            _flush_reasoning(reasoning_buffer, workflow_name.upper())
+        delta = (
+            structured_response_delta(update["structured_response"])
+            if update.get("structured_response")
+            else None
+        )
+        yield _extract_messages(update), delta
+
+
 async def run_agent_executor(
     agent_executor: AgentExecutor,
     *,
@@ -222,7 +254,6 @@ async def run_agent_executor(
 ) -> AgentRunResult:
     """Run agent via invoke or stream and return final messages state."""
     streaming = bool(settings.llm and settings.llm.streaming)
-
     if not streaming:
         result = await agent_executor.ainvoke(
             input=state, context=runtime_context, config=config
@@ -231,40 +262,21 @@ async def run_agent_executor(
             "messages": _extract_messages(result),
             **structured_response_delta(result.get("structured_response")),
         }
-
     final_messages: list[AnyMessage] | None = None
     structured_delta: AgentRunResult = {}
     modes: list[StreamMode] = list(stream_mode or ["messages", "updates"])
     reasoning_buffer: list[str] = []
-
     async for chunk in agent_executor.astream(
-        input=state,
-        context=runtime_context,
-        config=config,
-        stream_mode=modes,
+        input=state, context=runtime_context, config=config, stream_mode=modes
     ):
-        parsed_chunk = _split_stream_chunk(chunk, modes)
-        if parsed_chunk is None:
-            continue
-        mode, data = parsed_chunk
-
-        if mode == "messages" and log_stream_chunks:
-            token = _extract_message_token(data)
-            if token is not None:
-                _log_stream_chunk(workflow_name, token, reasoning_buffer)
-        elif mode == "updates":
-            for update in _extract_updates(data):
-                if not isinstance(update.get("messages"), list):
-                    continue
-                if log_stream_chunks:
-                    _flush_reasoning(reasoning_buffer, workflow_name.upper())
-                final_messages = _extract_messages(update)
-                if structured_response := update.get("structured_response"):
-                    structured_delta = structured_response_delta(structured_response)
-
+        for messages, delta in _stream_results(
+            chunk, modes, workflow_name, log_stream_chunks, reasoning_buffer
+        ):
+            final_messages = messages
+            if delta is not None:
+                structured_delta = delta
     if log_stream_chunks:
         _flush_reasoning(reasoning_buffer, workflow_name.upper())
-
     if final_messages is None:
         logger.debug(
             "[{}] Stream returned no final messages; falling back to invoke.",
@@ -275,5 +287,4 @@ async def run_agent_executor(
         )
         final_messages = _extract_messages(result)
         structured_delta = structured_response_delta(result.get("structured_response"))
-
     return {"messages": final_messages, **structured_delta}
