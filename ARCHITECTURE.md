@@ -932,7 +932,7 @@ offered it.
     shell on every run.
 
   Unknown `$placeholders` are left intact by `safe_substitute`. One-agent
-  graph builders do not accept `prompt_context`.
+  workflows also pass `prompt_context` through `build_agent_graph`.
 - **A similarity score is a topic signal, never a merge decision.** In E4,
   E4b and E5 (development archive), bge-small ranked the planted cross-field match first
   for 7 of 8 notes, but no cosine threshold separated duplicates from
