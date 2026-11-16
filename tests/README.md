@@ -44,6 +44,16 @@ Prefer, in this order:
 3. Put the test next to the seam it protects. Update [ARCHITECTURE.md §11](../ARCHITECTURE.md) in the same change.
 4. Run the focused file, then `just check` when the contract is shared. A `check_always` failure prints the counterexample assignment; `check_sometimes` only prints the seed and world count. Replay with the same axes and seed. Do not delete the world to make it pass.
 
+## Connect
+
+Connect's public-executor proof is `tests/engine/test_connect.py`. It varies source
+graphs, empty/oversize inputs, truncated notes and source edits against valid,
+empty, malformed and hostile model output plus dependency and report-write failures.
+The proof inspects the outer saver and rejects nested judgment checkpoints or
+source excerpts. The external
+embedding and chat boundaries are simulated; real model quality remains an eval.
+The existing authentication test applies to every `WorkflowName`, including Connect.
+
 ## Removed
 
 `tests/test_settings.py` asserted `FilesystemConfig().backend_type == IN_PROCESS`. That copied the default into the test. It did not check that every backend type has a factory. `tests/backends/test_factory.py` is the replacement: the configured default must be registered, and a new enum member without a factory fails.

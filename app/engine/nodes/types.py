@@ -19,6 +19,7 @@ class NodeName(StrEnum):
     SUMMARIZER = "summarizer"
     ZETTELKASTEN = "zettelkasten"
     PERSIST = "persist"
+    CONNECT = "connect"
 
 
 class WorkflowName(StrEnum):
@@ -34,6 +35,8 @@ class WorkflowName(StrEnum):
     RESEARCHER = "researcher"
     SUMMARIZER = "summarizer"
     ZETTELKASTEN = "zettelkasten"
+
+    CONNECT = "connect"
 
 
 class AgentNode(Protocol):

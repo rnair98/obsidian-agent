@@ -118,6 +118,11 @@ class RunArtifacts(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    connect: ArtifactRef | None = Field(
+        default=None,
+        description="Run-owned draft Hypothesis proposals under outputs/connect/.",
+    )
+
     report: ArtifactRef | None = Field(
         default=None,
         description="``outputs/report.md`` if the summarizer persisted one.",

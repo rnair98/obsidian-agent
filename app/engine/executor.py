@@ -128,6 +128,17 @@ def _project_run_response(
             absolute_path=str(backend.resolve(rel_path)),
         )
 
+    if workflow_name == WorkflowName.CONNECT:
+        return WorkflowRunResponse(
+            run_id=run_id,
+            workflow=str(workflow_name),
+            topic=request.topic,
+            vault=request.vault,
+            artifacts=RunArtifacts(
+                connect=_ref(vault.outputs_dir / "connect" / f"{run_id}.json")
+            ),
+        )
+
     report_ref = _ref(vault.outputs_dir / "report.md")
     sources_ref = _ref(vault.outputs_dir / "sources.csv")
 

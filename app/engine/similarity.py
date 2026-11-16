@@ -35,12 +35,21 @@ class SimilarityIndex:
     """Rebuildable sqlite-vec index of note embeddings, kept outside the vault."""
 
     def __init__(
-        self, vault: ObsidianVaultOperations, assets: FilesystemBackend, embed: Embed
+        self,
+        vault: ObsidianVaultOperations,
+        assets: FilesystemBackend,
+        embed: Embed,
+        *,
+        root: Path | None = None,
     ) -> None:
         self._vault = vault
         self._embed = embed
+        self._root = root
         vault_root = vault.backend.resolve(vault.layout.root)
-        key = hashlib.sha256(str(vault_root).encode()).hexdigest()[:16]
+        identity = (
+            str(vault_root) if root is None else f"{vault_root}:{root.as_posix()}"
+        )
+        key = hashlib.sha256(identity.encode()).hexdigest()[:16]
         assets.mkdir(INDEX_DIR)
         self.db_file = assets.resolve(INDEX_DIR / f"{key}.sqlite")
 
@@ -76,7 +85,8 @@ class SimilarityIndex:
 
     def _refresh(self, db: sqlite3.Connection) -> None:
         current = {
-            path.as_posix(): self._note_text(path) for path in self._vault.list_notes()
+            path.as_posix(): self._note_text(path)
+            for path in self._vault.list_notes(root=self._root)
         }
         stored = dict(db.execute("SELECT path, sha FROM notes").fetchall())
         changed = [

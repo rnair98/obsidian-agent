@@ -36,6 +36,7 @@ def test_yaml_override_wins_over_default(monkeypatch: pytest.MonkeyPatch) -> Non
             researcher=AgentPromptConfig(system_prompt="yaml override wins"),
             summarizer=AgentPromptConfig(),
             zettelkasten=AgentPromptConfig(),
+            connect=AgentPromptConfig(),
         ),
     )
     spec = _make_spec("default body")
@@ -56,6 +57,7 @@ def test_prompt_for_rejects_unknown_runtime_agent_name() -> None:
         researcher=AgentPromptConfig(),
         summarizer=AgentPromptConfig(),
         zettelkasten=AgentPromptConfig(),
+        connect=AgentPromptConfig(),
     )
 
     with pytest.raises(ValueError, match="unknown agent name"):
@@ -89,7 +91,9 @@ def test_agent_yaml_llm_keys_override_global_llm(
     monkeypatch.setattr("app.engine.agents.spec.settings.llm", _LLM())
     monkeypatch.setattr(
         "app.engine.agents.spec.settings.agents",
-        AgentsConfig(researcher=agent, summarizer=agent, zettelkasten=agent),
+        AgentsConfig(
+            researcher=agent, summarizer=agent, zettelkasten=agent, connect=agent
+        ),
     )
     kwargs = _make_spec().llm_kwargs()
     assert kwargs["model"] == "gpt-x"

@@ -9,8 +9,10 @@ _ADAPTERS = frozenset(
         "app/engine/agents/types.py",
         "app/engine/executor.py",
         "app/engine/graphs/agents.py",
+        "app/engine/graphs/connect.py",
         "app/engine/graphs/research.py",
         "app/engine/nodes/agent.py",
+        "app/engine/nodes/connect.py",
         "app/engine/nodes/builders/agent.py",
         "app/engine/nodes/builders/middleware.py",
         "app/engine/nodes/persist.py",
@@ -19,6 +21,7 @@ _ADAPTERS = frozenset(
         "app/engine/schema.py",
         "app/engine/tools/shell.py",
         "app/engine/workflows/agents.py",
+        "app/engine/workflows/connect.py",
         "app/engine/workflows/compose.py",
         "app/engine/workflows/research.py",
     }
