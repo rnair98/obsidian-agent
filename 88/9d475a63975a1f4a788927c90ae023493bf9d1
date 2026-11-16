@@ -1,0 +1,111 @@
+app/engine/workflows/__init__.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 3
+app/engine/agents/types.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 8
+app/engine/nodes/builders/agent.py
+  s_4aa9c58e8e86f6::t_c2e8d436ba6d48 4,156,167
+  s_4aa9c58e8e86f6::t_ae7f584b3d645b 215-220,222-223,225-230,232-241,243-244,270,272-277
+  s_4aa9c58e8e86f6::t_4f046c7d4e4001 3,221,224,231,242
+app/core/settings.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 79,89-90
+tests/api/test_workflows.py
+  s_4aa9c58e8e86f6::t_92ee3687857c2f 10,88,90-91,100
+  s_fb6c5b8f70f079::t_b04a550be284b5 92
+app/engine/agents/connect.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 1-6,13-33
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 7-12
+tests/engine/test_connect.py
+  s_4aa9c58e8e86f6::t_dfd093a35d9896 20,218-220,230-232,237-239
+  s_4aa9c58e8e86f6::t_2b5d21b5077902 6,15,204-210,248-252,304-306
+  s_4aa9c58e8e86f6::t_67c28d1fee91fb 52,260,273-276
+  s_4aa9c58e8e86f6::t_b6f3dbfd728f49 19,39,53,144-151,178-182,217,242,256
+  s_fb6c5b8f70f079::t_514e72f45e296d 28-30,32-35,37-38,40-47,49-51,54,57-58,60-64,67-68,105-107,110-115,122-130,139-141,174,197,211-214,229,233-234,277-287
+  s_4aa9c58e8e86f6::t_3db2a82d824ff0 59,65-66,98-100,223-224
+  s_4aa9c58e8e86f6::t_92ee3687857c2f 31,36,48,132-134,162-164,171-172,175-176,186-190,264-265
+  s_fb6c5b8f70f079::t_05cc2433e07397 135-138
+  s_4aa9c58e8e86f6::t_ae7f584b3d645b 7
+  s_4aa9c58e8e86f6::t_c4e16f7d4e01f8 1-5,8-14,16-18,21-27,55-56,69-97,101-104,108-109,116-121,131,142-143,152-161,165-170,173,177,183-185,191-196,198-203,215-216,221,226-228,235-236,240-241,243-247,253-255,257-259,261-263,266-272,288-303,307-324
+  s_4aa9c58e8e86f6::t_e46e3ccb72d8f4 222,225
+app/engine/schema.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 121,124-125
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 122-123
+app/engine/graphs/connect.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 3-10,14-18
+  s_4aa9c58e8e86f6::t_25f1b1b79c9126 1-2
+  s_4aa9c58e8e86f6::t_3404062cc6dbf2 11-13
+ARCHITECTURE.md
+  s_4aa9c58e8e86f6::t_0d5af5977aa138 597-598
+  s_fb6c5b8f70f079::t_05cc2433e07397 223,234,249,254,258,388,499-518,522-536,797
+  s_4aa9c58e8e86f6::t_1df3008635d4b4 519-521,1147
+tests/engine/agents/test_spec.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 39,60
+  s_fb6c5b8f70f079::t_05cc2433e07397 94-96
+app/engine/nodes/connect.py
+  s_4aa9c58e8e86f6::t_25f1b1b79c9126 4,27,32,38-39
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 16-17,19-22,33-37,60-67
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 1-2,5-7,9-15,28-31,43,57-59,84-85,87-92
+  s_4aa9c58e8e86f6::t_3404062cc6dbf2 23-26
+  s_4aa9c58e8e86f6::t_67c28d1fee91fb 51-53,69-71
+  s_4aa9c58e8e86f6::t_839147c5d3dd52 3,8,18,40-42,44-50,54-56,68,72-83,86
+tests/README.md
+  s_fb6c5b8f70f079::t_05cc2433e07397 47-50,54-56
+  s_4aa9c58e8e86f6::t_1df3008635d4b4 51-53
+app/engine/executor.py
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 133-135,137-139
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 131-132,136,140-141
+app/engine/connect.py
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 71-73,80-89,93-95,123-129,137-139,142-145,148,150-165,167-176,178-180,187-189
+  s_4aa9c58e8e86f6::t_fc6c50be2b0225 69,79,96,108,177
+  s_4aa9c58e8e86f6::t_1a5139c03aab4c 22-25,77,183,201-206,210
+  s_4aa9c58e8e86f6::t_839147c5d3dd52 207-209
+  s_4aa9c58e8e86f6::t_92ee3687857c2f 191-196
+  s_4aa9c58e8e86f6::t_25f1b1b79c9126 61,103-107,166
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 1-11,13-21,26-60,62-68,70,74-76,90-92,97-102,109-122,130-136,140-141,146-147,181-182,184-186,190,197-198
+  s_4aa9c58e8e86f6::t_c4e16f7d4e01f8 12,78,149,199-200
+app/api/v1/workflows.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 30-31
+  s_4aa9c58e8e86f6::t_1a5139c03aab4c 4,32-33
+  s_4aa9c58e8e86f6::t_55feee70fc47eb 22
+app/engine/similarity.py
+  s_4aa9c58e8e86f6::t_fc6c50be2b0225 47,52
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 38-43,49-51,88-89
+app/core/resources/agent_config.yaml
+  s_4aa9c58e8e86f6::t_fc6c50be2b0225 20-21,23-47
+  s_4aa9c58e8e86f6::t_b18cbee8c5894e 22
+app/engine/workflows/connect.py
+  s_4aa9c58e8e86f6::t_3404062cc6dbf2 12-16
+  s_fb6c5b8f70f079::t_4d2700b9d09b19 17-19
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 3-11
+  s_4aa9c58e8e86f6::t_25f1b1b79c9126 1-2
+README.md
+  s_fb6c5b8f70f079::t_5c38eb59229d1a 67-93,108
+app/engine/nodes/types.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 22,39
+  s_4aa9c58e8e86f6::t_1846bf66095bca 40
+tests/engine/test_framework_boundary.py
+  s_4aa9c58e8e86f6::t_ccb4b4c6f37c70 12,15,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "889d475a63975a1f4a788927c90ae023493bf9d1",
+  "prompts": {},
+  "sessions": {
+    "s_4aa9c58e8e86f6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e1b8-6340-7121-b227-05c6cba1d9d3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    },
+    "s_fb6c5b8f70f079": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a1e1b8-6340-7121-b227-05c6cba1d9d3",
+        "model": "unknown"
+      },
+      "human_author": "Rohit Nair <6954311+rnair98@users.noreply.github.com>"
+    }
+  }
+}
