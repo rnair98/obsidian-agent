@@ -39,6 +39,7 @@ class CsvSourceStore:
         self.backend.mkdir(sources_path.parent)
         frame = pl.DataFrame(
             {
+                "id": [entry.get("id", "") for entry in sources],
                 "title": [entry.get("title", "") for entry in sources],
                 "url": [entry.get("url", "") for entry in sources],
                 "notes": [entry.get("notes", "") for entry in sources],

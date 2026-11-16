@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" />
 </a>
 <br></br>
-<i>Vault profiler → Researcher → Summarizer → Zettelkasten → Persist</i>
+<i>Researcher → Summarizer → Zettelkasten → Persist</i>
 <br></br>
 </div>
 
@@ -31,6 +31,10 @@ Plans, implementation tasks and research audits live in the
 Configure workflow authentication and approved vault paths first; see
 [workflow access](docs/security-access.md). Empty credentials or allowlists
 fail closed. Container vault paths require explicit writable mounts.
+
+The local SQLite dependency requires the fork checkout at `../sqlite-vec` and a
+C compiler for source builds. Compose supplies that checkout as an additional
+build context.
 
 ```bash
 # Prerequisites: podman + provider keys + configured workflow access

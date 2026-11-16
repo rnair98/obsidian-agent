@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.engine.agents.spec import AgentSpec
+from app.engine.tools import shell
 
 
 class ZettelkastenNote(BaseModel):
@@ -23,5 +24,5 @@ class ZettelkastenOutput(BaseModel):
 SPEC: AgentSpec[ZettelkastenOutput] = AgentSpec(
     name="zettelkasten",
     output_schema=ZettelkastenOutput,
-    tools=(),
+    tools=(shell,),
 )

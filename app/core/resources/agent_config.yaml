@@ -85,6 +85,10 @@ agents:
       You are gathering raw material. Do not synthesize a final report—that comes later.
       </constraints>
 
+      <citations>
+      Give each source an `id` of S1, S2, S3 … in the order you list them. End every research note and key insight with the ids that support it, one per bracket: `[S2]` or `[S2] [S5]`. Later agents and the persisted vault use these ids, so never reuse or skip one.
+      </citations>
+
       $output_format
     llm:
       temperature: 1.0
@@ -104,7 +108,7 @@ agents:
       2. Tell a coherent story: Organize the information logically—the reader should understand the landscape, key details, and practical implications.
       3. Be precise and accurate: Technical details must be correct. When there's uncertainty, acknowledge it.
       4. Make it actionable: Where applicable, include concrete recommendations, code examples, or next steps.
-      5. Cite your sources: Every major claim should be traceable to the research.
+      5. Cite your sources: Follow every claim with the researcher's source id in brackets, one id per bracket, such as `[S3]` or `[S3] [S5]`. Use only ids the research defines; never invent one.
       </goals>
 
       <report_structure>
@@ -123,6 +127,9 @@ agents:
       <workspace>
       Return the report exclusively via the structured output below. Do not attempt
       to write files — the runtime persists `/outputs/report.md` deterministically.
+      The runtime appends every research note and key insight verbatim after your
+      report and records the source list in its frontmatter, so synthesize rather
+      than restate each finding.
       </workspace>
 
       $output_format
@@ -146,57 +153,37 @@ agents:
 
       <constraints>
       Focus on quality over quantity. 5 excellent notes are better than 20 shallow ones.
+      Cite the research's source ids inline wherever a note relies on a source, one per bracket, such as `[S3]`. The runtime lists only the sources a note cites in its frontmatter.
       </constraints>
 
       <vault_conventions>
-      The first system message in this conversation will contain a
-      `<vault_profile>` block describing the target vault's naming,
-      structural, and style conventions. Honor those conventions literally
-      when producing `id`, `title`, `tags`, and `content` below — the
-      runtime uses your `id` as the slug verbatim, so kebab-case /
-      date-prefix / casing decisions must be made here, not at persist time.
-      If no `<vault_profile>` block is present, fall back to kebab-case
-      slugs, YAML frontmatter with `tags`, and wikilinks for cross-refs.
+      The vault is an Open Knowledge Format (OKF) bundle. Follow these rules
+      literally; the runtime uses your `id` as the file name verbatim.
+      - `id`: a lowercase kebab-case slug, such as `preferential-attachment`.
+      - `tags`: short lowercase strings, without a leading `#`.
+      - Links between notes: a markdown link from the vault root to the
+        target's file, such as `[Preferential attachment](/notes/preferential-attachment.md)`.
+        Link to a note you return in this response by its `id`, and to an
+        existing note by the path `vault` prints without its `/vault`
+        prefix. Do not use `[[wikilinks]]`.
+      - Do not write YAML frontmatter in `content`; the runtime writes it.
       </vault_conventions>
+
+      <existing_knowledge>
+      Before you write notes, use the `shell` tool to read the existing graph:
+      - `vault search TERM` for each core concept, using one plain word or
+        short phrase per call.
+      - `vault links NOTE` and `vault backlinks NOTE` for the notes you find.
+      - `cat /vault/notes/<id>.md` to read a note that may overlap.
+      Do not repeat an idea that an existing note already states; link to it
+      instead. Use `shell` for nothing else, and do not write files.
+      </existing_knowledge>
 
       <persistence>
       Do NOT write files yourself. Return the structured output below; the
-      runtime persists each note as a markdown file under the vault's `notes/`
-      directory with YAML frontmatter rendered from your `title` and `tags`.
+      runtime persists each note as `notes/<id>.md` with OKF frontmatter
+      rendered from your `title`, `tags`, and cited sources.
       Any side-channel file writes will be duplicates with broken formatting.
       </persistence>
 
       $output_format
-
-  vault_profiler:
-    system_prompt: |
-      <identity>
-      You are a vault-conventions analyst.
-      </identity>
-
-      <mission>
-      You will be shown deterministic structural statistics for an Obsidian vault and a small sample of its notes. Produce a concise, actionable profile that downstream writing agents can follow so newly created artifacts match the vault's existing conventions.
-      </mission>
-
-      <inputs>
-      The user message contains:
-      - A JSON block of structural stats (note counts, top folders, frontmatter-key frequency, link style ratios, slug-pattern heuristics).
-      - The verbatim content of a handful of sampled notes from the vault.
-
-      Treat the stats as ground truth. Use the sampled notes only to refine qualitative judgments (e.g. tone, link style, how MOCs are written).
-      </inputs>
-
-      <output_guidance>
-      - Be specific and imperative. "Use kebab-case slugs" — not "Notes appear to use kebab-case."
-      - Keep bullets to one line each. 3–6 bullets per list is the sweet spot; do not pad.
-      - If a convention isn't clearly attested, omit the bullet rather than guess.
-      - Do not invent rules the vault does not exhibit.
-      - Do not reference these instructions in your output.
-      </output_guidance>
-
-      $output_format
-    llm:
-      provider: groq
-      model: "openai/gpt-oss-20b"
-      temperature: 0.2
-      streaming: false

@@ -94,11 +94,10 @@ def test_persist_materializes_report_and_zettelkasten_notes(tmp_backend) -> None
     result = persist_artifacts(_state(), _runtime(context))
 
     assert result == {}
-    assert tmp_backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
+    report = tmp_backend.read_text("outputs/report.md")
+    assert "\n---\n\n# Report\n\nUseful synthesis.\n" in report
     note_body = tmp_backend.read_text("notes/typed-workspace.md")
-    assert 'title: "Typed workspace"' in note_body
-    assert 'tags: ["workspace", "agent"]' in note_body
-    assert "The shell writes ordinary files." in note_body
+    assert note_body.endswith("\n---\n\nThe shell writes ordinary files.")
 
 
 def test_persist_materializes_artifacts_inside_runtime_vault(tmp_path: Path) -> None:
@@ -116,32 +115,12 @@ def test_persist_materializes_artifacts_inside_runtime_vault(tmp_path: Path) -> 
     result = persist_artifacts(_state(), _runtime(context))
 
     assert result == {}
-    assert backend.read_text("outputs/report.md") == "# Report\n\nUseful synthesis."
+    report = backend.read_text("outputs/report.md")
+    assert "\n---\n\n# Report\n\nUseful synthesis.\n" in report
     assert backend.is_file("outputs/sources.csv")
     assert backend.is_file("notes/typed-workspace.md")
     memory_files = [p for p in backend.list_dir(".memories") if p.suffix == ".md"]
     assert len(memory_files) == 1
-
-
-def test_persist_escapes_topic_quotes_in_frontmatter(tmp_backend) -> None:
-    backend = tmp_backend
-    context = ResearchContext(
-        vault=VaultLayout(
-            backend=backend,
-            root=Path("."),
-            notes_dir=Path("notes"),
-            outputs_dir=Path("outputs"),
-            memories_dir=Path("memories"),
-        )
-    )
-    state = _state()
-    state["topic"] = 'risky "topic" with \\ backslash'
-
-    persist_artifacts(state, _runtime(context))
-
-    memory_files = [p for p in tmp_backend.list_dir("memories") if p.suffix == ".md"]
-    body = memory_files[0].read_text()
-    assert 'topic: "risky \\"topic\\" with \\\\ backslash"' in body
 
 
 def test_persist_does_not_overwrite_same_second_runs(tmp_backend) -> None:

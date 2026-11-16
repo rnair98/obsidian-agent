@@ -17,6 +17,7 @@ class Source(BaseModel):
     round-trip to ``sources.csv`` without key translation.
     """
 
+    id: str = Field(..., description="Citation key S1, S2, … in list order")
     title: str = Field(..., description="Title of the source")
     url: str = Field(..., description="URL of the source")
     notes: str = Field(..., description="Brief summary / notes about the content")
