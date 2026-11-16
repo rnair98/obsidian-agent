@@ -3016,7 +3016,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.7.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "scipy", specifier = ">=1.17.0" },
-    { name = "sqlite-vec", directory = "../sqlite-vec" },
+    { name = "sqlite-vec", specifier = "==0.1.10a4+cercova.1", index = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/simple/" },
     { name = "tree-sitter", specifier = ">=0.25.2" },
     { name = "tree-sitter-language-pack", specifier = ">=1.5.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.27.0" },
@@ -4712,7 +4712,16 @@ wheels = [
 
 [[package]]
 name = "sqlite-vec"
-source = { directory = "../sqlite-vec" }
+version = "0.1.10a4+cercova.1"
+source = { registry = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/simple/" }
+sdist = { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1.tar.gz", hash = "sha256:34dab38c439340e64f2b0fd8fc2aeb09b5c2ccce7c4f7952807bfd6906ab3279" }
+wheels = [
+    { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:05be8eff7cbf7c2f6162568d7d0a1efd9e01151f90034acd21c19ddeec60937d" },
+    { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:bf207db3beec47df6acc9b7b871ce4ea44dae409e9d73c24bc20488fe892856b" },
+    { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:bbc5801a8729654b2d299df5a548eababa5ac88966d2e7a6191dbfd580785166" },
+    { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ff037a1329a88c4675075178a5849010678d200df0ef2003d61cc1506d1a0c9f" },
+    { url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/sqlite-vec/sqlite_vec-0.1.10a4+cercova.1-py3-none-win_amd64.whl", hash = "sha256:657c4f66b49f82e8dc25e48cd23f3cf2d13927cafea35845e24a4a931b5ad6ed" },
+]
 
 [[package]]
 name = "sse-starlette"

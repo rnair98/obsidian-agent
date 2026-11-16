@@ -9,10 +9,6 @@ WORKDIR /app
 
 RUN apk add --no-cache gcc musl-dev
 
-COPY --from=sqlite-vec pyproject.toml setup.py MANIFEST.in VERSION LICENSE-MIT LICENSE-APACHE /sqlite-vec/
-COPY --from=sqlite-vec bindings/python/__init__.py bindings/python/extra_init.py bindings/python/README.md /sqlite-vec/bindings/python/
-COPY --from=sqlite-vec bindings/rust/sqlite-vec.c bindings/rust/sqlite-vec.h bindings/rust/sqlite3.h bindings/rust/sqlite3ext.h /sqlite-vec/bindings/rust/
-
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_NO_DEV=1 \

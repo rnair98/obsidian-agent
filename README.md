@@ -32,9 +32,9 @@ Configure workflow authentication and approved vault paths first; see
 [workflow access](docs/security-access.md). Empty credentials or allowlists
 fail closed. Container vault paths require explicit writable mounts.
 
-The local SQLite dependency requires the fork checkout at `../sqlite-vec` and a
-C compiler for source builds. Compose supplies that checkout as an additional
-build context.
+uv installs the pinned Cercova `sqlite-vec` release from its explicit public
+package index. Supported Linux, macOS and Windows platforms use wheels; Alpine
+builds from the source archive with the compiler supplied by the Containerfile.
 
 ```bash
 # Prerequisites: podman + provider keys + configured workflow access

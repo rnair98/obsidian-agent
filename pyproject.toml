@@ -28,7 +28,7 @@ dependencies = [
     "pydantic-monty>=0.0.17",
     "wrapt<2",
     "githubkit[auth-app]>=0.17.1",
-    "sqlite-vec",
+    "sqlite-vec==0.1.10a4+cercova.1",
 ]
 
 [tool.uv]
@@ -38,7 +38,12 @@ concurrent-installs = 1
 compile-bytecode = false
 
 [tool.uv.sources]
-sqlite-vec = { path = "../sqlite-vec" }
+sqlite-vec = { index = "cercova" }
+
+[[tool.uv.index]]
+name = "cercova"
+url = "https://us-east4-python.pkg.dev/gen-lang-client-0026636413/sqlite-vec-python/simple/"
+explicit = true
 
 [dependency-groups]
 dev = [

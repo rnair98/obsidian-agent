@@ -622,7 +622,7 @@ serving `unsloth/bge-small-en-v1.5-GGUF:F16` from the Hugging Face cache on
 | GitHub | githubkit (App-installation auth) for REST; the git CLI under Seatbelt for history; surfaced as `git` and Monty `git()` | `services/gh_client/`, `engine/workspace_commands/git.py` |
 | Code IR parsing | standalone `tree_sitter.Parser(get_language(...))`; language pack supplies grammars | `services/codesearch/` |
 | Tabular sources | Polars | `engine/artifacts/sources.py: CsvSourceStore` |
-| Native SQLite vector/graph SQL | Local `sqlite-vec` fork | Host Python dependency, imported as `sqlite_vec` by `engine/similarity.py`; source is `../sqlite-vec` in `pyproject.toml` |
+| Native SQLite vector/graph SQL | Cercova `sqlite-vec==0.1.10a4+cercova.1` | Host Python dependency, imported as `sqlite_vec` by `engine/similarity.py`; pinned to the explicit public Cercova index in `pyproject.toml` |
 | Note embeddings | `llama-server` (llama.cpp) + `bge-small-en-v1.5` GGUF F16 | Out-of-process sidecar over HTTP via `httpx`; `just embed` |
 | Structured-output recovery | `json-repair` | `engine/parsing.py: parse_structured` |
 | Frontmatter (YAML) | `pyyaml` | `engine/frontmatter.py` — `split_frontmatter` / `join_frontmatter` |
@@ -632,13 +632,13 @@ serving `unsloth/bge-small-en-v1.5-GGUF:F16` from the Hugging Face cache on
 | Cognitive complexity | complexipy | `.cursor/hooks/complexity.py`; dev dependency; threshold 15 |
 | Import boundaries | import-linter (`lint-imports`) | `pyproject.toml` `[tool.importlinter]`; `just check` |
 
-The local `sqlite-vec` dependency requires a sibling `../sqlite-vec` checkout and
-a C compiler for source builds. Load it explicitly on each host SQLite connection;
-the package does not change workflow persistence or grant Monty host imports.
-Compose supplies that checkout as the named `sqlite-vec` build context. The
-Containerfile copies only the package inputs to `/sqlite-vec` before `uv sync`
-and installs the C compiler and libc headers. Direct image builds need
-`--build-context sqlite-vec=../sqlite-vec`.
+uv resolves `sqlite-vec` only from the public Cercova Artifact Registry index;
+other packages retain their existing indexes. `uv.lock` records hashes for the
+release's source archive and five platform wheels. Alpine uses the source archive;
+the Containerfile supplies the C compiler and libc headers. Local and container
+installs need no sibling checkout or additional build context. Load the extension
+explicitly on each host SQLite connection; the package does not change workflow
+persistence or grant Monty host imports.
 
 ---
 
